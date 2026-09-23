@@ -1,0 +1,40 @@
+# Dependencies — pnpm only. A second lockfile silently changes what installs.
+node_modules/
+.pnpm-store/
+package-lock.json
+yarn.lock
+
+# Build output
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Secrets — never commit. Document variables in .env.example instead.
+.env
+.env.*
+!.env.example
+
+# Private uploads (CIN / patente). Never served publicly, never committed.
+storage/
+uploads/
+
+# Generated
+apps/api/src/generated/
+coverage/
+
+# Courier app
+apps/courier/.expo/
+apps/courier/android/
+apps/courier/ios/
+*.apk
+*.aab
+*.keystore
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

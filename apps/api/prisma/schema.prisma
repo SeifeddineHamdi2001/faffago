@@ -1,0 +1,1264 @@
+// Faffa Go — database schema
+//
+// Conventions
+//   Money      integer millimes in BIGINT, named *Millimes. Never a float.
+//   Rates      integers in basis points (300 = 3 %), so a percentage stays exact.
+//   GPS        Decimal(9,6). Never used for money.
+//   Snapshots  any value that must not move when a setting changes is copied
+//              onto the row when it is created (fees on a parcel, the retenue
+//              rate on a bon, the courier rate on a delivered parcel).
+//   Actors     structural links are real relations; pure "who did this" columns
+//              are plain indexed UUIDs whose foreign keys are declared in SQL,
+//              so that User does not carry twenty-five back-relations (D-3).
+//
+// Enum members are mirrored one-for-one in packages/shared. Adding, renaming or
+// reusing a status requires an explicit decision (CLAUDE.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  DEPOT
+  SERVICE_CLIENT
+  VENDEUR
+  LIVREUR
+  RAMASSEUR
+}
+
+enum Langue {
+  FR
+  AR
+}
+
+/// Fiscal status of a seller. Drives the 3 % retenue à la source.
+enum SellerStatut {
+  PATENTE
+  AUTO_ENTREPRENEUR
+  CIN_UNIQUEMENT
+}
+
+enum SellerAccountState {
+  ACTIF
+  SUSPENDU
+}
+
+enum CourierAccountState {
+  ACTIF
+  INACTIF
+}
+
+enum PayPlan {
+  JOURNALIER
+  HEBDOMADAIRE
+  MENSUEL
+}
+
+enum ZoneAssignmentKind {
+  TITULAIRE
+  BACKUP
+}
+
+enum ParcelStatus {
+  CREE
+  RAMASSE
+  AU_DEPOT
+  EN_LIVRAISON
+  LIVRE
+  A_VERIFIER
+  RELANCE
+  RETOUR_AU_DEPOT
+  RETOUR_EN_ROUTE
+  RETOUR_RECU
+  ANNULE
+}
+
+/// Physical whereabouts, tracked apart from the status (D-1).
+enum ParcelLocation {
+  CHEZ_LE_VENDEUR
+  AVEC_LE_RAMASSEUR
+  AU_DEPOT
+  AVEC_LE_LIVREUR
+  CHEZ_LE_CLIENT
+  RENDU_AU_VENDEUR
+}
+
+enum ParcelCashStatus {
+  CHEZ_LE_COURSIER
+  AU_DEPOT
+  PAYE
+}
+
+enum FailureReason {
+  NE_REPOND_PAS
+  INJOIGNABLE
+  ADRESSE_INCORRECTE
+  REPORTE_PAR_LE_CLIENT
+  REFUSE
+}
+
+enum ParcelEventType {
+  CREATION
+  MODIFICATION_VENDEUR
+  ANNULATION
+  RAMASSAGE
+  ENTREE_DEPOT
+  SORTIE_COURSIER
+  AFFECTATION_LIVREUR
+  LIVRAISON
+  ECHEC_LIVRAISON
+  RETOUR_DE_TOURNEE
+  DECISION_RELANCER
+  DECISION_RETOURNER
+  DECISION_CHANGER_CLIENT
+  RETOUR_AUTO_48H
+  RETOUR_AUTO_3E_TENTATIVE
+  PREPARATION_RETOUR
+  DEPART_RETOUR
+  RETOUR_RECU
+  ENCAISSEMENT_DEPOT
+  PAIEMENT_VENDEUR
+  ARTICLE_ECHANGE_RECUPERE
+  FORCAGE_STATUT
+  ANNULATION_SCAN
+}
+
+enum ScanAction {
+  RAMASSAGE
+  ENTREE_DEPOT
+  SORTIE_COURSIER
+  LIVRE
+  ECHEC
+  RETOUR_DE_TOURNEE
+  PREPARATION_RETOURS
+  RETOUR_RECU
+  BON_VERSEMENT_REMIS
+  ARCHIVAGE_BON
+}
+
+enum ScanSource {
+  APP_COURSIER
+  WEB_CAMERA
+  WEB_DOUCHETTE
+  SAISIE_MANUELLE
+}
+
+enum PickupStatus {
+  DEMANDE
+  PLANIFIE
+  EFFECTUE
+  ANNULE
+}
+
+/// Shared by bons de versement and bons de retour.
+/// ANNULE is not in the specs' flow; it exists for the admin-only cancellation
+/// of a bon that never reached the seller (A-5b).
+enum BonStatus {
+  PREPARE
+  EN_ROUTE
+  REMIS
+  ARCHIVE
+  ANNULE
+}
+
+enum ChargeType {
+  LIVRAISON
+  RETOUR
+  CHANGEMENT_CLIENT
+  RAMASSAGE
+}
+
+enum ChargeStatus {
+  EN_ATTENTE
+  DEDUITE
+  ANNULEE
+}
+
+enum CaisseSessionStatus {
+  OUVERTE
+  COMPTEE
+  CLOTUREE
+}
+
+enum DebtStatus {
+  EN_COURS
+  DEDUITE
+  ANNULEE
+}
+
+enum PayslipStatus {
+  A_PAYER
+  PAYEE
+}
+
+enum SellerDocumentType {
+  CIN_RECTO
+  CIN_VERSO
+  PATENTE
+  CARTE_AUTO_ENTREPRENEUR
+}
+
+enum ChangeRequestStatus {
+  EN_ATTENTE
+  APPLIQUEE
+  REFUSEE
+}
+
+enum ChatParticipantKind {
+  VENDEUR
+  COURSIER
+  FAFFA_GO
+}
+
+/// The life of a parcel chat (Q15). VERROUILLE means the seller and the
+/// couriers can only read while no livreur holds the parcel; Faffa Go staff
+/// still reply, which is how À vérifier and returns are followed up.
+enum ChatThreadState {
+  OUVERT
+  VERROUILLE
+  CLOS
+}
+
+enum BonRetourItemType {
+  COLIS
+  ARTICLE_RECUPERE
+}
+
+enum NotificationType {
+  COLIS_A_VERIFIER
+  COLIS_24H_RESTANTES
+  COLIS_RETOUR_AUTO_48H
+  COLIS_EN_RETOUR
+  BON_VERSEMENT_EN_ROUTE
+  BON_RETOUR_EN_ROUTE
+  RAMASSAGE_PLANIFIE
+  RAMASSAGE_EFFECTUE
+  NOUVEAU_MESSAGE
+  COMPTE_SUSPENDU
+  COMPTE_REACTIVE
+  NOUVELLE_DEMANDE_RAMASSAGE
+  DEMANDE_MODIFICATION
+  ECART_CAISSE
+  BON_NON_REMIS
+  COURSIER_A_PAYER
+  NOUVEAUX_COLIS_ASSIGNES
+  COLIS_RELANCE_AUJOURDHUI
+  RAPPEL_FIN_DE_JOURNEE
+}
+
+enum DocumentCounterKind {
+  BON_VERSEMENT
+  BON_RETOUR
+  FICHE_PAIE
+  CERTIFICAT_RETENUE
+}
+
+// ─────────────────────────────────────────────────────────────
+// IDENTITY
+// ─────────────────────────────────────────────────────────────
+
+/// Login identifiers differ by role (A-20): sellers use their email, staff a
+/// username, couriers their phone plus the role they pick on the login screen.
+/// A CHECK constraint in the first migration enforces "the right one is set".
+model User {
+  id       String @id @default(uuid()) @db.Uuid
+  role     Role
+  /// Sellers only.
+  email    String? @unique
+  /// Admin, Dépôt and Service client only.
+  username String? @unique
+  /// Couriers log in with it; sellers keep it so the courier can call them.
+  phone    String  @db.VarChar(8)
+
+  /// argon2id. Generated by the admin, shown once, never readable again.
+  passwordHash      String
+  passwordUpdatedAt DateTime @default(now())
+
+  firstName String
+  lastName  String
+  isActive  Boolean @default(true)
+  /// False on a former account after a role change: the person can still log
+  /// in and see what is owed, but receives no new work (Admin 4.15).
+  acceptsWork Boolean @default(true)
+  langue      Langue  @default(FR)
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  seller        Seller?
+  courier       Courier?
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+  chatMessages  ChatMessage[]
+  chatReads     ChatRead[]
+  scans         Scan[]
+
+  /// One LIVREUR and one RAMASSEUR account may share a phone (Admin 4.15).
+  @@unique([phone, role])
+  @@index([role, isActive])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  deviceId  String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELLERS
+// ─────────────────────────────────────────────────────────────
+
+model Seller {
+  id              String             @id @default(uuid()) @db.Uuid
+  userId          String             @unique @db.Uuid
+  shopName        String
+  productCategory String
+  storeLink       String?
+  /// The CIN holder. The only person a courier hands cash or returns to.
+  contactFullName String
+  contactPhone    String             @db.VarChar(8)
+  statut          SellerStatut
+  accountState    SellerAccountState @default(ACTIF)
+  createdByUserId String             @db.Uuid
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User                  @relation(fields: [userId], references: [id])
+  documents       SellerDocument[]
+  pickupAddresses PickupAddress[]
+  parcels         Parcel[]
+  pickups         Pickup[]
+  charges         SellerCharge[]
+  bonsVersement   BonVersement[]
+  bonsRetour      BonRetour[]
+  changeRequests  SellerChangeRequest[]
+  certificates    RetenueCertificate[]
+
+  @@index([accountState])
+  @@map("sellers")
+}
+
+/// Private storage only, admin-only access, never a public URL (CLAUDE.md).
+model SellerDocument {
+  id               String             @id @default(uuid()) @db.Uuid
+  sellerId         String             @db.Uuid
+  type             SellerDocumentType
+  storageKey       String             @unique
+  mimeType         String
+  sizeBytes        Int
+  uploadedByUserId String             @db.Uuid
+  uploadedAt       DateTime           @default(now())
+
+  seller Seller @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+  @@map("seller_documents")
+}
+
+model PickupAddress {
+  id           String  @id @default(uuid()) @db.Uuid
+  sellerId     String  @db.Uuid
+  label        String?
+  delegationId String  @db.Uuid
+  address      String
+  landmark     String?
+  isDefault    Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  seller     Seller     @relation(fields: [sellerId], references: [id])
+  delegation Delegation @relation(fields: [delegationId], references: [id])
+  pickups    Pickup[]
+
+  @@index([sellerId])
+  @@map("pickup_addresses")
+}
+
+// ─────────────────────────────────────────────────────────────
+// COURIERS
+// ─────────────────────────────────────────────────────────────
+
+model Courier {
+  id           String              @id @default(uuid()) @db.Uuid
+  userId       String              @unique @db.Uuid
+  cin          String
+  vehicle      String?
+  /// Livreurs only. Ramasseurs are employees paid by HR outside the app.
+  payPlan      PayPlan?
+  accountState CourierAccountState @default(ACTIF)
+  /// Protects the app when it is reopened. Set on the device by the courier.
+  pinHash      String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id])
+  zoneAssignments ZoneAssignment[]
+  absences        CourierAbsence[]
+  caisseSessions  CaisseSession[]
+  debts           CourierDebt[]
+  payslips        Payslip[]
+  plannedParcels  Parcel[]         @relation("ParcelPlannedLivreur")
+  deliveryParcels Parcel[]         @relation("ParcelLivreur")
+  pickups         Pickup[]
+  bonsVersement   BonVersement[]
+  bonsRetour      BonRetour[]
+  chatThreads     ChatThread[]
+
+  @@index([accountState])
+  @@map("couriers")
+}
+
+model CourierAbsence {
+  id              String   @id @default(uuid()) @db.Uuid
+  courierId       String   @db.Uuid
+  date            DateTime @db.Date
+  reason          String?
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+
+  courier Courier @relation(fields: [courierId], references: [id])
+
+  @@unique([courierId, date])
+  @@map("courier_absences")
+}
+
+// ─────────────────────────────────────────────────────────────
+// GEOGRAPHY AND ZONES
+// ─────────────────────────────────────────────────────────────
+
+/// Both names are required: the public site lists the zones served in French
+/// and in Arabic, and each interface shows the one for its language (A-18).
+model Gouvernorat {
+  id       String  @id @default(uuid()) @db.Uuid
+  code     String  @unique
+  nameFr   String
+  nameAr   String
+  isActive Boolean @default(true)
+
+  delegations Delegation[]
+
+  @@map("gouvernorats")
+}
+
+model Delegation {
+  id            String  @id @default(uuid()) @db.Uuid
+  gouvernoratId String  @db.Uuid
+  /// Stable identifier a seller can put in a CSV instead of a name.
+  code          String  @unique
+  nameFr        String
+  nameAr        String
+  zoneId        String? @db.Uuid
+  isActive      Boolean @default(true)
+
+  gouvernorat     Gouvernorat     @relation(fields: [gouvernoratId], references: [id])
+  zone            Zone?           @relation(fields: [zoneId], references: [id])
+  parcels         Parcel[]
+  pickupAddresses PickupAddress[]
+
+  /// Délégation names repeat across gouvernorats, so a CSV that gives a name
+  /// must give its gouvernorat too; this pair is what the importer looks up.
+  @@unique([gouvernoratId, nameFr])
+  @@index([zoneId])
+  @@map("delegations")
+}
+
+model Zone {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique
+  isActive Boolean @default(true)
+
+  delegations Delegation[]
+  assignments ZoneAssignment[]
+
+  @@map("zones")
+}
+
+/// Each zone has a livreur and a ramasseur, each with a backup (Admin 4.5).
+model ZoneAssignment {
+  id        String             @id @default(uuid()) @db.Uuid
+  zoneId    String             @db.Uuid
+  courierId String             @db.Uuid
+  role      Role
+  kind      ZoneAssignmentKind
+
+  zone    Zone    @relation(fields: [zoneId], references: [id])
+  courier Courier @relation(fields: [courierId], references: [id])
+
+  @@unique([zoneId, role, kind])
+  @@index([courierId])
+  @@map("zone_assignments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SETTINGS
+// ─────────────────────────────────────────────────────────────
+
+/// One row per setting; every change is written to audit_log.
+model Setting {
+  key             String   @id
+  value           Json
+  updatedByUserId String?  @db.Uuid
+  updatedAt       DateTime @updatedAt
+
+  @@map("settings")
+}
+
+/// Per kind and per day sequence behind BV-2026-0921-01 and BR-2026-0921-01.
+/// Locked inside the transaction that creates the document, so two admins
+/// preparing bons at the same second cannot collide.
+model DocumentCounter {
+  kind      DocumentCounterKind
+  dateKey   String
+  lastValue Int                 @default(0)
+
+  @@id([kind, dateKey])
+  @@map("document_counters")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PARCELS
+// ─────────────────────────────────────────────────────────────
+
+model Parcel {
+  id       String @id @default(uuid()) @db.Uuid
+  /// FG- plus 8 Crockford characters, random, never sequential (A-19).
+  code     String @unique
+  sellerId String @db.Uuid
+
+  recipientName   String
+  recipientPhone  String  @db.VarChar(8)
+  recipientPhone2 String? @db.VarChar(8)
+  delegationId    String  @db.Uuid
+  address         String
+  /// Shown large on the courier screen, so it is its own field (A-21).
+  landmark        String?
+
+  productDescription String
+  pieceCount         Int     @default(1)
+  isExchange         Boolean @default(false)
+  openingAllowed     Boolean @default(false)
+  courierNote        String?
+
+  codAmountMillimes BigInt
+
+  /// Rates frozen at creation. A settings change never touches an existing
+  /// parcel (CLAUDE.md, Money). The charge rows are created later, when the
+  /// event that owes them happens, using these amounts.
+  deliveryFeeMillimes     BigInt
+  returnFeeMillimes       BigInt
+  changeClientFeeMillimes BigInt
+  /// Frozen at delivery, not at creation: it is the livreur's pay, and only a
+  /// delivered parcel earns it (A-15).
+  courierRateMillimes     BigInt?
+
+  status     ParcelStatus      @default(CREE)
+  location   ParcelLocation    @default(CHEZ_LE_VENDEUR)
+  cashStatus ParcelCashStatus?
+
+  attemptCount      Int            @default(0)
+  lastFailureReason FailureReason?
+  lastFailureNote   String?
+  /// Set on entering À vérifier, cleared by any decision. The scheduled job
+  /// reads it; it stops at the decision, not at the return scan (A-7).
+  verifyDeadlineAt  DateTime?
+  relaunchDate      DateTime?      @db.Date
+  relaunchSlot      String?
+  changeClientCount Int            @default(0)
+  /// Recorded when the customer prefers to meet somewhere (Coursier 4.3).
+  meetingPoint      String?
+
+  /// The Tournées screen fills the zone's column; the Sortie coursier scan is
+  /// what actually assigns the parcel (Admin 4.5).
+  plannedLivreurId String? @db.Uuid
+  currentLivreurId String? @db.Uuid
+
+  /// Old item of an échange: same code, no new label, its own line in Retours
+  /// and no return fee (A-10).
+  exchangeItemCollected Boolean       @default(false)
+  exchangeItemStatus    ParcelStatus?
+
+  createdByUserId String    @db.Uuid
+  createdAt       DateTime  @default(now())
+  pickedUpAt      DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  closedAt        DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  seller           Seller                @relation(fields: [sellerId], references: [id])
+  delegation       Delegation            @relation(fields: [delegationId], references: [id])
+  plannedLivreur   Courier?              @relation("ParcelPlannedLivreur", fields: [plannedLivreurId], references: [id])
+  currentLivreur   Courier?              @relation("ParcelLivreur", fields: [currentLivreurId], references: [id])
+  events           ParcelEvent[]
+  scans            Scan[]
+  charges          SellerCharge[]
+  pickupLinks      PickupParcel[]
+  bonVersementLine BonVersementParcel?
+  bonRetourLines   BonRetourParcel[]
+  caisseLine       CaisseSessionParcel?
+  payslipLine      PayslipParcel[]
+  chatThread       ChatThread?
+  calls            FaffaGoCall[]
+  changeRequests   SellerChangeRequest[]
+  clientChanges    ParcelClientChange[]
+
+  @@index([sellerId, status])
+  @@index([status, location])
+  @@index([currentLivreurId, status])
+  @@index([delegationId, status])
+  @@index([cashStatus, sellerId])
+  @@index([verifyDeadlineAt])
+  @@index([recipientPhone])
+  @@index([createdAt])
+  @@map("parcels")
+}
+
+/// Changer de client overwrites the customer on the parcel, so the previous
+/// one is kept here. Staff-visible history; the seller and the public tracking
+/// page see only the new customer and a "Changement de client" event (A-17).
+model ParcelClientChange {
+  id                   String   @id @default(uuid()) @db.Uuid
+  parcelId             String   @db.Uuid
+  previousName         String
+  previousPhone        String   @db.VarChar(8)
+  previousDelegationId String   @db.Uuid
+  previousAddress      String
+  previousCodMillimes  BigInt
+  newCodMillimes       BigInt
+  feeMillimes          BigInt
+  chargeId             String?  @db.Uuid
+  decidedByUserId      String   @db.Uuid
+  createdAt            DateTime @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@index([parcelId])
+  @@map("parcel_client_changes")
+}
+
+/// APPEND-ONLY. UPDATE and DELETE are revoked for the application role and
+/// blocked by a trigger (see the first migration).
+model ParcelEvent {
+  id               String          @id @default(uuid()) @db.Uuid
+  parcelId         String          @db.Uuid
+  type             ParcelEventType
+  previousStatus   ParcelStatus?
+  newStatus        ParcelStatus?
+  previousLocation ParcelLocation?
+  newLocation      ParcelLocation?
+  /// Null for a scheduled job: the 48-hour return has no human actor.
+  actorUserId      String?         @db.Uuid
+  actorRole        Role?
+  source           ScanSource?
+  scanId           String?         @db.Uuid
+  reasonCode       FailureReason?
+  reasonText       String?
+  gpsLat           Decimal?        @db.Decimal(9, 6)
+  gpsLng           Decimal?        @db.Decimal(9, 6)
+  gpsAccuracyM     Int?
+  deviceId         String?
+  appVersion       String?
+  deviceTime       DateTime?
+  serverTime       DateTime        @default(now())
+  metadata         Json?
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@index([parcelId, serverTime])
+  @@index([type, serverTime])
+  @@map("parcel_events")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCANS
+// ─────────────────────────────────────────────────────────────
+
+/// There is deliberately no unique index on (parcelId, action): a parcel is
+/// legitimately scanned ECHEC up to three times. "The same parcel cannot be
+/// scanned twice for the same action" is enforced by the state machine and by
+/// the phone's local queue; clientScanId alone gives idempotency.
+model Scan {
+  id             String         @id @default(uuid()) @db.Uuid
+  /// UUID generated on the device. Replaying it returns the first result.
+  clientScanId   String         @unique @db.Uuid
+  action         ScanAction
+  rawCode        String
+  parcelId       String?        @db.Uuid
+  bonVersementId String?        @db.Uuid
+  bonRetourId    String?        @db.Uuid
+  pickupId       String?        @db.Uuid
+  actorUserId    String         @db.Uuid
+  source         ScanSource
+  /// Allowed when a label is damaged, but flagged to the admin (Coursier 01).
+  manualEntry    Boolean        @default(false)
+  accepted       Boolean
+  refusalReason  String?
+  failureReason  FailureReason?
+  collectedMillimes BigInt?
+
+  gpsLat       Decimal? @db.Decimal(9, 6)
+  gpsLng       Decimal? @db.Decimal(9, 6)
+  gpsAccuracyM Int?
+  deviceId     String?
+  appVersion   String?
+
+  deviceTime DateTime
+  receivedAt DateTime @default(now())
+  /// Business day derived from the device time, used by the Caisse (A-12).
+  businessDate DateTime @db.Date
+  /// Device clock more than the configured minutes away from the server (A-12).
+  clockSkewFlagged Boolean @default(false)
+  clockSkewMs      Int?
+
+  /// "Annuler le dernier scan" within one minute of the device time (A-11).
+  /// The cancellation writes a compensating event; the scan row stays.
+  cancelledAt       DateTime?
+  cancelledByUserId String?   @db.Uuid
+  cancelReason      String?
+
+  parcel Parcel? @relation(fields: [parcelId], references: [id])
+  actor  User    @relation(fields: [actorUserId], references: [id])
+
+  @@index([parcelId, action])
+  @@index([actorUserId, businessDate])
+  @@index([manualEntry, receivedAt])
+  @@index([clockSkewFlagged, receivedAt])
+  @@map("scans")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PICKUPS
+// ─────────────────────────────────────────────────────────────
+
+model Pickup {
+  id              String       @id @default(uuid()) @db.Uuid
+  sellerId        String       @db.Uuid
+  pickupAddressId String       @db.Uuid
+  status          PickupStatus @default(DEMANDE)
+  /// The seller either lists the parcels or just says how many (Vendeur 4.5).
+  declaredCount   Int?
+  requestedSlot   String?
+  note            String?
+  plannedDate     DateTime?    @db.Date
+  plannedSlot     String?
+  /// Pre-filled with the ramasseur of the zone of this pickup address (A-14).
+  ramasseurId     String?      @db.Uuid
+  completedAt     DateTime?
+  scannedCount    Int          @default(0)
+  /// Set when the pickup is closed below the free threshold with at least one
+  /// parcel scanned; zero parcels costs nothing (A-13).
+  feeChargeId     String?      @db.Uuid
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  seller        Seller         @relation(fields: [sellerId], references: [id])
+  pickupAddress PickupAddress  @relation(fields: [pickupAddressId], references: [id])
+  ramasseur     Courier?       @relation(fields: [ramasseurId], references: [id])
+  parcels       PickupParcel[]
+  bonsVersement BonVersement[]
+  bonsRetour    BonRetour[]
+
+  @@index([sellerId, status])
+  @@index([ramasseurId, plannedDate])
+  @@index([status, plannedDate])
+  @@map("pickups")
+}
+
+model PickupParcel {
+  pickupId  String    @db.Uuid
+  parcelId  String    @db.Uuid
+  /// Announced by the seller. The pickup screen shows expected versus scanned.
+  expected  Boolean   @default(true)
+  scannedAt DateTime?
+  scanId    String?   @db.Uuid
+
+  pickup Pickup @relation(fields: [pickupId], references: [id])
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@id([pickupId, parcelId])
+  @@index([parcelId])
+  @@map("pickup_parcels")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELLER CHARGES — every deduction line of a bon de versement (D-2)
+// ─────────────────────────────────────────────────────────────
+
+model SellerCharge {
+  id              String       @id @default(uuid()) @db.Uuid
+  sellerId        String       @db.Uuid
+  type            ChargeType
+  /// Copied from the frozen rate on the parcel, or from the pickup fee setting.
+  amountMillimes  BigInt
+  status          ChargeStatus @default(EN_ATTENTE)
+  parcelId        String?      @db.Uuid
+  pickupId        String?      @db.Uuid
+  bonVersementId  String?      @db.Uuid
+  note            String?
+  createdByUserId String?      @db.Uuid
+  createdAt       DateTime     @default(now())
+
+  seller       Seller        @relation(fields: [sellerId], references: [id])
+  parcel       Parcel?       @relation(fields: [parcelId], references: [id])
+  bonVersement BonVersement? @relation(fields: [bonVersementId], references: [id])
+
+  @@index([sellerId, status, createdAt])
+  @@index([parcelId])
+  @@index([bonVersementId])
+  @@map("seller_charges")
+}
+
+// ─────────────────────────────────────────────────────────────
+// BONS DE VERSEMENT
+// ─────────────────────────────────────────────────────────────
+
+model BonVersement {
+  id       String    @id @default(uuid()) @db.Uuid
+  number   String    @unique
+  sellerId String    @db.Uuid
+  status   BonStatus @default(PREPARE)
+
+  totalCodMillimes      BigInt
+  totalFeesMillimes     BigInt
+  baseAfterFeesMillimes BigInt
+  /// The seller's fiscal statut at preparation. A statut change stops or
+  /// starts the retenue from the next bon, never retroactively (Vendeur 2.4).
+  sellerStatutSnapshot  SellerStatut
+  retenueRateBps        Int          @default(0)
+  retenueMillimes       BigInt       @default(0)
+  netMillimes           BigInt
+
+  /// Printed on the bon; the ramasseur scans it to mark the bon Remis.
+  qrToken          String    @unique
+  preparedByUserId String    @db.Uuid
+  preparedAt       DateTime  @default(now())
+  ramasseurId      String?   @db.Uuid
+  pickupId         String?   @db.Uuid
+  enRouteAt        DateTime?
+  remisAt          DateTime?
+  remisScanId      String?   @db.Uuid
+  archivedAt       DateTime?
+  archivedByUserId String?   @db.Uuid
+  /// Admin-only, with a reason, audited. The number is never reused (A-5b).
+  cancelledAt       DateTime?
+  cancelledByUserId String?  @db.Uuid
+  cancelReason      String?
+  pdfStorageKey    String?
+
+  seller      Seller               @relation(fields: [sellerId], references: [id])
+  ramasseur   Courier?             @relation(fields: [ramasseurId], references: [id])
+  pickup      Pickup?              @relation(fields: [pickupId], references: [id])
+  parcels     BonVersementParcel[]
+  charges     SellerCharge[]
+  certificate RetenueCertificate?
+  caisseLines CaisseSessionBon[]
+
+  @@index([sellerId, status])
+  @@index([status, preparedAt])
+  @@map("bons_versement")
+}
+
+model BonVersementParcel {
+  bonVersementId String @db.Uuid
+  /// A parcel belongs to one bon only (A-5a, Vendeur rule 05).
+  parcelId       String @unique @db.Uuid
+  codMillimes    BigInt
+
+  bonVersement BonVersement @relation(fields: [bonVersementId], references: [id])
+  parcel       Parcel       @relation(fields: [parcelId], references: [id])
+
+  @@id([bonVersementId, parcelId])
+  @@map("bon_versement_parcels")
+}
+
+/// One certificate per bon that withheld something, plus a yearly summary the
+/// seller downloads (Vendeur 4.11).
+model RetenueCertificate {
+  id             String   @id @default(uuid()) @db.Uuid
+  number         String   @unique
+  bonVersementId String   @unique @db.Uuid
+  sellerId       String   @db.Uuid
+  year           Int
+  baseMillimes   BigInt
+  rateBps        Int
+  amountMillimes BigInt
+  issuedAt       DateTime @default(now())
+  pdfStorageKey  String?
+
+  bonVersement BonVersement @relation(fields: [bonVersementId], references: [id])
+  seller       Seller       @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId, year])
+  @@map("retenue_certificates")
+}
+
+// ─────────────────────────────────────────────────────────────
+// BONS DE RETOUR
+// ─────────────────────────────────────────────────────────────
+
+model BonRetour {
+  id               String    @id @default(uuid()) @db.Uuid
+  number           String    @unique
+  sellerId         String    @db.Uuid
+  status           BonStatus @default(PREPARE)
+  parcelCount      Int       @default(0)
+  qrToken          String    @unique
+  preparedByUserId String    @db.Uuid
+  preparedAt       DateTime  @default(now())
+  ramasseurId      String?   @db.Uuid
+  pickupId         String?   @db.Uuid
+  enRouteAt        DateTime?
+  remisAt          DateTime?
+  archivedAt       DateTime?
+  archivedByUserId String?   @db.Uuid
+  cancelledAt       DateTime?
+  cancelledByUserId String?  @db.Uuid
+  cancelReason      String?
+  pdfStorageKey    String?
+
+  seller    Seller            @relation(fields: [sellerId], references: [id])
+  ramasseur Courier?          @relation(fields: [ramasseurId], references: [id])
+  pickup    Pickup?           @relation(fields: [pickupId], references: [id])
+  parcels   BonRetourParcel[]
+
+  @@index([sellerId, status])
+  @@map("bons_retour")
+}
+
+model BonRetourParcel {
+  bonRetourId String            @db.Uuid
+  parcelId    String            @db.Uuid
+  /// A delivered échange parcel appears here as ARTICLE_RECUPERE while it also
+  /// appears in a bon de versement as a paid parcel (A-10).
+  itemType    BonRetourItemType @default(COLIS)
+  receivedAt  DateTime?
+  scanId      String?           @db.Uuid
+
+  bonRetour BonRetour @relation(fields: [bonRetourId], references: [id])
+  parcel    Parcel    @relation(fields: [parcelId], references: [id])
+
+  @@id([bonRetourId, parcelId, itemType])
+  @@index([parcelId])
+  @@map("bon_retour_parcels")
+}
+
+// ─────────────────────────────────────────────────────────────
+// CAISSE
+// ─────────────────────────────────────────────────────────────
+
+model CaisseSession {
+  id           String              @id @default(uuid()) @db.Uuid
+  courierId    String              @db.Uuid
+  businessDate DateTime            @db.Date
+  status       CaisseSessionStatus @default(OUVERTE)
+
+  expectedDeliveryMillimes BigInt  @default(0)
+  expectedBonCashMillimes  BigInt  @default(0)
+  expectedTotalMillimes    BigInt  @default(0)
+  countedMillimes          BigInt?
+  /// compté − attendu. Negative becomes a courier debt, positive is flagged.
+  ecartMillimes            BigInt?
+  ecartFlagged             Boolean @default(false)
+  ecartNote                String?
+
+  openedAt       DateTime  @default(now())
+  countedAt      DateTime?
+  closedAt       DateTime?
+  closedByUserId String?   @db.Uuid
+
+  courier Courier               @relation(fields: [courierId], references: [id])
+  parcels CaisseSessionParcel[]
+  bons    CaisseSessionBon[]
+  debts   CourierDebt[]
+
+  @@unique([courierId, businessDate])
+  @@index([businessDate, status])
+  @@map("caisse_sessions")
+}
+
+model CaisseSessionParcel {
+  caisseSessionId String @db.Uuid
+  parcelId        String @unique @db.Uuid
+  codMillimes     BigInt
+
+  caisseSession CaisseSession @relation(fields: [caisseSessionId], references: [id])
+  parcel        Parcel        @relation(fields: [parcelId], references: [id])
+
+  @@id([caisseSessionId, parcelId])
+  @@map("caisse_session_parcels")
+}
+
+/// Bon cash a ramasseur left with in the morning, accounted for in the evening:
+/// either handed to the seller or brought back in full (Admin 4.9).
+model CaisseSessionBon {
+  caisseSessionId  String @db.Uuid
+  bonVersementId   String @db.Uuid
+  takenOutMillimes BigInt
+  remisMillimes    BigInt @default(0)
+  returnedMillimes BigInt @default(0)
+
+  caisseSession CaisseSession @relation(fields: [caisseSessionId], references: [id])
+  bonVersement  BonVersement  @relation(fields: [bonVersementId], references: [id])
+
+  @@id([caisseSessionId, bonVersementId])
+  @@map("caisse_session_bons")
+}
+
+model CourierDebt {
+  id                String     @id @default(uuid()) @db.Uuid
+  courierId         String     @db.Uuid
+  caisseSessionId   String?    @db.Uuid
+  amountMillimes    BigInt
+  /// What is still to deduct; a pay slip that cannot absorb it all leaves the
+  /// rest for the next period (Admin 4.12).
+  remainingMillimes BigInt
+  status            DebtStatus @default(EN_COURS)
+  /// Only the admin can cancel a debt, with a note (Admin rule 05).
+  cancelledByUserId String?    @db.Uuid
+  cancelReason      String?
+  cancelledAt       DateTime?
+  createdAt         DateTime   @default(now())
+
+  courier       Courier            @relation(fields: [courierId], references: [id])
+  caisseSession CaisseSession?     @relation(fields: [caisseSessionId], references: [id])
+  deductions    PayslipDeduction[]
+
+  @@index([courierId, status, createdAt])
+  @@map("courier_debts")
+}
+
+// ─────────────────────────────────────────────────────────────
+// PAIE COURSIERS (livreurs only)
+// ─────────────────────────────────────────────────────────────
+
+model Payslip {
+  id          String        @id @default(uuid()) @db.Uuid
+  number      String        @unique
+  courierId   String        @db.Uuid
+  payPlan     PayPlan
+  periodStart DateTime      @db.Date
+  periodEnd   DateTime      @db.Date
+  parcelCount Int
+  /// Kept for the printed fiche; the authoritative amounts are the rates
+  /// frozen on each parcel at delivery (A-15).
+  ratePerParcelMillimes BigInt
+  grossMillimes         BigInt
+  deductionsMillimes    BigInt        @default(0)
+  netMillimes           BigInt
+  status                PayslipStatus @default(A_PAYER)
+  paidAt                DateTime?
+  paidByUserId          String?       @db.Uuid
+  preparedByUserId      String        @db.Uuid
+  preparedAt            DateTime      @default(now())
+  pdfStorageKey         String?
+
+  courier    Courier            @relation(fields: [courierId], references: [id])
+  parcels    PayslipParcel[]
+  deductions PayslipDeduction[]
+
+  @@index([courierId, status])
+  @@index([periodEnd, status])
+  @@map("payslips")
+}
+
+model PayslipParcel {
+  payslipId    String @db.Uuid
+  /// A delivered parcel is paid to a courier once.
+  parcelId     String @unique @db.Uuid
+  rateMillimes BigInt
+
+  payslip Payslip @relation(fields: [payslipId], references: [id])
+  parcel  Parcel  @relation(fields: [parcelId], references: [id])
+
+  @@id([payslipId, parcelId])
+  @@map("payslip_parcels")
+}
+
+model PayslipDeduction {
+  payslipId      String @db.Uuid
+  debtId         String @db.Uuid
+  amountMillimes BigInt
+
+  payslip Payslip     @relation(fields: [payslipId], references: [id])
+  debt    CourierDebt @relation(fields: [debtId], references: [id])
+
+  @@id([payslipId, debtId])
+  @@map("payslip_deductions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// COMMUNICATION
+// ─────────────────────────────────────────────────────────────
+
+/// One thread per parcel, from the Sortie coursier scan until the parcel is
+/// delivered and paid or the return is received. It locks while the parcel sits
+/// at the depot and reopens with the new livreur when it goes out again; that
+/// livreur reads the whole history. The ramasseur never joins (A-23, Q15).
+model ChatThread {
+  id       String          @id @default(uuid()) @db.Uuid
+  parcelId String          @unique @db.Uuid
+  sellerId String          @db.Uuid
+  /// The livreur who currently holds the parcel; null while it is at the depot.
+  courierId String?        @db.Uuid
+  state     ChatThreadState @default(OUVERT)
+  lastMessageAt DateTime?
+  createdAt     DateTime  @default(now())
+
+  parcel   Parcel        @relation(fields: [parcelId], references: [id])
+  courier  Courier?      @relation(fields: [courierId], references: [id])
+  messages ChatMessage[]
+  reads    ChatRead[]
+
+  @@index([sellerId, lastMessageAt])
+  @@index([courierId, lastMessageAt])
+  @@map("chat_threads")
+}
+
+model ChatMessage {
+  id           String              @id @default(uuid()) @db.Uuid
+  threadId     String              @db.Uuid
+  senderUserId String              @db.Uuid
+  /// Staff messages are shown as "Faffa Go" (Admin 4.8).
+  senderKind   ChatParticipantKind
+  body         String
+  createdAt    DateTime            @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id])
+  sender User       @relation(fields: [senderUserId], references: [id])
+
+  @@index([threadId, createdAt])
+  @@map("chat_messages")
+}
+
+model ChatRead {
+  threadId   String   @db.Uuid
+  userId     String   @db.Uuid
+  lastReadAt DateTime
+
+  thread ChatThread @relation(fields: [threadId], references: [id])
+  user   User       @relation(fields: [userId], references: [id])
+
+  @@id([threadId, userId])
+  @@map("chat_reads")
+}
+
+/// Appels Faffa Go: customer-service calls, visible to the seller. The seller's
+/// own calls are never recorded (Vendeur rule 18).
+model FaffaGoCall {
+  id          String   @id @default(uuid()) @db.Uuid
+  parcelId    String   @db.Uuid
+  staffUserId String   @db.Uuid
+  calledAt    DateTime @default(now())
+  answered    Boolean
+  note        String?
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+
+  @@index([parcelId, calledAt])
+  @@map("faffago_calls")
+}
+
+/// Parameters only, never rendered text: the courier app shows the same
+/// notification in French or in Arabic (A-24).
+model Notification {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  params    Json
+  parcelId  String?          @db.Uuid
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────
+// ADDRESS MEMORY — couriers and staff only, never sellers (Coursier 4.3)
+// ─────────────────────────────────────────────────────────────
+
+model AddressMemory {
+  id                String   @id @default(uuid()) @db.Uuid
+  customerPhone     String   @unique @db.VarChar(8)
+  note              String
+  meetingPoint      String?
+  delegationId      String?  @db.Uuid
+  lastCourierUserId String   @db.Uuid
+  deliveryCount     Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("address_memory")
+}
+
+// ─────────────────────────────────────────────────────────────
+// SELLER CHANGE REQUESTS (Vendeur 4.6)
+// ─────────────────────────────────────────────────────────────
+
+model SellerChangeRequest {
+  id              String              @id @default(uuid()) @db.Uuid
+  parcelId        String              @db.Uuid
+  sellerId        String              @db.Uuid
+  requestedFields Json
+  sellerNote      String?
+  status          ChangeRequestStatus @default(EN_ATTENTE)
+  handledByUserId String?             @db.Uuid
+  handledAt       DateTime?
+  staffNote       String?
+  createdAt       DateTime            @default(now())
+
+  parcel Parcel @relation(fields: [parcelId], references: [id])
+  seller Seller @relation(fields: [sellerId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([parcelId])
+  @@map("seller_change_requests")
+}
+
+// ─────────────────────────────────────────────────────────────
+// AUDIT — APPEND-ONLY
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @db.Uuid
+  actorRole   Role?
+  action      String
+  entityType  String
+  entityId    String
+  before      Json?
+  after       Json?
+  reason      String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_log")
+}

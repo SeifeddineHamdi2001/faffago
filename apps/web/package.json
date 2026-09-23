@@ -1,0 +1,20 @@
+{
+  "name": "@faffago/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "echo \"apps/web est créé en phase 2 (docs/PROGRESS.md)\"",
+    "dev": "echo \"apps/web est créé en phase 2 (docs/PROGRESS.md)\"",
+    "test": "echo \"aucun test pour l'instant\"",
+    "lint": "echo \"aucun code pour l'instant\"",
+    "typecheck": "echo \"aucun code pour l'instant\""
+  },
+  "dependencies": {
+    "@faffago/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@faffago/config": "workspace:*",
+    "typescript": "^5.7.3"
+  }
+}

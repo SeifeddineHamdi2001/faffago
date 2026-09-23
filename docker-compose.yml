@@ -1,0 +1,35 @@
+# Local PostgreSQL for development.
+#
+#   docker compose up -d
+#
+# Creates the database and both roles of the first migration:
+# faffago_owner runs the migrations, faffago_app is what the API connects as
+# and has UPDATE/DELETE revoked on parcel_events and audit_log.
+#
+# Not for production. On the VPS, PostgreSQL is installed on the host and
+# backed up daily off the server (tech-stack 6).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: faffago-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: faffago_owner
+      POSTGRES_PASSWORD: faffago_dev
+      POSTGRES_DB: faffago
+      # Tunisian collation for ORDER BY on French names.
+      LANG: fr_FR.utf8
+    ports:
+      - "5432:5432"
+    volumes:
+      - faffago-pgdata:/var/lib/postgresql/data
+      - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U faffago_owner -d faffago"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  faffago-pgdata:
