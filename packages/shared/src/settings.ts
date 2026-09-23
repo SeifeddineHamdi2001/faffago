@@ -1,4 +1,5 @@
-import type { BasisPoints, Millimes } from './money.js';
+import { z } from 'zod';
+import { millimesFromJson, type BasisPoints, type Millimes } from './money.js';
 
 /**
  * Platform settings (Paramètres, Admin 4.16).
@@ -98,3 +99,160 @@ export const DEFAULT_CONTACT_LINKS: ContactLinks = {
   instagram: 'https://www.instagram.com/faffago/',
   tiktok: 'https://www.tiktok.com/@faffa_goo',
 };
+
+export const SETTING_KEYS: readonly SettingKey[] = Object.values(SettingKey);
+
+/** A setting as it is stored in `settings.value` and sent over the wire. */
+export type SettingJsonValue = string | number | ContactLinks;
+
+/**
+ * Money is a string of digits, read back as `bigint` (D-20): JSON numbers are
+ * floats, and a fee must never pass through one. No sign, no separator, no
+ * leading zero, so there is exactly one way to write each amount.
+ */
+const millimesJson = z
+  .string({ invalid_type_error: 'Montant en millimes, en chiffres (ex. 5500)' })
+  .regex(/^(0|[1-9]\d{0,8})$/, 'Montant en millimes, en chiffres (ex. 5500)');
+
+function wholeNumber(min: number, max: number) {
+  return z
+    .number({ invalid_type_error: 'Nombre entier attendu' })
+    .int('Nombre entier attendu')
+    .min(min, `Minimum ${min}`)
+    .max(max, `Maximum ${max}`);
+}
+
+const httpsOrEmpty = z
+  .string()
+  .trim()
+  .max(300)
+  .refine((value) => value === '' || /^https:\/\/\S+$/.test(value), {
+    message: 'Lien complet commençant par https://',
+  });
+
+export const contactLinksSchema = z
+  .object({
+    phone: z.string().trim().max(30),
+    whatsapp: httpsOrEmpty,
+    facebook: httpsOrEmpty,
+    instagram: httpsOrEmpty,
+    tiktok: httpsOrEmpty,
+  })
+  .strict();
+
+/**
+ * What each setting may hold. The bounds are guards against a typing slip, not
+ * business rules: the business values are the defaults above.
+ */
+export const SETTING_VALUE_SCHEMAS: Record<SettingKey, z.ZodType<SettingJsonValue>> = {
+  [SettingKey.DELIVERY_FEE_MILLIMES]: millimesJson,
+  [SettingKey.RETURN_FEE_MILLIMES]: millimesJson,
+  [SettingKey.CHANGE_CLIENT_FEE_MILLIMES]: millimesJson,
+  [SettingKey.PICKUP_FEE_MILLIMES]: millimesJson,
+  [SettingKey.COURIER_RATE_PER_PARCEL_MILLIMES]: millimesJson,
+  [SettingKey.PICKUP_FREE_THRESHOLD]: wholeNumber(1, 100),
+  /** 10 000 basis points = 100 %. */
+  [SettingKey.RETENUE_RATE_BPS]: wholeNumber(0, 10_000),
+  [SettingKey.VERIFY_DEADLINE_HOURS]: wholeNumber(1, 720),
+  [SettingKey.MAX_DELIVERY_ATTEMPTS]: wholeNumber(1, 10),
+  [SettingKey.MAX_CLIENT_CHANGES_PER_PARCEL]: wholeNumber(0, 10),
+  [SettingKey.SCAN_CANCEL_WINDOW_SECONDS]: wholeNumber(0, 3600),
+  [SettingKey.CLOCK_SKEW_FLAG_MINUTES]: wholeNumber(1, 1440),
+  [SettingKey.COURIER_MIN_APP_VERSION]: z
+    .string()
+    .regex(/^\d{1,3}\.\d{1,3}\.\d{1,3}$/, 'Version au format 1.2.3'),
+  [SettingKey.CONTACT_LINKS]: contactLinksSchema,
+};
+
+export type SettingParseResult =
+  | { ok: true; value: SettingJsonValue }
+  | { ok: false; message: string };
+
+export function parseSettingValue(key: SettingKey, value: unknown): SettingParseResult {
+  const result = SETTING_VALUE_SCHEMAS[key].safeParse(value);
+  if (result.success) return { ok: true, value: result.data };
+  return { ok: false, message: result.error.issues[0]?.message ?? 'Valeur invalide' };
+}
+
+/** The defaults in their stored form: what a fresh seed writes. */
+export function defaultSettingValues(): Record<SettingKey, SettingJsonValue> {
+  const d = DEFAULT_SETTINGS;
+  return {
+    [SettingKey.DELIVERY_FEE_MILLIMES]: d.deliveryFeeMillimes.toString(),
+    [SettingKey.RETURN_FEE_MILLIMES]: d.returnFeeMillimes.toString(),
+    [SettingKey.CHANGE_CLIENT_FEE_MILLIMES]: d.changeClientFeeMillimes.toString(),
+    [SettingKey.PICKUP_FEE_MILLIMES]: d.pickupFeeMillimes.toString(),
+    [SettingKey.COURIER_RATE_PER_PARCEL_MILLIMES]: d.courierRatePerParcelMillimes.toString(),
+    [SettingKey.PICKUP_FREE_THRESHOLD]: d.pickupFreeThreshold,
+    [SettingKey.RETENUE_RATE_BPS]: d.retenueRateBps,
+    [SettingKey.VERIFY_DEADLINE_HOURS]: d.verifyDeadlineHours,
+    [SettingKey.MAX_DELIVERY_ATTEMPTS]: d.maxDeliveryAttempts,
+    [SettingKey.MAX_CLIENT_CHANGES_PER_PARCEL]: d.maxClientChangesPerParcel,
+    [SettingKey.SCAN_CANCEL_WINDOW_SECONDS]: d.scanCancelWindowSeconds,
+    [SettingKey.CLOCK_SKEW_FLAG_MINUTES]: d.clockSkewFlagMinutes,
+    [SettingKey.COURIER_MIN_APP_VERSION]: d.courierMinAppVersion,
+    [SettingKey.CONTACT_LINKS]: { ...DEFAULT_CONTACT_LINKS },
+  };
+}
+
+/**
+ * Reads the `settings` rows back into typed values. A key that is missing or
+ * unreadable takes its default, so a half-seeded database still runs; the
+ * seed and the Paramètres screen are what keep the table complete.
+ */
+export function readPlatformSettings(stored: Readonly<Record<string, unknown>>): {
+  settings: PlatformSettings;
+  contactLinks: ContactLinks;
+} {
+  const money = (key: SettingKey, fallback: Millimes): Millimes => {
+    const value = stored[key];
+    if (typeof value !== 'string' && typeof value !== 'number') return fallback;
+    try {
+      const amount = millimesFromJson(value);
+      return amount >= 0n ? amount : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+  const whole = (key: SettingKey, fallback: number): number => {
+    const value = stored[key];
+    return typeof value === 'number' && Number.isSafeInteger(value) ? value : fallback;
+  };
+  const d = DEFAULT_SETTINGS;
+  const version = stored[SettingKey.COURIER_MIN_APP_VERSION];
+  const links = stored[SettingKey.CONTACT_LINKS];
+
+  return {
+    settings: {
+      deliveryFeeMillimes: money(SettingKey.DELIVERY_FEE_MILLIMES, d.deliveryFeeMillimes),
+      returnFeeMillimes: money(SettingKey.RETURN_FEE_MILLIMES, d.returnFeeMillimes),
+      changeClientFeeMillimes: money(
+        SettingKey.CHANGE_CLIENT_FEE_MILLIMES,
+        d.changeClientFeeMillimes,
+      ),
+      pickupFeeMillimes: money(SettingKey.PICKUP_FEE_MILLIMES, d.pickupFeeMillimes),
+      pickupFreeThreshold: whole(SettingKey.PICKUP_FREE_THRESHOLD, d.pickupFreeThreshold),
+      retenueRateBps: whole(SettingKey.RETENUE_RATE_BPS, d.retenueRateBps),
+      courierRatePerParcelMillimes: money(
+        SettingKey.COURIER_RATE_PER_PARCEL_MILLIMES,
+        d.courierRatePerParcelMillimes,
+      ),
+      verifyDeadlineHours: whole(SettingKey.VERIFY_DEADLINE_HOURS, d.verifyDeadlineHours),
+      maxDeliveryAttempts: whole(SettingKey.MAX_DELIVERY_ATTEMPTS, d.maxDeliveryAttempts),
+      maxClientChangesPerParcel: whole(
+        SettingKey.MAX_CLIENT_CHANGES_PER_PARCEL,
+        d.maxClientChangesPerParcel,
+      ),
+      scanCancelWindowSeconds: whole(
+        SettingKey.SCAN_CANCEL_WINDOW_SECONDS,
+        d.scanCancelWindowSeconds,
+      ),
+      clockSkewFlagMinutes: whole(SettingKey.CLOCK_SKEW_FLAG_MINUTES, d.clockSkewFlagMinutes),
+      courierMinAppVersion: typeof version === 'string' ? version : d.courierMinAppVersion,
+    },
+    contactLinks: {
+      ...DEFAULT_CONTACT_LINKS,
+      ...(links && typeof links === 'object' ? (links as Partial<ContactLinks>) : {}),
+    },
+  };
+}

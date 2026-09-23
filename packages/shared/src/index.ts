@@ -11,6 +11,7 @@ export * from './statuses.js';
 export * from './settings.js';
 export * from './codes.js';
 export * from './geo.js';
+export * from './localites.js';
 export * from './chat.js';
 export * from './fees.js';
 export * from './parcel-state-machine.js';

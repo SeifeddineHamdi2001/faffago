@@ -47,7 +47,8 @@ export const createParcelSchema = z.object({
   recipientName: z.string().trim().min(2, 'Nom du destinataire obligatoire').max(120),
   recipientPhone: tunisianPhone,
   recipientPhone2: tunisianPhone.optional().nullable(),
-  delegationId: z.string().uuid('Délégation obligatoire'),
+  /** The délégation always comes from the localité, never entered separately (D-17). */
+  localiteId: z.string().uuid('Localité obligatoire'),
   address: z.string().trim().min(5, 'Adresse obligatoire').max(500),
   /** Kept separate from the address so the courier screen can show it large (A-21). */
   landmark: z.string().trim().max(200).optional().nullable(),
@@ -64,16 +65,18 @@ export type CreateParcelValues = z.output<typeof createParcelSchema>;
 /**
  * One CSV row (Vendeur 4.3).
  *
- * The délégation may be given by code, by its French name or by its Arabic
- * name; names repeat across gouvernorats, so a name must come with its
- * gouvernorat (Q5, still open — this is the rule I proposed).
+ * The localité is given by its name or an alias; the délégation (code or name)
+ * and the gouvernorat are only needed to settle a name found in several
+ * places. `resolveLocalite` decides, and a row it cannot settle is an error the
+ * seller fixes in the preview (D-17, refining Q5).
  */
 export const csvParcelRowSchema = z.object({
   nom_destinataire: z.string().trim().min(2),
   telephone: tunisianPhone,
   telephone_2: z.string().trim().optional(),
   gouvernorat: z.string().trim().optional(),
-  delegation: z.string().trim().min(1),
+  delegation: z.string().trim().optional(),
+  localite: z.string().trim().optional(),
   adresse: z.string().trim().min(5),
   repere: z.string().trim().optional(),
   description_produit: z.string().trim().min(2),
@@ -90,6 +93,7 @@ export const CSV_TEMPLATE_COLUMNS = [
   'telephone_2',
   'gouvernorat',
   'delegation',
+  'localite',
   'adresse',
   'repere',
   'description_produit',
@@ -132,3 +136,42 @@ export const scanEnvelopeSchema = z.object({
   appVersion: z.string().max(20),
   manualEntry: z.boolean().default(false),
 });
+
+// ── Paramètres › Localités (Admin 4.16, D-17) ─────────────────
+
+const postalCode = z
+  .string()
+  .trim()
+  .regex(/^\d{4}$/, 'Code postal à 4 chiffres');
+
+const aliases = z
+  .array(z.string().trim().min(1).max(120))
+  .max(30)
+  .transform((values) => [...new Set(values)]);
+
+export const createLocaliteSchema = z.object({
+  delegationId: z.string().uuid('Délégation obligatoire'),
+  nameFr: z.string().trim().min(2, 'Nom obligatoire').max(120),
+  nameAr: z.string().trim().max(120).optional().nullable(),
+  postalCode: postalCode.optional().nullable(),
+  aliases: aliases.default([]),
+});
+export type CreateLocaliteValues = z.output<typeof createLocaliteSchema>;
+
+/** Rename, fill the Arabic name, change aliases, deactivate or reactivate. */
+export const updateLocaliteSchema = z
+  .object({
+    nameFr: z.string().trim().min(2, 'Nom obligatoire').max(120),
+    /** Null or empty clears it: the French name is shown instead. */
+    nameAr: z.string().trim().max(120).nullable(),
+    postalCode: postalCode.nullable(),
+    aliases,
+    isActive: z.boolean(),
+  })
+  .partial()
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, 'Aucune modification');
+export type UpdateLocaliteValues = z.output<typeof updateLocaliteSchema>;
+
+/** Paramètres: one setting at a time; the value is checked per key in settings.ts. */
+export const updateSettingSchema = z.object({ value: z.unknown() }).strict();
