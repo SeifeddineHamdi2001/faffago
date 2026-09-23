@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma, Role } from '@prisma/client';
 import { CLOCK, type Clock } from '../common/clock';
 
-/** Actions written by the auth and account work (Journal d'audit, Admin 4.17). */
+/** Actions written to the Journal d'audit (Admin 4.17). */
 export const AuditAction = {
   CREATION_COMPTE: 'CREATION_COMPTE',
   REGENERATION_MOT_DE_PASSE: 'REGENERATION_MOT_DE_PASSE',
@@ -12,6 +12,11 @@ export const AuditAction = {
   REACTIVATION_COMPTE: 'REACTIVATION_COMPTE',
   VOIR_COMME_VENDEUR_DEBUT: 'VOIR_COMME_VENDEUR_DEBUT',
   VOIR_COMME_VENDEUR_FIN: 'VOIR_COMME_VENDEUR_FIN',
+  /** Paramètres (Admin 4.16, D-20): one entry per changed setting. */
+  MODIFICATION_PARAMETRE: 'MODIFICATION_PARAMETRE',
+  /** Paramètres › Localités (D-17). */
+  CREATION_LOCALITE: 'CREATION_LOCALITE',
+  MODIFICATION_LOCALITE: 'MODIFICATION_LOCALITE',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 

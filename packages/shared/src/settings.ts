@@ -176,7 +176,14 @@ export function parseSettingValue(key: SettingKey, value: unknown): SettingParse
 
 /** The defaults in their stored form: what a fresh seed writes. */
 export function defaultSettingValues(): Record<SettingKey, SettingJsonValue> {
-  const d = DEFAULT_SETTINGS;
+  return settingValuesOf(DEFAULT_SETTINGS, DEFAULT_CONTACT_LINKS);
+}
+
+/** Typed settings back to their stored form, money as digit strings (D-20). */
+export function settingValuesOf(
+  d: PlatformSettings,
+  contactLinks: ContactLinks,
+): Record<SettingKey, SettingJsonValue> {
   return {
     [SettingKey.DELIVERY_FEE_MILLIMES]: d.deliveryFeeMillimes.toString(),
     [SettingKey.RETURN_FEE_MILLIMES]: d.returnFeeMillimes.toString(),
@@ -191,7 +198,7 @@ export function defaultSettingValues(): Record<SettingKey, SettingJsonValue> {
     [SettingKey.SCAN_CANCEL_WINDOW_SECONDS]: d.scanCancelWindowSeconds,
     [SettingKey.CLOCK_SKEW_FLAG_MINUTES]: d.clockSkewFlagMinutes,
     [SettingKey.COURIER_MIN_APP_VERSION]: d.courierMinAppVersion,
-    [SettingKey.CONTACT_LINKS]: { ...DEFAULT_CONTACT_LINKS },
+    [SettingKey.CONTACT_LINKS]: { ...contactLinks },
   };
 }
 
