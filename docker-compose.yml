@@ -21,12 +21,12 @@ services:
       # Tunisian collation for ORDER BY on French names.
       LANG: fr_FR.utf8
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - faffago-pgdata:/var/lib/postgresql/data
       - ./scripts/db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U faffago_owner -d faffago"]
+      test: ['CMD-SHELL', 'pg_isready -U faffago_owner -d faffago']
       interval: 5s
       timeout: 5s
       retries: 10

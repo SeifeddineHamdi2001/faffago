@@ -12,8 +12,8 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,prisma}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,prisma}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,prisma,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,prisma,yml,yaml}\""
   },
   "devDependencies": {
     "prettier": "^3.4.2",

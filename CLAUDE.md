@@ -71,7 +71,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 4. Run the tests, lint and type checks before saying a task is done.
 5. At the end of each task, update `docs/PROGRESS.md` (what was done, decisions made, open questions).
 6. Database changes only through Prisma migrations. Never edit a migration that has already been applied.
-7. One branch per phase (`phase-1-auth`, `phase-2-…`). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck` and `pnpm test` pass through turbo from the root.
+7. One branch per phase (`phase-1-auth`, `phase-2-…`). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck` and `pnpm test` pass through turbo from the root. After every merge into `main`, push `main` to `origin`.
 8. Never commit when lint, typecheck or tests fail. Commit only after the checks pass, chaining the commands with `&&` so that a failure stops the chain before `git commit`.
 
 ## Commands

@@ -416,6 +416,11 @@ only, no HTTP endpoint (D-22).
 - 2026-09-24 — **README** phase numbers corrected (web from phase 1, courier
   app phase 6).
 
+- 2026-09-24 — **Phase 4 housekeeping**: `pnpm-lock.yaml` goes in
+  `.prettierignore` (pnpm writes it), `docker-compose.yml` and
+  `pnpm-workspace.yaml` formatted, and `pnpm format` now covers yaml too.
+  CLAUDE.md, How to work, 7: push `main` to `origin` after every merge.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
