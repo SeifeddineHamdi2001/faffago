@@ -1,0 +1,54 @@
+@import 'tailwindcss';
+
+/*
+ * Faffa Go brand (landing.md, Design): orange #FF6B35, navy #1A1B2E.
+ * White text on #FF6B35 is 2.9:1, below WCAG AA, so orange surfaces carry
+ * navy text (5.9:1), and orange-dark is the orange used for text on white.
+ */
+@theme {
+  --color-orange: #ff6b35;
+  --color-orange-dark: #b3441a;
+  --color-navy: #1a1b2e;
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-manrope), system-ui, sans-serif;
+  --font-arabic: var(--font-arabic-face), system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-navy antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-orange-dark;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg bg-orange px-4 py-2 font-semibold text-navy hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-navy/20 bg-white px-4 py-2 font-semibold text-navy hover:bg-navy/5 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .field-label {
+    @apply mb-1 block text-sm font-semibold text-navy;
+  }
+  .field {
+    @apply min-h-11 w-full rounded-lg border border-navy/20 bg-white px-3 py-2 text-navy;
+  }
+  .card {
+    @apply rounded-xl border border-navy/10 bg-white p-4 shadow-sm;
+  }
+  .badge-ok {
+    @apply rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800;
+  }
+  .badge-muted {
+    @apply rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700;
+  }
+  .badge-warn {
+    @apply rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900;
+  }
+}

@@ -3,18 +3,40 @@
   "version": "0.0.0",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
-    "build": "echo \"apps/web est créé en phase 3 (docs/PROGRESS.md)\"",
-    "dev": "echo \"apps/web est créé en phase 3 (docs/PROGRESS.md)\"",
-    "test": "echo \"aucun test pour l'instant\"",
-    "lint": "echo \"aucun code pour l'instant\"",
-    "typecheck": "echo \"aucun code pour l'instant\""
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@faffago/shared": "workspace:*"
+    "@faffago/shared": "workspace:*",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@faffago/config": "workspace:*",
-    "typescript": "^5.7.3"
+    "@next/eslint-plugin-next": "^15.5.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.0",
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5",
+    "jsdom": "^25.0.1",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
   }
 }

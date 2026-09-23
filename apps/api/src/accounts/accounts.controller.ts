@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import {
   Permission,
   createCourierAccountSchema,
@@ -19,6 +19,18 @@ import { AccountsService } from './accounts.service';
 @Controller('accounts')
 export class AccountsController {
   constructor(private readonly accounts: AccountsService) {}
+
+  @Get('staff')
+  @RequirePermission(Permission.COMPTES_STAFF)
+  listStaff() {
+    return this.accounts.listStaff();
+  }
+
+  @Get('couriers')
+  @RequirePermission(Permission.COURSIERS_LECTURE)
+  listCouriers(@CurrentPrincipal() principal: Principal) {
+    return this.accounts.listCouriers(principal.role);
+  }
 
   /** Paramètres › Staff users (Admin 4.16). */
   @Post('staff')

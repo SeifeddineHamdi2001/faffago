@@ -164,7 +164,7 @@ export const username = z
   .toLowerCase()
   .regex(/^[a-z0-9._-]{4,32}$/, 'Identifiant : 4 caractères minimum, a-z 0-9 . _ -');
 
-const personName = z.string().trim().min(1).max(80);
+const personName = z.string().trim().min(1, 'Obligatoire').max(80, '80 caractères maximum');
 
 export const createStaffAccountSchema = z.object({
   role: z.enum([Role.ADMIN, Role.DEPOT, Role.SERVICE_CLIENT]),
@@ -181,7 +181,7 @@ export const createCourierAccountSchema = z
     phone: tunisianPhone,
     firstName: personName,
     lastName: personName,
-    cin: z.string().trim().min(1).max(20),
+    cin: z.string().trim().min(1, 'CIN obligatoire').max(20, '20 caractères maximum'),
     vehicle: z.string().trim().max(80).optional().nullable(),
     payPlan: z.nativeEnum(PayPlan).optional().nullable(),
     langue: z.enum(['FR', 'AR']).optional(),

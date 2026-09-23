@@ -57,6 +57,8 @@ const ADMIN_SECTION_2: [PermissionT, 'Oui' | '—', 'Oui' | '—', 'Oui' | '—'
   [Permission.VENDEURS_LECTURE, 'Oui', 'Oui', 'Oui'],
   // CIN / patente documents: admin only (CLAUDE.md, Security)
   [Permission.VENDEURS_DOCUMENTS, 'Oui', '—', '—'],
+  // The seller's email, his login identifier: admin only (D-11)
+  [Permission.VENDEURS_EMAIL, 'Oui', '—', '—'],
   // Coursiers: name, phone, zone and today's parcels only
   [Permission.COURSIERS_LECTURE, 'Oui', 'Oui', 'Oui'],
 ];
@@ -91,6 +93,7 @@ describe('permission matrix — outside the Admin 2 table', () => {
       Permission.PARAMETRES,
       Permission.FORCER_STATUT,
       Permission.VENDEURS_DOCUMENTS,
+      Permission.VENDEURS_EMAIL,
       Permission.JOURNAL_AUDIT,
     ]) {
       expect(ROLES_BY_PERMISSION[permission]).toEqual([Role.ADMIN]);

@@ -12,7 +12,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 
 ## Phase 1 — Auth and permissions
 
-The API side is done. The screens come with the web and courier app scaffolding.
+Done: API and web. Ready to merge into `main` once reviewed.
 
 - [x] Permission matrix from Admin 2, encoded in packages/shared and tested
       (`permissions.ts`: the test copies the spec table row by row)
@@ -25,13 +25,22 @@ The API side is done. The screens come with the web and courier app scaffolding.
 - [x] Voir comme le vendeur: read-only, 30 min, audited (D-5)
 - [x] Minimum courier app version enforced by the API; outdated apps reach the
       scan upload only (D-14)
-- [x] Screen access for Dépôt and Service client in the matrix (D-11, Admin v1.11)
+- [x] Screen access for Dépôt and Service client in the matrix (D-11, Admin v1.11);
+      the seller's email is admin-only
 - [x] Désactiver un coursier: new work stops at once, refused while work is open
       (D-12). The caisse, payslip and debt checks are `it.todo` until phase 7
-- [x] Refresh token grace window, 10 s (D-13, server side)
-- [ ] Web screens: the three login pages, account creation with "Copier les
-      identifiants", Régénérer le mot de passe, deactivation screens,
-      impersonation banner; one refresh shared across tabs (D-13, web side)
+- [x] Refresh token grace window, 10 s (D-13)
+- [x] List endpoints: `GET /accounts/staff`, `GET /accounts/couriers`,
+      `GET /sellers`, each narrowed by role
+- [x] `db:seed:demo`: demo accounts, development only (D-16)
+- [x] apps/web scaffolded: Next.js 15, Tailwind with the brand tokens, `/fr` and
+      `/ar` with RTL from the first commit
+- [x] Web sessions: tokens in httpOnly cookies, middleware refresh, Origin check,
+      one refresh across tabs (D-13 web side, D-15)
+- [x] Web screens: the two logins (`/vendeur/connexion`, `/admin/connexion`),
+      Coursiers, Vendeurs, Paramètres › Utilisateurs, "Copier les
+      identifiants", Régénérer le mot de passe, Désactiver / Réactiver with the
+      blocker list, Voir comme le vendeur with its banner
 - [ ] Courier login screen with role choice — phase 5
 
 ## Phase 2 — Parcel core
@@ -50,6 +59,9 @@ The API side is done. The screens come with the web and courier app scaffolding.
 - [ ] Labels PDF (Code128 + QR; thermal and A4)
 - [ ] Mes colis + Détail du colis
 - [ ] Ramassage requests + pickup address at first request
+- [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
+      the seller logs in → creates a parcel. Covers the phase 1 screens too
+      (logins, Copier les identifiants, Voir comme le vendeur)
 
 ## Phase 4 — Back office operations
 
@@ -248,6 +260,25 @@ The API side is done. The screens come with the web and courier app scaffolding.
   `corepack enable` cannot write to `D:\Program Files\Node` without admin
   rights.
 
+- 2026-09-25 — **One branch per phase**, merged into `main` when the phase is
+  complete and green through turbo (CLAUDE.md, How to work, 7).
+- 2026-09-25 — **The seller's email is admin-only** (`VENDEURS_EMAIL`, D-11).
+- 2026-09-25 — **The Coursiers list shows Dépôt and Service client the active
+  couriers only.** The admin sees every account. Today's parcels join the list
+  with the Tournées (phase 4).
+- 2026-09-25 — **Web sessions (D-15):** the browser never holds a token. Route
+  handlers keep them in httpOnly cookies; the middleware refreshes; back office
+  calls go through an allowlisted `/api/bff`; "Voir comme le vendeur" has its
+  own cookie. Next.js 15 (the approved plan) rather than 16.
+- 2026-09-25 — **Orange buttons carry navy text.** White on #FF6B35 is 2.9:1,
+  below WCAG AA; navy on orange is 5.9:1. `orange-dark` (#B3441A) is the orange
+  used for text on white.
+- 2026-09-25 — **Verified end to end** before commit: the built API on PGlite
+  behind `next start`, driven with curl — login, cookies, middleware refresh,
+  courier creation, cross-origin refusal, Dépôt's narrowed views, Voir comme le
+  vendeur and its exit, logout, `/ar` in RTL. Playwright replaces this in
+  phase 3.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -259,11 +290,13 @@ The API side is done. The screens come with the web and courier app scaffolding.
   shows them to customers.
 - Delivery fee, return fee and courier rate are seeded at 0 because no spec
   gives a value. They must be set in Paramètres before the first parcel.
-- **Courier deactivation texts** (TO CONFIRM): the refusal message and the
-  blocker labels ("2 colis en main", "1 bon de retour en route"…) in
-  `packages/shared/src/accounts.ts`.
+- **UI texts not worded by the specs** (TO CONFIRM): the courier deactivation
+  refusal and its blocker labels (`packages/shared/src/accounts.ts`); on the web,
+  "Mot de passe généré", "Ce mot de passe ne sera plus affiché…", "J'ai noté le
+  mot de passe", the confirmation texts of Régénérer and Désactiver, "Remplissez
+  les deux champs.", "Mot de passe oublié ? Contactez Faffa Go…", and the
+  placeholder home and Tableau de bord texts.
+- **Arabic on the public placeholder**: "تسجيل الدخول" (Se connecter) waits for
+  a native speaker, with the rest of the public site (phase 8).
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 5 implementation.
-- D-6 splits a row of `docs/landing.md` 4.2: Relancé now maps to two public
-  labels depending on who asked for the delay. The spec has not been amended
-  yet — say the word and I will bump it to v1.2.

@@ -89,6 +89,7 @@ Per workspace:
 - Apply migrations: `pnpm --filter @faffago/api prisma:deploy`
 - Prisma client: `pnpm --filter @faffago/api prisma:generate`
 - Seed (idempotent): `pnpm --filter @faffago/api db:seed`
+- Demo accounts, development only (never in production, never by the normal seed): `pnpm --filter @faffago/api db:seed:demo`
 
 Notes:
 

@@ -54,6 +54,8 @@ export const Permission = {
   VENDEURS_LECTURE: 'VENDEURS_LECTURE',
   /** CIN / patente / auto-entrepreneur documents (CLAUDE.md, Security). */
   VENDEURS_DOCUMENTS: 'VENDEURS_DOCUMENTS',
+  /** The seller's email, which is his login identifier (D-11). */
+  VENDEURS_EMAIL: 'VENDEURS_EMAIL',
   /** Coursiers: name, phone, zone, today's parcels. Pay and debts need PAIE_COURSIERS. */
   COURSIERS_LECTURE: 'COURSIERS_LECTURE',
 
@@ -103,6 +105,7 @@ export const ROLES_BY_PERMISSION: Readonly<Record<Permission, readonly Role[]>> 
   JOURNAL_AUDIT: frozen([ADMIN]),
   VENDEURS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
   VENDEURS_DOCUMENTS: frozen([ADMIN]),
+  VENDEURS_EMAIL: frozen([ADMIN]),
   COURSIERS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
 
   REIMPRIMER_ETIQUETTE: frozen([ADMIN, DEPOT]),

@@ -5,8 +5,10 @@ import {
   AuthErrorCode,
   COURIER_DEACTIVATION_REFUSED,
   COURIER_ROLES,
+  Permission,
   Role,
   STAFF_ROLES,
+  can,
   type CreateCourierAccountValues,
   type CreateStaffAccountValues,
 } from '@faffago/shared';
@@ -78,6 +80,55 @@ export class AccountsService {
     private readonly audit: AuditService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
+
+  /** Paramètres › Utilisateurs. Admin only, by the route's permission. */
+  async listStaff(): Promise<(AccountView & { lastLoginAt: Date | null })[]> {
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: [...STAFF_ROLES] } },
+      orderBy: [{ role: 'asc' }, { username: 'asc' }],
+    });
+    return users.map((user) => ({ ...view(user), lastLoginAt: user.lastLoginAt }));
+  }
+
+  /**
+   * Coursiers (D-11). Dépôt and Service client read name, phone, role and
+   * zones of the active couriers; the admin also reads the account (state,
+   * CIN, vehicle) and, with PAIE_COURSIERS, the pay plan. Today's parcels
+   * join the list with the Tournées in phase 4.
+   */
+  async listCouriers(role: Role): Promise<Record<string, unknown>[]> {
+    const withAccount = can(role, Permission.GERER_VENDEURS_COURSIERS);
+    const withPay = can(role, Permission.PAIE_COURSIERS);
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: [...COURIER_ROLES] }, ...(withAccount ? {} : { isActive: true }) },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+      include: {
+        courier: { include: { zoneAssignments: { include: { zone: true } } } },
+      },
+    });
+    return users.map((user) => {
+      const courier = user.courier!;
+      const row: Record<string, unknown> = {
+        id: user.id,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        zones: courier.zoneAssignments.map((a) => ({ name: a.zone.name, kind: a.kind })),
+      };
+      if (withAccount) {
+        Object.assign(row, {
+          isActive: user.isActive,
+          acceptsWork: user.acceptsWork,
+          accountState: courier.accountState,
+          cin: courier.cin,
+          vehicle: courier.vehicle,
+        });
+      }
+      if (withPay) row.payPlan = courier.payPlan;
+      return row;
+    });
+  }
 
   async createStaff(
     actor: UserPrincipal,

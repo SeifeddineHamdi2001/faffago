@@ -39,17 +39,17 @@ _**TO CONFIRM** Roles adopted as proposed during the discussion._
 
 Screen access (v1.11, decision D-11). Reading a screen never grants its actions: each role acts only with the rights above.
 
-| Screen          | Admin   | Dépôt                              | Service client                         |
-| --------------- | ------- | ---------------------------------- | -------------------------------------- |
-| Aujourd'hui     | **Oui** | Figures of its own work            | Figures of its own work                |
-| Colis           | **Oui** | Read, Réimprimer l'étiquette       | Read, log calls, apply change requests |
-| Exceptions      | **Oui** | Read                               | Read                                   |
-| Retours         | **Oui** | Read, prepare bons de retour       | Read                                   |
-| Journal d'audit | **Oui** | —                                  | —                                      |
-| Vendeurs        | **Oui** | Contact info and parcels only      | Contact info and parcels only          |
-| Coursiers       | **Oui** | Name, phone, zone, today's parcels | Name, phone, zone, today's parcels     |
+| Screen          | Admin   | Dépôt                                                 | Service client                                        |
+| --------------- | ------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| Aujourd'hui     | **Oui** | Figures of its own work                               | Figures of its own work                               |
+| Colis           | **Oui** | Read, Réimprimer l'étiquette                          | Read, log calls, apply change requests                |
+| Exceptions      | **Oui** | Read                                                  | Read                                                  |
+| Retours         | **Oui** | Read, prepare bons de retour                          | Read                                                  |
+| Journal d'audit | **Oui** | —                                                     | —                                                     |
+| Vendeurs        | **Oui** | Shop, contact name and phone, parcels (not the email) | Shop, contact name and phone, parcels (not the email) |
+| Coursiers       | **Oui** | Name, phone, zone, today's parcels                    | Name, phone, zone, today's parcels                    |
 
-CIN / patente documents, courier pay and debts, account creation, passwords, suspension and Paramètres stay with the admin.
+The seller's email (his login), CIN / patente documents, courier pay and debts, account creation, passwords, suspension and Paramètres stay with the admin.
 
 ## 3. Navigation
 

@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-14** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-14 are rules |
+| **D-1 … D-16** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-16 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-14**
+**Rules decided during the build — D-4 to D-16**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -43,6 +43,8 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-12 · Deactivating a courier is refused while work is open](#d-12--deactivating-a-courier-is-refused-while-work-is-open)
 - [D-13 · A 10-second grace window on refresh tokens](#d-13--a-10-second-grace-window-on-refresh-tokens)
 - [D-14 · Outdated courier apps reach the scan upload only](#d-14--outdated-courier-apps-reach-the-scan-upload-only)
+- [D-15 · The browser never holds a token](#d-15--the-browser-never-holds-a-token)
+- [D-16 · Demo accounts for development only](#d-16--demo-accounts-for-development-only)
 
 **Money — A-1 to A-5**
 
@@ -289,6 +291,12 @@ stay with the admin alone, like everything else touching money.
 | Vendeurs        | Oui   | Contact info and parcels           | Contact info and parcels               |
 | Coursiers       | Oui   | Name, phone, zone, today's parcels | Name, phone, zone, today's parcels     |
 
+**The seller's email is admin-only.** It is his login identifier, so Dépôt and
+Service client see the shop name, the contact name and the contact phone, and
+nothing else (`VENDEURS_EMAIL`). The Coursiers list shows them the active
+couriers only; the admin also sees deactivated accounts, the CIN, the vehicle
+and, with `PAIE_COURSIERS`, the pay plan.
+
 No role but the admin forces a status. Account creation, passwords,
 suspension, Paramètres, CIN / patente documents, courier pay and debts stay
 with the admin.
@@ -347,6 +355,46 @@ the one route marked `@AllowOutdatedCourierApp` (phase 5); every other courier
 route, the login and the refresh included, refuses a version below the
 minimum set in Paramètres. A test fails if the marker appears on any other
 route.
+
+### D-15 · The browser never holds a token
+
+The web app (Next.js) is the only client of the API from the browser side:
+
+- The login, refresh and logout route handlers keep the access and refresh
+  tokens in **httpOnly**, `SameSite=Lax` cookies (`Secure` in production). The
+  page can read only `fg_exp`, the access token's expiry.
+- The **middleware** refreshes the access token before a page or a back office
+  call runs, and hands the new one to the page it lets through. A refused
+  refresh (idle staff, regenerated password, deactivation) clears the cookies
+  and opens the area's login page with "Session expirée".
+- The back office's calls go through `/api/bff/…`, an allowlist of API paths
+  (`accounts`, `sellers`), with the admin's own token. Every write checks the
+  **Origin** header.
+- "Voir comme le vendeur" keeps its token in its **own cookie**: the seller
+  space reads with it, the back office never does, so the admin's tab keeps
+  working while he looks.
+- **One refresh across tabs (D-13, web side):** before a back office call, a tab
+  takes a `navigator.locks` lock, re-reads `fg_exp` and refreshes only if it is
+  still stale. On the server, concurrent refreshes of one token share one call.
+- The Next.js server forwards the browser's `X-Forwarded-For` and user agent,
+  so the API's login throttling (D-6) and audit entries see the real client.
+  The reverse proxy must set those headers from the connection.
+
+The API still checks the role on every call; the web app only routes.
+
+**Where.** `apps/web/src/middleware.ts`, `apps/web/src/app/api/`,
+`apps/web/src/lib/`.
+
+### D-16 · Demo accounts for development only
+
+`pnpm --filter @faffago/api db:seed:demo` creates a seller "Boutique Démo", a
+Dépôt `demo.depot`, a Service client `demo.sc`, a livreur and a ramasseur, and
+prints their passwords once, like `admin:reset`. It **refuses to run when
+`NODE_ENV=production`**, needs the first admin from the normal seed, never
+changes an existing password, and is never run by `db:seed` or
+`prisma:deploy`. Tests hold all of this.
+
+**Where.** `apps/api/prisma/seed-demo.ts`, `apps/api/test/seed-demo.spec.ts`.
 
 ---
 
