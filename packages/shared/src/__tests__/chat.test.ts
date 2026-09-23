@@ -42,9 +42,7 @@ describe('chatStateFor (Q15)', () => {
 
   it('locks it when the parcel is scanned back at the depot', () => {
     expect(
-      chatStateFor(
-        parcel({ status: ParcelStatus.A_VERIFIER, location: ParcelLocation.AU_DEPOT }),
-      ),
+      chatStateFor(parcel({ status: ParcelStatus.A_VERIFIER, location: ParcelLocation.AU_DEPOT })),
     ).toBe(ChatThreadState.VERROUILLE);
   });
 

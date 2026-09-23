@@ -49,9 +49,10 @@ beforeAll(async () => {
      values ($1,$2,'Boutique','Mode','Saif B','20123456','CIN_UNIQUEMENT',$2,now())`,
     [SELLER_ID, USER_ID],
   );
-  await db.query(`insert into gouvernorats (id,code,"nameFr","nameAr") values ($1,'TUN','Tunis','تونس')`, [
-    GOUVERNORAT_ID,
-  ]);
+  await db.query(
+    `insert into gouvernorats (id,code,"nameFr","nameAr") values ($1,'TUN','Tunis','تونس')`,
+    [GOUVERNORAT_ID],
+  );
   await db.query(
     `insert into delegations (id,"gouvernoratId",code,"nameFr","nameAr")
      values ($1,$2,'TUN-BARDO','Le Bardo','باردو')`,
@@ -231,14 +232,17 @@ describe('money', () => {
   });
 
   it('refuses a bon de versement whose net is zero (A-2)', async () => {
-    await expect(insertBonVersement('BV-2026-0921-01', `5000,5000,0,'PATENTE',0,0,0`)).rejects.toThrow(
-      /net_positive/,
-    );
+    await expect(
+      insertBonVersement('BV-2026-0921-01', `5000,5000,0,'PATENTE',0,0,0`),
+    ).rejects.toThrow(/net_positive/);
   });
 
   it('refuses a bon whose net does not match its own lines', async () => {
     await expect(
-      insertBonVersement('BV-2026-0921-02', `1000000,84000,916000,'CIN_UNIQUEMENT',300,27480,999999`),
+      insertBonVersement(
+        'BV-2026-0921-02',
+        `1000000,84000,916000,'CIN_UNIQUEMENT',300,27480,999999`,
+      ),
     ).rejects.toThrow(/net_positive/);
   });
 
@@ -250,7 +254,10 @@ describe('money', () => {
 
   it('accepts the worked example of Vendeur 2.4', async () => {
     await expect(
-      insertBonVersement('BV-2026-0921-04', `1000000,84000,916000,'CIN_UNIQUEMENT',300,27480,888520`),
+      insertBonVersement(
+        'BV-2026-0921-04',
+        `1000000,84000,916000,'CIN_UNIQUEMENT',300,27480,888520`,
+      ),
     ).resolves.toBeDefined();
   });
 

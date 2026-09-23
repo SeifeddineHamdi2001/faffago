@@ -121,7 +121,10 @@ describe('resolveDelegation (Q5)', () => {
   });
 
   it('refuses a name that does not belong to the gouvernorat given', () => {
-    const result = resolveDelegation({ delegation: 'Le Bardo', gouvernorat: 'Ben Arous' }, DELEGATIONS);
+    const result = resolveDelegation(
+      { delegation: 'Le Bardo', gouvernorat: 'Ben Arous' },
+      DELEGATIONS,
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toBe(DelegationLookupError.INTROUVABLE);
   });

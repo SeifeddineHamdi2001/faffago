@@ -74,7 +74,7 @@ async function main(): Promise<void> {
   ]);
 
   console.log('\n─────────────────────────────────────────────');
-  console.log("  Mot de passe régénéré. Il ne sera plus affiché.");
+  console.log('  Mot de passe régénéré. Il ne sera plus affiché.');
   console.log(`  Identifiant : ${username}`);
   console.log(`  Mot de passe : ${password}`);
   console.log('  Toutes les sessions de ce compte ont été révoquées.');

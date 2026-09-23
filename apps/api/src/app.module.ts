@@ -9,9 +9,6 @@ import { PrismaModule } from './common/prisma/prisma.module';
  * notifications, reports, audit, settings, public.
  */
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env'] }),
-    PrismaModule,
-  ],
+  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env'] }), PrismaModule],
 })
 export class AppModule {}

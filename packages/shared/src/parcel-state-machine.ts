@@ -1,10 +1,5 @@
 import { Role, SYSTEM_ACTOR, type Actor } from './roles.js';
-import {
-  ParcelCashStatus,
-  ParcelLocation,
-  ParcelStatus,
-  type FailureReason,
-} from './statuses.js';
+import { ParcelCashStatus, ParcelLocation, ParcelStatus, type FailureReason } from './statuses.js';
 
 /**
  * The parcel state machine.
@@ -239,12 +234,7 @@ export function applyParcelAction(
         ok: true,
         next: parcel,
         events: [
-          event(
-            ParcelEventType.MODIFICATION_VENDEUR,
-            parcel,
-            parcel.status,
-            parcel.location,
-          ),
+          event(ParcelEventType.MODIFICATION_VENDEUR, parcel, parcel.status, parcel.location),
         ],
       };
     }
@@ -305,10 +295,7 @@ export function applyParcelAction(
 
     // ── Dispatch ─────────────────────────────────────────────
     case ParcelAction.SCAN_SORTIE_COURSIER: {
-      const dispatchable: readonly ParcelStatus[] = [
-        ParcelStatus.AU_DEPOT,
-        ParcelStatus.RELANCE,
-      ];
+      const dispatchable: readonly ParcelStatus[] = [ParcelStatus.AU_DEPOT, ParcelStatus.RELANCE];
       if (!dispatchable.includes(parcel.status)) return refuseByStatus(parcel);
       if (parcel.location !== ParcelLocation.AU_DEPOT) {
         return refuse(ScanRefusal.COLIS_PAS_AU_DEPOT);
@@ -475,13 +462,9 @@ export function applyParcelAction(
         ok: true,
         next: { ...parcel, location: ParcelLocation.AU_DEPOT },
         events: [
-          event(
-            ParcelEventType.RETOUR_DE_TOURNEE,
-            parcel,
-            parcel.status,
-            ParcelLocation.AU_DEPOT,
-            [ParcelEffect.VERROUILLER_CHAT],
-          ),
+          event(ParcelEventType.RETOUR_DE_TOURNEE, parcel, parcel.status, ParcelLocation.AU_DEPOT, [
+            ParcelEffect.VERROUILLER_CHAT,
+          ]),
         ],
       };
     }
@@ -498,13 +481,9 @@ export function applyParcelAction(
         ok: true,
         next: { ...parcel, status: ParcelStatus.RELANCE },
         events: [
-          event(
-            ParcelEventType.DECISION_RELANCER,
-            parcel,
-            ParcelStatus.RELANCE,
-            parcel.location,
-            [ParcelEffect.ARRETER_DELAI_VERIFICATION],
-          ),
+          event(ParcelEventType.DECISION_RELANCER, parcel, ParcelStatus.RELANCE, parcel.location, [
+            ParcelEffect.ARRETER_DELAI_VERIFICATION,
+          ]),
         ],
       };
     }
@@ -591,14 +570,7 @@ export function applyParcelAction(
       return {
         ok: true,
         next: parcel,
-        events: [
-          event(
-            ParcelEventType.PREPARATION_RETOUR,
-            parcel,
-            parcel.status,
-            parcel.location,
-          ),
-        ],
+        events: [event(ParcelEventType.PREPARATION_RETOUR, parcel, parcel.status, parcel.location)],
       };
     }
 

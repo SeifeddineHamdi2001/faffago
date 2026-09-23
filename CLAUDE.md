@@ -26,6 +26,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 ## Non-negotiable rules
 
 ### Money
+
 - Always integer **millimes** (`BIGINT` / `bigint`). 85,000 DT = `85000`. Change-client fee = `1000`.
 - No floating-point math on money, ever. Format to `85,000 DT` only in the UI via the shared helper.
 - Retenue à la source: 3% of (total COD − Faffa Go fees), rounded to the millime, only for sellers with statut `CIN_UNIQUEMENT`. Computed once per bon and stored.
@@ -34,6 +35,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 - Every financial operation (Caisse closing, bon de versement, bon de retour, pay slip) runs in one database transaction.
 
 ### Parcels and statuses
+
 - Use only the statuses defined in `packages/shared`. Never add, rename or reuse a status without asking.
 - Every status change goes through the parcel event service, which writes an immutable event (who, when, GPS if any, previous → new, reason). Never update a status column directly.
 - `parcel_events` and `audit_log` are append-only.
@@ -41,17 +43,20 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 - Changer de client is only possible when the parcel is at the depot.
 
 ### Scans
+
 - Every scan carries a client-generated UUID with a UNIQUE constraint. Handle duplicates idempotently.
 - A parcel can only be marked Livré by scanning (manual code entry allowed but flagged).
 - Validate every scan server-side against the current parcel state and return a clear reason when refused.
 
 ### Security and privacy
+
 - Role check on every endpoint (NestJS guards). Roles: ADMIN, DEPOT, SERVICE_CLIENT, VENDEUR, LIVREUR, RAMASSEUR.
 - A seller only ever sees his own data. A seller sees only the courier's first name.
 - CIN / patente documents: private storage, admin-only access, never a public URL.
 - Never commit secrets. Use `.env` files (git-ignored) and document variables in `.env.example`.
 
 ### UI
+
 - All user-facing text in French, using the exact labels from the specs. The public site is French + Arabic (right-to-left layout for Arabic). The courier app also supports Arabic (TO CONFIRM).
 - Public tracking never exposes customer name, phone, address, failure reason or internal notes.
 - Courier app: large touch targets (≥ 56 px), main actions at the bottom, works offline.

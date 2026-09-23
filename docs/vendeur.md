@@ -6,16 +6,16 @@
 
 The seller interface is where online sellers create parcels, follow them, act on failed deliveries, talk to the courier about a parcel, and see exactly what money and returns Faffa Go owes them. It is a web application, used on desktop and phone.
 
-| Principle | What it means |
-|---|---|
-| **Accounts are created by Faffa Go.** | There is no public sign-up. The admin creates every seller account. |
-| **Cash only, delivered by the courier.** | Faffa Go prepares each payment; a courier brings the cash with a bon de versement, and the contact person signs it. No bank transfer, no D17, no payout request button. |
-| **Same rates for every seller.** | Delivery fee, return fee and the 1,000 DT change-client fee are identical for all sellers. Sellers registered with CIN only have a 3% retenue à la source withheld on each payment (see 2.4). |
-| **Delivered is not the same as paid.** | Each parcel has a delivery status and, once delivered, a separate cash status. The seller always sees both. |
-| **Payment is per parcel.** | A payment covers a chosen list of parcels. If some cash is still being counted, only those parcels wait; the rest is paid. |
-| **A failure is a question, not a return.** | A failed delivery goes to **À vérifier**. It only becomes a return under the rules in section 6. |
-| **The seller sees only his own data.** | Counts, amounts and lists are always filtered to the seller. Depot-wide figures never appear. |
-| **Courier privacy.** | The seller only ever sees the courier's first name. No phone number, no photo, no surname. |
+| Principle                                  | What it means                                                                                                                                                                                 |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Accounts are created by Faffa Go.**      | There is no public sign-up. The admin creates every seller account.                                                                                                                           |
+| **Cash only, delivered by the courier.**   | Faffa Go prepares each payment; a courier brings the cash with a bon de versement, and the contact person signs it. No bank transfer, no D17, no payout request button.                       |
+| **Same rates for every seller.**           | Delivery fee, return fee and the 1,000 DT change-client fee are identical for all sellers. Sellers registered with CIN only have a 3% retenue à la source withheld on each payment (see 2.4). |
+| **Delivered is not the same as paid.**     | Each parcel has a delivery status and, once delivered, a separate cash status. The seller always sees both.                                                                                   |
+| **Payment is per parcel.**                 | A payment covers a chosen list of parcels. If some cash is still being counted, only those parcels wait; the rest is paid.                                                                    |
+| **A failure is a question, not a return.** | A failed delivery goes to **À vérifier**. It only becomes a return under the rules in section 6.                                                                                              |
+| **The seller sees only his own data.**     | Counts, amounts and lists are always filtered to the seller. Depot-wide figures never appear.                                                                                                 |
+| **Courier privacy.**                       | The seller only ever sees the courier's first name. No phone number, no photo, no surname.                                                                                                    |
 
 ## 2. Access and account
 
@@ -32,14 +32,14 @@ _**Mot de passe oublié** — the seller contacts Faffa Go and the admin regener
 
 The admin creates the account from the back office. The seller only receives a login.
 
-| Information | Entered by | Notes |
-|---|---|---|
-| Shop name, product category, store link (Facebook / Instagram / site) | Admin | Store link is optional but useful to check the seller is real. |
-| Contact person: full name, phone, email | Admin | Email is the login identifier. The phone is how the courier reaches the seller. |
-| Statut: **Patente**, **Auto-entrepreneur** or **CIN uniquement** | Admin | Decides whether the 3% retenue à la source applies (see 2.4). |
-| Documents: CIN (front and back) always; patente or auto-entrepreneur card when applicable | Admin | Uploaded by the admin. Stored privately, visible to admins only. |
-| Rates | — | Not entered per seller. The same rates apply to everyone and are set once in the admin settings. |
-| Pickup address | Seller | Not asked at creation. Filled by the seller at his first pickup request (see 4.5). |
+| Information                                                                               | Entered by | Notes                                                                                            |
+| ----------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------ |
+| Shop name, product category, store link (Facebook / Instagram / site)                     | Admin      | Store link is optional but useful to check the seller is real.                                   |
+| Contact person: full name, phone, email                                                   | Admin      | Email is the login identifier. The phone is how the courier reaches the seller.                  |
+| Statut: **Patente**, **Auto-entrepreneur** or **CIN uniquement**                          | Admin      | Decides whether the 3% retenue à la source applies (see 2.4).                                    |
+| Documents: CIN (front and back) always; patente or auto-entrepreneur card when applicable | Admin      | Uploaded by the admin. Stored privately, visible to admins only.                                 |
+| Rates                                                                                     | —          | Not entered per seller. The same rates apply to everyone and are set once in the admin settings. |
+| Pickup address                                                                            | Seller     | Not asked at creation. Filled by the seller at his first pickup request (see 4.5).               |
 
 ### 2.3 The contact person
 
@@ -47,21 +47,21 @@ The contact person is the person whose CIN (and patente or auto-entrepreneur car
 
 ### 2.4 Seller status and the retenue à la source
 
-| Statut | Documents | Retenue à la source |
-|---|---|---|
-| **Patente** | CIN + patente | None |
-| **Auto-entrepreneur** | CIN + auto-entrepreneur card | None |
-| **CIN uniquement** | CIN only | **3%** of each payment, after Faffa Go fees |
+| Statut                | Documents                    | Retenue à la source                         |
+| --------------------- | ---------------------------- | ------------------------------------------- |
+| **Patente**           | CIN + patente                | None                                        |
+| **Auto-entrepreneur** | CIN + auto-entrepreneur card | None                                        |
+| **CIN uniquement**    | CIN only                     | **3%** of each payment, after Faffa Go fees |
 
 #### How it is calculated in a bon de versement:
 
-| Line | Example |
-|---|---|
-| Total COD of the parcels paid | 1 000,000 DT |
-| − Faffa Go fees (delivery, return, change-client) | − 84,000 DT |
-| = Base after fees | 916,000 DT |
-| − Retenue à la source 3% (CIN uniquement only) | − 27,480 DT |
-| **= Net paid in cash** | **888,520 DT** |
+| Line                                              | Example        |
+| ------------------------------------------------- | -------------- |
+| Total COD of the parcels paid                     | 1 000,000 DT   |
+| − Faffa Go fees (delivery, return, change-client) | − 84,000 DT    |
+| = Base after fees                                 | 916,000 DT     |
+| − Retenue à la source 3% (CIN uniquement only)    | − 27,480 DT    |
+| **= Net paid in cash**                            | **888,520 DT** |
 
 _Amounts are rounded to the millime. If the seller later provides a patente or auto-entrepreneur card, the admin changes his statut and the retenue stops from the next bon._
 
@@ -69,25 +69,25 @@ _Amounts are rounded to the millime. If the seller later provides a patente or a
 
 ### 2.5 Account states
 
-| State | What the seller can do |
-|---|---|
-| **Actif** | Everything in this document. |
+| State        | What the seller can do                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Actif**    | Everything in this document.                                                                                                     |
 | **Suspendu** | Set by the admin. The seller can log in and see his parcels, payments and returns, but cannot create parcels or request pickups. |
 
 ## 3. Navigation
 
 One top bar on desktop, a bottom bar plus menu on phone. The notification bell and the shop name are always visible.
 
-| Menu item | Content | Badge |
-|---|---|---|
-| **Tableau de bord** | Overview of money, parcels and actions to take | — |
-| **Colis** | Mes colis, Créer un colis, Import CSV, Étiquettes | — |
-| **À vérifier** | Failed deliveries waiting for the seller's decision | Count |
-| **Ramassages** | Pickup requests and their history | — |
-| **Paiements** | À recevoir and bons de versement | New bons |
-| **Retours** | Returns at the depot and bons de retour | New bons |
-| **Notifications** (bell) | In-app notifications | Unread count |
-| **Profil** | Shop, contact person, addresses, rates, password | — |
+| Menu item                | Content                                             | Badge        |
+| ------------------------ | --------------------------------------------------- | ------------ |
+| **Tableau de bord**      | Overview of money, parcels and actions to take      | —            |
+| **Colis**                | Mes colis, Créer un colis, Import CSV, Étiquettes   | —            |
+| **À vérifier**           | Failed deliveries waiting for the seller's decision | Count        |
+| **Ramassages**           | Pickup requests and their history                   | —            |
+| **Paiements**            | À recevoir and bons de versement                    | New bons     |
+| **Retours**              | Returns at the depot and bons de retour             | New bons     |
+| **Notifications** (bell) | In-app notifications                                | Unread count |
+| **Profil**               | Shop, contact person, addresses, rates, password    | —            |
 
 ## 4. Features
 
@@ -105,19 +105,19 @@ The first screen after login. It answers three questions: how much am I owed, wh
 
 A fast, keyboard-friendly form. After saving, the seller can print the label immediately.
 
-| Field | Required | Rule |
-|---|---|---|
-| Nom du destinataire | Yes |  |
-| Téléphone | Yes | 8 digits, Tunisian format |
-| Téléphone 2 | No | 8 digits |
-| Gouvernorat / Délégation | Yes | Chosen from a fixed list (delivery zones depend on it) |
-| Adresse | Yes | Free text, with landmark |
-| Description du produit | Yes | What is inside, e.g. "2 bracelets" |
-| Nombre de pièces | Yes | Default 1 |
-| Montant COD (DT) | Yes | Three decimals. 0 allowed if already paid |
-| Colis d'échange | No | Toggle. The courier delivers the new item and brings back the old one, which follows the return flow |
-| Ouverture autorisée | No | Toggle. The customer may open the parcel before paying |
-| Note pour le coursier | No | e.g. "sonner deux fois" |
+| Field                    | Required | Rule                                                                                                 |
+| ------------------------ | -------- | ---------------------------------------------------------------------------------------------------- |
+| Nom du destinataire      | Yes      |                                                                                                      |
+| Téléphone                | Yes      | 8 digits, Tunisian format                                                                            |
+| Téléphone 2              | No       | 8 digits                                                                                             |
+| Gouvernorat / Délégation | Yes      | Chosen from a fixed list (delivery zones depend on it)                                               |
+| Adresse                  | Yes      | Free text, with landmark                                                                             |
+| Description du produit   | Yes      | What is inside, e.g. "2 bracelets"                                                                   |
+| Nombre de pièces         | Yes      | Default 1                                                                                            |
+| Montant COD (DT)         | Yes      | Three decimals. 0 allowed if already paid                                                            |
+| Colis d'échange          | No       | Toggle. The courier delivers the new item and brings back the old one, which follows the return flow |
+| Ouverture autorisée      | No       | Toggle. The customer may open the parcel before paying                                               |
+| Note pour le coursier    | No       | e.g. "sonner deux fois"                                                                              |
 
 ### 4.3 Import CSV
 
@@ -172,22 +172,22 @@ When a delivery fails, the parcel is brought back to the depot and gets the stat
 
 #### Reason shown under the status
 
-Only the courier chooses the reason, from a fixed list, when he scans the failure. The seller cannot choose or change it; he sees it read-only, directly under the status, e.g. **À vérifier** · *Ne répond pas*. The seller's own calls to his customer stay outside the platform.
+Only the courier chooses the reason, from a fixed list, when he scans the failure. The seller cannot choose or change it; he sees it read-only, directly under the status, e.g. **À vérifier** · _Ne répond pas_. The seller's own calls to his customer stay outside the platform.
 
-| Reason | Meaning |
-|---|---|
-| Ne répond pas | The customer did not answer the courier's calls |
-| Injoignable | Phone switched off or number not reachable |
-| Adresse incorrecte | Address wrong, incomplete or not found |
-| Reporté par le client | The customer asked for another day |
-| Refusé | The customer refused the parcel at the door |
+| Reason                | Meaning                                         |
+| --------------------- | ----------------------------------------------- |
+| Ne répond pas         | The customer did not answer the courier's calls |
+| Injoignable           | Phone switched off or number not reachable      |
+| Adresse incorrecte    | Address wrong, incomplete or not found          |
+| Reporté par le client | The customer asked for another day              |
+| Refusé                | The customer refused the parcel at the door     |
 
 #### Seller decisions
 
-| Action | What it does |
-|---|---|
-| **Relancer** | Send the parcel again to the same customer. The seller picks a date / time slot and may correct the phone, address or note. The parcel gets **one** new attempt; free of charge. If it fails again, it comes back to À vérifier. |
-| **Retourner** | The parcel becomes a return and is brought back to the seller (see 4.12). The return fee applies. |
+| Action                           | What it does                                                                                                                                                                                                                                                                                                                                              |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Relancer**                     | Send the parcel again to the same customer. The seller picks a date / time slot and may correct the phone, address or note. The parcel gets **one** new attempt; free of charge. If it fails again, it comes back to À vérifier.                                                                                                                          |
+| **Retourner**                    | The parcel becomes a return and is brought back to the seller (see 4.12). The return fee applies.                                                                                                                                                                                                                                                         |
 | **Changer de client** — 1,000 DT | Deliver the parcel to a different customer. The seller enters the new name, phone, address and COD amount (the price may change). The attempt counter restarts at 1. The fee is 1,000 DT for every seller and is deducted in the next bon de versement. **Only available once the parcel is back at the depot**; disabled while the courier still has it. |
 
 _À vérifier starts as soon as the courier scans the failure. Relancer and Retourner can be chosen immediately; Changer de client becomes available when the depot scans the parcel back in (the button shows "Disponible au retour au dépôt")._
@@ -231,17 +231,17 @@ Flow: À vérifier › Retour au dépôt › En route › Reçu
 
 In the web application only: a bell with an unread count and a list. No SMS, WhatsApp or email.
 
-| Event | Notification |
-|---|---|
-| Delivery failed | Colis FG-… à vérifier · [motif] |
-| 24 h left to decide | Plus que 24 h pour décider sur FG-… |
-| No decision after 48 h | Colis FG-… retourné automatiquement |
-| Parcel becomes a return | Colis FG-… en retour |
+| Event                       | Notification                                |
+| --------------------------- | ------------------------------------------- |
+| Delivery failed             | Colis FG-… à vérifier · [motif]             |
+| 24 h left to decide         | Plus que 24 h pour décider sur FG-…         |
+| No decision after 48 h      | Colis FG-… retourné automatiquement         |
+| Parcel becomes a return     | Colis FG-… en retour                        |
 | Bon de versement on its way | Votre paiement BV-… arrive avec le coursier |
-| Bon de retour on its way | Vos retours BR-… arrivent avec le coursier |
-| Pickup planned / done | Ramassage planifié / effectué |
-| New chat message | Nouveau message de [prénom] sur FG-… |
-| Account notice | Compte suspendu / réactivé |
+| Bon de retour on its way    | Vos retours BR-… arrivent avec le coursier  |
+| Pickup planned / done       | Ramassage planifié / effectué               |
+| New chat message            | Nouveau message de [prénom] sur FG-…        |
+| Account notice              | Compte suspendu / réactivé                  |
 
 ### 4.14 Profil
 
@@ -257,48 +257,48 @@ These labels are fixed. The interface never uses synonyms.
 
 #### Delivery status (statut du colis)
 
-| Label | Meaning |
-|---|---|
-| Créé | Created by the seller, not yet picked up |
-| Ramassé | Scanned by the courier at the seller's place |
-| Au dépôt | Scanned in at the depot |
-| En livraison | Out with a courier |
-| Livré | Delivered, COD collected |
+| Label              | Meaning                                                        |
+| ------------------ | -------------------------------------------------------------- |
+| Créé               | Created by the seller, not yet picked up                       |
+| Ramassé            | Scanned by the courier at the seller's place                   |
+| Au dépôt           | Scanned in at the depot                                        |
+| En livraison       | Out with a courier                                             |
+| Livré              | Delivered, COD collected                                       |
 | À vérifier · motif | Delivery failed, waiting for a decision; shown with its reason |
-| Relancé | Seller chose to resend; waiting for the next tour |
-| Retour au dépôt | Decided as a return, at the depot |
-| Retour en route | Out with the pickup courier, on its way back to the seller |
-| Retour reçu | Scanned as received at handover; bon de retour signed |
-| Annulé | Cancelled by the seller before pickup |
+| Relancé            | Seller chose to resend; waiting for the next tour              |
+| Retour au dépôt    | Decided as a return, at the depot                              |
+| Retour en route    | Out with the pickup courier, on its way back to the seller     |
+| Retour reçu        | Scanned as received at handover; bon de retour signed          |
+| Annulé             | Cancelled by the seller before pickup                          |
 
 #### Cash status (statut de paiement) — only for delivered parcels
 
-| Label | Meaning |
-|---|---|
-| Chez le coursier | Collected, the courier still holds the cash |
-| Au dépôt | Counted at the courier's end-of-day reconciliation, ready to pay |
-| Payé | Included in a bon de versement signed by the seller |
+| Label            | Meaning                                                          |
+| ---------------- | ---------------------------------------------------------------- |
+| Chez le coursier | Collected, the courier still holds the cash                      |
+| Au dépôt         | Counted at the courier's end-of-day reconciliation, ready to pay |
+| Payé             | Included in a bon de versement signed by the seller              |
 
 #### Other statuses
 
-| Object | Statuses |
-|---|---|
-| Ramassage | Demandé › Planifié › Effectué · Annulé |
-| Bon de versement | Préparé › En route › Remis (signé) |
-| Bon de retour | Préparé › En route › Remis (signé) |
-| Compte | Actif · Suspendu |
+| Object           | Statuses                               |
+| ---------------- | -------------------------------------- |
+| Ramassage        | Demandé › Planifié › Effectué · Annulé |
+| Bon de versement | Préparé › En route › Remis (signé)     |
+| Bon de retour    | Préparé › En route › Remis (signé)     |
+| Compte           | Actif · Suspendu                       |
 
 ## 6. Business rules
 
-01. A seller account can only be created by the admin.
-02. The courier hands cash and returns only to the contact person (the CIN holder), who signs the bon.
-03. Payments are in cash only, prepared by Faffa Go and delivered by a courier.
-04. A parcel can be paid only when it is **Livré** and its cash is **Au dépôt**.
-05. A payment covers a list of parcels. A parcel is either fully paid or not paid; no partial amounts per parcel.
-06. Rates are the same for every seller. The change-client fee is 1,000 DT.
-07. Sellers with statut **CIN uniquement** have a 3% retenue à la source, calculated on the amount left after Faffa Go fees, withheld for the tax administration and backed by a certificate.
-08. Return fees are deducted in the next bon de versement. A cancellation after pickup is charged the return fee.
-09. Signed paper bons are brought back by the courier and archived at the depot.
+1.  A seller account can only be created by the admin.
+2.  The courier hands cash and returns only to the contact person (the CIN holder), who signs the bon.
+3.  Payments are in cash only, prepared by Faffa Go and delivered by a courier.
+4.  A parcel can be paid only when it is **Livré** and its cash is **Au dépôt**.
+5.  A payment covers a list of parcels. A parcel is either fully paid or not paid; no partial amounts per parcel.
+6.  Rates are the same for every seller. The change-client fee is 1,000 DT.
+7.  Sellers with statut **CIN uniquement** have a 3% retenue à la source, calculated on the amount left after Faffa Go fees, withheld for the tax administration and backed by a certificate.
+8.  Return fees are deducted in the next bon de versement. A cancellation after pickup is charged the return fee.
+9.  Signed paper bons are brought back by the courier and archived at the depot.
 10. Fees (delivery, return, change-client, pickup) are deducted in the bon de versement, line by line.
 11. A pickup is free from 5 parcels picked up; below 5, a 2,000 DT pickup fee applies.
 12. A failed delivery always goes to **À vérifier** first.
@@ -314,37 +314,37 @@ These labels are fixed. The interface never uses synonyms.
 
 ## 7. Out of scope for version 1
 
-| Item | Reason |
-|---|---|
-| Public sign-up form | Accounts are created by the admin |
-| Delivery proof photo | Not needed for the Tunisian COD market |
-| Call tools or call log for the seller's own calls | Sellers call from their own phone and system |
-| SMS, WhatsApp or email notifications | Notifications are in-app only |
-| Bank transfer, D17 or any non-cash payment | Payments are cash only |
-| Payment requests by the seller | Faffa Go decides when to pay |
-| Per-seller rates | Rates are the same for everyone |
-| Seller choosing or editing the failure reason | Only the courier sets it; the seller sees it |
-| In-app confirmation of bons | Replaced by the signed paper bon and the courier's scan |
-| Several authorised persons per seller | Possible later; v1 uses one contact person |
-| API and Shopify / WooCommerce integration | Planned for a later phase |
+| Item                                              | Reason                                                  |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| Public sign-up form                               | Accounts are created by the admin                       |
+| Delivery proof photo                              | Not needed for the Tunisian COD market                  |
+| Call tools or call log for the seller's own calls | Sellers call from their own phone and system            |
+| SMS, WhatsApp or email notifications              | Notifications are in-app only                           |
+| Bank transfer, D17 or any non-cash payment        | Payments are cash only                                  |
+| Payment requests by the seller                    | Faffa Go decides when to pay                            |
+| Per-seller rates                                  | Rates are the same for everyone                         |
+| Seller choosing or editing the failure reason     | Only the courier sets it; the seller sees it            |
+| In-app confirmation of bons                       | Replaced by the signed paper bon and the courier's scan |
+| Several authorised persons per seller             | Possible later; v1 uses one contact person              |
+| API and Shopify / WooCommerce integration         | Planned for a later phase                               |
 
 ## 8. Decisions log
 
 Points raised during the design discussion and the decision taken for each.
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | How are return fees charged, given that a return brings in no cash? | Deducted from the next bon de versement as a separate line. |
-| 2 | Which documents are required to open an account? | CIN always. Statut Patente or Auto-entrepreneur with the matching document; or CIN uniquement with a 3% retenue à la source after Faffa Go fees. |
-| 3 | For Changer de client: does the attempt counter restart? | Yes, it restarts at 1 for the new customer. |
-| 4 | For Changer de client: can the COD amount change? | Yes. |
-| 5 | Is a cancellation after pickup charged? | Yes, the return fee. |
-| 6 | Where do the signed paper bons go? | The courier brings the signed copy back to the depot, where it is archived. |
-| 7 | Password reset | Handled by the admin in v1. |
-| 8 | Who chooses the failure reason? | Only the courier. The seller sees it read-only. |
-| 9 | Time limit on À vérifier | 48 hours, then automatic return. |
-| 10 | Devenir partenaire | Opens contact options: social media and phone / WhatsApp. |
-| 11 | Does Relancer cost anything? | No. Relancer is free and gives one new attempt; a new failure returns the parcel to À vérifier. |
-| 12 | When can Changer de client be used? | Only when the parcel is at the depot, never while the courier has it. |
-| 13 | Can Faffa Go customer service decide a return? | No. Returns come only from the seller's decision, the 48-hour rule or the 3rd failed attempt. |
-| 14 | Is a pickup charged? | Free from 5 parcels picked up; 2,000 DT below 5, based on the parcels scanned at pickup. |
+| #   | Question                                                            | Decision                                                                                                                                         |
+| --- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | How are return fees charged, given that a return brings in no cash? | Deducted from the next bon de versement as a separate line.                                                                                      |
+| 2   | Which documents are required to open an account?                    | CIN always. Statut Patente or Auto-entrepreneur with the matching document; or CIN uniquement with a 3% retenue à la source after Faffa Go fees. |
+| 3   | For Changer de client: does the attempt counter restart?            | Yes, it restarts at 1 for the new customer.                                                                                                      |
+| 4   | For Changer de client: can the COD amount change?                   | Yes.                                                                                                                                             |
+| 5   | Is a cancellation after pickup charged?                             | Yes, the return fee.                                                                                                                             |
+| 6   | Where do the signed paper bons go?                                  | The courier brings the signed copy back to the depot, where it is archived.                                                                      |
+| 7   | Password reset                                                      | Handled by the admin in v1.                                                                                                                      |
+| 8   | Who chooses the failure reason?                                     | Only the courier. The seller sees it read-only.                                                                                                  |
+| 9   | Time limit on À vérifier                                            | 48 hours, then automatic return.                                                                                                                 |
+| 10  | Devenir partenaire                                                  | Opens contact options: social media and phone / WhatsApp.                                                                                        |
+| 11  | Does Relancer cost anything?                                        | No. Relancer is free and gives one new attempt; a new failure returns the parcel to À vérifier.                                                  |
+| 12  | When can Changer de client be used?                                 | Only when the parcel is at the depot, never while the courier has it.                                                                            |
+| 13  | Can Faffa Go customer service decide a return?                      | No. Returns come only from the seller's decision, the 48-hour rule or the 3rd failed attempt.                                                    |
+| 14  | Is a pickup charged?                                                | Free from 5 parcels picked up; 2,000 DT below 5, based on the parcels scanned at pickup.                                                         |

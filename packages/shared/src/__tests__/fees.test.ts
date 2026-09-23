@@ -362,9 +362,10 @@ describe('buildPayslip', () => {
   });
 
   it('pays nothing for a period without a delivery', () => {
-    const result = buildPayslip([], [
-      { debtId: 'd1', remainingMillimes: 3000n, createdAt: new Date('2026-09-18T00:00:00Z') },
-    ]);
+    const result = buildPayslip(
+      [],
+      [{ debtId: 'd1', remainingMillimes: 3000n, createdAt: new Date('2026-09-18T00:00:00Z') }],
+    );
 
     expect(result.grossMillimes).toBe(0n);
     expect(result.netMillimes).toBe(0n);

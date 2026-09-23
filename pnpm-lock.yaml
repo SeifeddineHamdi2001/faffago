@@ -11,6 +11,9 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.9.8
+      prettier-plugin-prisma:
+        specifier: ^5.0.0
+        version: 5.0.0(prettier@3.9.8)
       turbo:
         specifier: ^2.3.3
         version: 2.11.3
@@ -968,6 +971,9 @@ packages:
 
   '@prisma/get-platform@6.19.3':
     resolution: {integrity: sha512-xFj1VcJ1N3MKooOQAGO0W5tsd0W2QzIvW7DD7c/8H14Zmp4jseeWAITm+w2LLoLrlhoHdPPh0NMZ8mfL6puoHA==}
+
+  '@prisma/prisma-schema-wasm@4.17.0-26.6b0aef69b7cdfc787f822ecd7cdc76d5f1991584':
+    resolution: {integrity: sha512-JFdsnSgBPN8reDTLOI9Vh/6ccCb2aD1LbY/LWQnkcIgNo6IdpzvuM+qRVbBuA6IZP2SdqQI8Lu6RL2P8EFBQUA==}
 
   '@protobufjs/aspromise@1.1.2':
     resolution: {integrity: sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==}
@@ -3137,6 +3143,12 @@ packages:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
 
+  prettier-plugin-prisma@5.0.0:
+    resolution: {integrity: sha512-jTJV04D9+yF7ziOOMs7CJe4ijgAH7DEGjt0SAWAToGNRy1H6BEhvcKA2UQH6gC6KVW5zeeOSAvsoiDDTt9oKXg==}
+    engines: {node: '>=14', npm: '>=8'}
+    peerDependencies:
+      prettier: '>=2 || >=3'
+
   prettier@3.9.8:
     resolution: {integrity: sha512-WRFq3Wn3WId7LLROfMLdH7xaFr2jR62wU8nLO6rQUOLOxNZUviyJQs1M0iIhLexSFy+L+w0ch66wtoO2jRjG0A==}
     engines: {node: '>=14'}
@@ -4793,6 +4805,8 @@ snapshots:
   '@prisma/get-platform@6.19.3':
     dependencies:
       '@prisma/debug': 6.19.3
+
+  '@prisma/prisma-schema-wasm@4.17.0-26.6b0aef69b7cdfc787f822ecd7cdc76d5f1991584': {}
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -7241,6 +7255,11 @@ snapshots:
       source-map-js: 1.2.1
 
   prelude-ls@1.2.1: {}
+
+  prettier-plugin-prisma@5.0.0(prettier@3.9.8):
+    dependencies:
+      '@prisma/prisma-schema-wasm': 4.17.0-26.6b0aef69b7cdfc787f822ecd7cdc76d5f1991584
+      prettier: 3.9.8
 
   prettier@3.9.8: {}
 

@@ -210,7 +210,13 @@ describe('permissions', () => {
       location: ParcelLocation.AVEC_LE_LIVREUR,
       currentLivreurId: LIVREUR_ID,
     });
-    for (const actor of [Role.ADMIN, Role.DEPOT, Role.SERVICE_CLIENT, Role.VENDEUR, Role.RAMASSEUR]) {
+    for (const actor of [
+      Role.ADMIN,
+      Role.DEPOT,
+      Role.SERVICE_CLIENT,
+      Role.VENDEUR,
+      Role.RAMASSEUR,
+    ]) {
       const result = applyParcelAction(current, command(ParcelAction.SCAN_LIVRE, { actor }));
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.refusal).toBe(ScanRefusal.ROLE_NON_AUTORISE);
@@ -237,7 +243,10 @@ describe('permissions', () => {
   });
 
   it('lets only the depot scan parcels in and out', () => {
-    const current = parcel({ status: ParcelStatus.RAMASSE, location: ParcelLocation.AVEC_LE_RAMASSEUR });
+    const current = parcel({
+      status: ParcelStatus.RAMASSE,
+      location: ParcelLocation.AVEC_LE_RAMASSEUR,
+    });
     expect(
       applyParcelAction(current, command(ParcelAction.SCAN_ENTREE_DEPOT, { actor: Role.ADMIN })).ok,
     ).toBe(true);
@@ -245,7 +254,8 @@ describe('permissions', () => {
       applyParcelAction(current, command(ParcelAction.SCAN_ENTREE_DEPOT, { actor: Role.DEPOT })).ok,
     ).toBe(true);
     expect(
-      applyParcelAction(current, command(ParcelAction.SCAN_ENTREE_DEPOT, { actor: Role.LIVREUR })).ok,
+      applyParcelAction(current, command(ParcelAction.SCAN_ENTREE_DEPOT, { actor: Role.LIVREUR }))
+        .ok,
     ).toBe(false);
   });
 
@@ -387,12 +397,16 @@ describe('seller decisions on À vérifier', () => {
   });
 
   it('Relancer can be chosen while the courier still has the parcel', () => {
-    const result = expectOk(applyParcelAction(withCourier, command(ParcelAction.DECISION_RELANCER)));
+    const result = expectOk(
+      applyParcelAction(withCourier, command(ParcelAction.DECISION_RELANCER)),
+    );
     expect(result.next.location).toBe(ParcelLocation.AVEC_LE_LIVREUR);
   });
 
   it('Retourner charges the return fee and stops the clock at the decision (A-7)', () => {
-    const result = expectOk(applyParcelAction(withCourier, command(ParcelAction.DECISION_RETOURNER)));
+    const result = expectOk(
+      applyParcelAction(withCourier, command(ParcelAction.DECISION_RETOURNER)),
+    );
     expect(result.next.status).toBe(ParcelStatus.RETOUR_AU_DEPOT);
     expect(result.next.location).toBe(ParcelLocation.AVEC_LE_LIVREUR);
     expect(result.events[0]?.effects).toEqual([
@@ -408,7 +422,9 @@ describe('seller decisions on À vérifier', () => {
   });
 
   it('Changer de client resets the attempts and charges 1,000 DT (A-6)', () => {
-    const result = expectOk(applyParcelAction(atDepot, command(ParcelAction.DECISION_CHANGER_CLIENT)));
+    const result = expectOk(
+      applyParcelAction(atDepot, command(ParcelAction.DECISION_CHANGER_CLIENT)),
+    );
     expect(result.next.status).toBe(ParcelStatus.AU_DEPOT);
     expect(result.next.attemptCount).toBe(0);
     expect(result.next.changeClientCount).toBe(1);
@@ -513,7 +529,9 @@ describe('seller decisions on À vérifier', () => {
     expect(current.status).toBe(ParcelStatus.RETOUR_AU_DEPOT);
 
     // One client change per parcel, so this is definitively a return.
-    expect(applyParcelAction(current, command(ParcelAction.DECISION_CHANGER_CLIENT)).ok).toBe(false);
+    expect(applyParcelAction(current, command(ParcelAction.DECISION_CHANGER_CLIENT)).ok).toBe(
+      false,
+    );
   });
 
   it('the 48-hour job returns a parcel nobody decided on (Vendeur rule 15)', () => {
@@ -661,7 +679,9 @@ describe('button helpers', () => {
       ),
     ).toBe(false);
     expect(
-      isPayableToSeller(parcel({ status: ParcelStatus.LIVRE, cashStatus: ParcelCashStatus.AU_DEPOT })),
+      isPayableToSeller(
+        parcel({ status: ParcelStatus.LIVRE, cashStatus: ParcelCashStatus.AU_DEPOT }),
+      ),
     ).toBe(true);
   });
 

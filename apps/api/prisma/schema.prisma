@@ -271,7 +271,7 @@ enum DocumentCounterKind {
 /// username, couriers their phone plus the role they pick on the login screen.
 /// A CHECK constraint in the first migration enforces "the right one is set".
 model User {
-  id       String @id @default(uuid()) @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
   role     Role
   /// Sellers only.
   email    String? @unique
@@ -284,9 +284,9 @@ model User {
   passwordHash      String
   passwordUpdatedAt DateTime @default(now())
 
-  firstName String
-  lastName  String
-  isActive  Boolean @default(true)
+  firstName   String
+  lastName    String
+  isActive    Boolean @default(true)
   /// False on a former account after a role change: the person can still log
   /// in and see what is owed, but receives no new work (Admin 4.15).
   acceptsWork Boolean @default(true)
@@ -698,22 +698,22 @@ model ParcelEvent {
 /// scanned twice for the same action" is enforced by the state machine and by
 /// the phone's local queue; clientScanId alone gives idempotency.
 model Scan {
-  id             String         @id @default(uuid()) @db.Uuid
+  id                String         @id @default(uuid()) @db.Uuid
   /// UUID generated on the device. Replaying it returns the first result.
-  clientScanId   String         @unique @db.Uuid
-  action         ScanAction
-  rawCode        String
-  parcelId       String?        @db.Uuid
-  bonVersementId String?        @db.Uuid
-  bonRetourId    String?        @db.Uuid
-  pickupId       String?        @db.Uuid
-  actorUserId    String         @db.Uuid
-  source         ScanSource
+  clientScanId      String         @unique @db.Uuid
+  action            ScanAction
+  rawCode           String
+  parcelId          String?        @db.Uuid
+  bonVersementId    String?        @db.Uuid
+  bonRetourId       String?        @db.Uuid
+  pickupId          String?        @db.Uuid
+  actorUserId       String         @db.Uuid
+  source            ScanSource
   /// Allowed when a label is damaged, but flagged to the admin (Coursier 01).
-  manualEntry    Boolean        @default(false)
-  accepted       Boolean
-  refusalReason  String?
-  failureReason  FailureReason?
+  manualEntry       Boolean        @default(false)
+  accepted          Boolean
+  refusalReason     String?
+  failureReason     FailureReason?
   collectedMillimes BigInt?
 
   gpsLat       Decimal? @db.Decimal(9, 6)
@@ -722,12 +722,12 @@ model Scan {
   deviceId     String?
   appVersion   String?
 
-  deviceTime DateTime
-  receivedAt DateTime @default(now())
+  deviceTime       DateTime
+  receivedAt       DateTime @default(now())
   /// Business day derived from the device time, used by the Caisse (A-12).
-  businessDate DateTime @db.Date
+  businessDate     DateTime @db.Date
   /// Device clock more than the configured minutes away from the server (A-12).
-  clockSkewFlagged Boolean @default(false)
+  clockSkewFlagged Boolean  @default(false)
   clockSkewMs      Int?
 
   /// "Annuler le dernier scan" within one minute of the device time (A-11).
@@ -851,21 +851,21 @@ model BonVersement {
   netMillimes           BigInt
 
   /// Printed on the bon; the ramasseur scans it to mark the bon Remis.
-  qrToken          String    @unique
-  preparedByUserId String    @db.Uuid
-  preparedAt       DateTime  @default(now())
-  ramasseurId      String?   @db.Uuid
-  pickupId         String?   @db.Uuid
-  enRouteAt        DateTime?
-  remisAt          DateTime?
-  remisScanId      String?   @db.Uuid
-  archivedAt       DateTime?
-  archivedByUserId String?   @db.Uuid
+  qrToken           String    @unique
+  preparedByUserId  String    @db.Uuid
+  preparedAt        DateTime  @default(now())
+  ramasseurId       String?   @db.Uuid
+  pickupId          String?   @db.Uuid
+  enRouteAt         DateTime?
+  remisAt           DateTime?
+  remisScanId       String?   @db.Uuid
+  archivedAt        DateTime?
+  archivedByUserId  String?   @db.Uuid
   /// Admin-only, with a reason, audited. The number is never reused (A-5b).
   cancelledAt       DateTime?
-  cancelledByUserId String?  @db.Uuid
+  cancelledByUserId String?   @db.Uuid
   cancelReason      String?
-  pdfStorageKey    String?
+  pdfStorageKey     String?
 
   seller      Seller               @relation(fields: [sellerId], references: [id])
   ramasseur   Courier?             @relation(fields: [ramasseurId], references: [id])
@@ -919,24 +919,24 @@ model RetenueCertificate {
 // ─────────────────────────────────────────────────────────────
 
 model BonRetour {
-  id               String    @id @default(uuid()) @db.Uuid
-  number           String    @unique
-  sellerId         String    @db.Uuid
-  status           BonStatus @default(PREPARE)
-  parcelCount      Int       @default(0)
-  qrToken          String    @unique
-  preparedByUserId String    @db.Uuid
-  preparedAt       DateTime  @default(now())
-  ramasseurId      String?   @db.Uuid
-  pickupId         String?   @db.Uuid
-  enRouteAt        DateTime?
-  remisAt          DateTime?
-  archivedAt       DateTime?
-  archivedByUserId String?   @db.Uuid
+  id                String    @id @default(uuid()) @db.Uuid
+  number            String    @unique
+  sellerId          String    @db.Uuid
+  status            BonStatus @default(PREPARE)
+  parcelCount       Int       @default(0)
+  qrToken           String    @unique
+  preparedByUserId  String    @db.Uuid
+  preparedAt        DateTime  @default(now())
+  ramasseurId       String?   @db.Uuid
+  pickupId          String?   @db.Uuid
+  enRouteAt         DateTime?
+  remisAt           DateTime?
+  archivedAt        DateTime?
+  archivedByUserId  String?   @db.Uuid
   cancelledAt       DateTime?
-  cancelledByUserId String?  @db.Uuid
+  cancelledByUserId String?   @db.Uuid
   cancelReason      String?
-  pdfStorageKey    String?
+  pdfStorageKey     String?
 
   seller    Seller            @relation(fields: [sellerId], references: [id])
   ramasseur Courier?          @relation(fields: [ramasseurId], references: [id])
@@ -1054,13 +1054,13 @@ model CourierDebt {
 // ─────────────────────────────────────────────────────────────
 
 model Payslip {
-  id          String        @id @default(uuid()) @db.Uuid
-  number      String        @unique
-  courierId   String        @db.Uuid
-  payPlan     PayPlan
-  periodStart DateTime      @db.Date
-  periodEnd   DateTime      @db.Date
-  parcelCount Int
+  id                    String        @id @default(uuid()) @db.Uuid
+  number                String        @unique
+  courierId             String        @db.Uuid
+  payPlan               PayPlan
+  periodStart           DateTime      @db.Date
+  periodEnd             DateTime      @db.Date
+  parcelCount           Int
   /// Kept for the printed fiche; the authoritative amounts are the rates
   /// frozen on each parcel at delivery (A-15).
   ratePerParcelMillimes BigInt
@@ -1117,14 +1117,14 @@ model PayslipDeduction {
 /// at the depot and reopens with the new livreur when it goes out again; that
 /// livreur reads the whole history. The ramasseur never joins (A-23, Q15).
 model ChatThread {
-  id       String          @id @default(uuid()) @db.Uuid
-  parcelId String          @unique @db.Uuid
-  sellerId String          @db.Uuid
+  id            String          @id @default(uuid()) @db.Uuid
+  parcelId      String          @unique @db.Uuid
+  sellerId      String          @db.Uuid
   /// The livreur who currently holds the parcel; null while it is at the depot.
-  courierId String?        @db.Uuid
-  state     ChatThreadState @default(OUVERT)
+  courierId     String?         @db.Uuid
+  state         ChatThreadState @default(OUVERT)
   lastMessageAt DateTime?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime        @default(now())
 
   parcel   Parcel        @relation(fields: [parcelId], references: [id])
   courier  Courier?      @relation(fields: [courierId], references: [id])

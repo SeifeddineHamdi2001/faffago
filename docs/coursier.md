@@ -6,14 +6,14 @@
 
 The courier app is a native Android app (React Native), installed directly by Faffa Go, used outdoors, one-handed, often with a weak signal and on low-cost Android phones. Every screen is judged on one question: can the courier do it in a few seconds without thinking?
 
-| Principle | What it means |
-|---|---|
-| **Big and simple.** | Large text and buttons (at least 56 px), main actions at the bottom within thumb reach, high contrast for sunlight. |
-| **The scan is the proof.** | A parcel cannot be marked Livré without scanning its label. Every scan records who, when and the phone's GPS position. |
-| **No maps.** | Customer addresses in Tunisia are rarely precise. Instead of a map, the app helps the courier find the customer through address details, landmarks, calls and the memory of past deliveries (4.3). |
-| **Works without signal.** | Every action works offline and syncs later, and the same parcel can never be scanned twice (4.9). |
-| **Cash is always visible.** | The courier always sees how much cash he is carrying and what he must hand over tonight. |
-| **He only sees his own work.** | A livreur sees his tour, cash and earnings. A ramasseur sees only the sellers he picks up from, his bons, returns and bon cash. Zones and pay plan are set by the admin. |
+| Principle                      | What it means                                                                                                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Big and simple.**            | Large text and buttons (at least 56 px), main actions at the bottom within thumb reach, high contrast for sunlight.                                                                                |
+| **The scan is the proof.**     | A parcel cannot be marked Livré without scanning its label. Every scan records who, when and the phone's GPS position.                                                                             |
+| **No maps.**                   | Customer addresses in Tunisia are rarely precise. Instead of a map, the app helps the courier find the customer through address details, landmarks, calls and the memory of past deliveries (4.3). |
+| **Works without signal.**      | Every action works offline and syncs later, and the same parcel can never be scanned twice (4.9).                                                                                                  |
+| **Cash is always visible.**    | The courier always sees how much cash he is carrying and what he must hand over tonight.                                                                                                           |
+| **He only sees his own work.** | A livreur sees his tour, cash and earnings. A ramasseur sees only the sellers he picks up from, his bons, returns and bon cash. Zones and pay plan are set by the admin.                           |
 
 ## 2. Access, roles and language
 
@@ -28,9 +28,9 @@ Flow: 1 · Livreur ou Ramasseur › 2 · Téléphone › 3 · Mot de passe
 - Two large buttons at the top: **Livreur** and **Ramasseur**. The person picks his role, then enters his phone number and password. The same phone number can have one account per role, each with its own password.
 - If no account exists for the chosen role: "Aucun compte ramasseur pour ce numéro" (or livreur). The last role used is pre-selected next time.
 
-| Role | What the app shows |
-|---|---|
-| **Livreur** | Ma journée, Ma tournée, Livrer, Retour au dépôt, Ma caisse, Chat, Mes gains, Notifications, Profil |
+| Role          | What the app shows                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Livreur**   | Ma journée, Ma tournée, Livrer, Retour au dépôt, Ma caisse, Chat, Mes gains, Notifications, Profil                                                   |
 | **Ramasseur** | Ma journée (his pickups), Ramassages, Ma caisse (bon cash), Notifications, Profil. No earnings screen: he is an employee paid by HR outside the app. |
 
 **Language**: French and Arabic, chosen by the courier in his profile. Status names and reasons are translated, so a courier never taps the wrong button because of the language. **TO CONFIRM**
@@ -41,14 +41,14 @@ A bottom bar with the scan button in the centre, always one tap away.
 
 _The livreur sees Journée, Tournée, Scanner, Caisse, Menu. The ramasseur sees Journée, Ramassages, Scanner, Caisse, Menu (Notifications, Profil only)._
 
-| Tab | Content |
-|---|---|
-| **Journée** | Home: today's summary |
-| **Tournée** | Parcels to deliver (livreur) |
+| Tab                          | Content                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| **Journée**                  | Home: today's summary                                                                             |
+| **Tournée**                  | Parcels to deliver (livreur)                                                                      |
 | **Scanner** (centre, orange) | Opens the camera; the action depends on the parcel and the moment (delivery, pickup, bon, return) |
-| **Ramassages** | Pickups, bons and returns (ramasseur) |
-| **Caisse** | Cash carried and handed over |
-| **Menu** | Chat, Mes gains, Notifications, Profil |
+| **Ramassages**               | Pickups, bons and returns (ramasseur)                                                             |
+| **Caisse**                   | Cash carried and handed over                                                                      |
+| **Menu**                     | Chat, Mes gains, Notifications, Profil                                                            |
 
 ## 4. Features
 
@@ -75,14 +75,14 @@ The parcels scanned out to him at the depot, grouped by délégation.
 
 Customer addresses in Tunisia are often vague ("près de la mosquée"). The app does not show a map. It helps the courier find the customer with what actually works:
 
-| Tool | How it helps |
-|---|---|
-| **Adresse et repère** | The address and the landmark entered by the seller, shown in large text, never shortened. |
-| **Mémoire d'adresse** | After a successful delivery, the courier can save a short **note d'adresse** ("immeuble bleu à côté de la pharmacie, 2e étage, porte gauche"). It is linked to the customer's phone number. Next time any parcel goes to that number, every courier sees the note and "Déjà livré ici". Over time, Faffa Go builds its own knowledge of where customers really live. |
-| **Appel en un geste** | Call the customer (and the second phone number if given) directly from the stop. |
-| **Message WhatsApp prêt** | One tap opens WhatsApp with a ready message: "Bonjour, je suis le livreur Faffa Go pour votre commande de [boutique]. Je suis à [délégation], pouvez-vous me guider ?" The customer can reply with directions. |
-| **Point de rendez-vous** | If the customer prefers to meet somewhere (café, pharmacy, station), the courier records it on the parcel; it is saved in the address memory. |
-| **Chat avec le vendeur** | If the address is unclear, the courier asks the seller in the parcel chat or calls him (4.8). |
+| Tool                      | How it helps                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Adresse et repère**     | The address and the landmark entered by the seller, shown in large text, never shortened.                                                                                                                                                                                                                                                                            |
+| **Mémoire d'adresse**     | After a successful delivery, the courier can save a short **note d'adresse** ("immeuble bleu à côté de la pharmacie, 2e étage, porte gauche"). It is linked to the customer's phone number. Next time any parcel goes to that number, every courier sees the note and "Déjà livré ici". Over time, Faffa Go builds its own knowledge of where customers really live. |
+| **Appel en un geste**     | Call the customer (and the second phone number if given) directly from the stop.                                                                                                                                                                                                                                                                                     |
+| **Message WhatsApp prêt** | One tap opens WhatsApp with a ready message: "Bonjour, je suis le livreur Faffa Go pour votre commande de [boutique]. Je suis à [délégation], pouvez-vous me guider ?" The customer can reply with directions.                                                                                                                                                       |
+| **Point de rendez-vous**  | If the customer prefers to meet somewhere (café, pharmacy, station), the courier records it on the parcel; it is saved in the address memory.                                                                                                                                                                                                                        |
+| **Chat avec le vendeur**  | If the address is unclear, the courier asks the seller in the parcel chat or calls him (4.8).                                                                                                                                                                                                                                                                        |
 
 _The address memory is visible to Faffa Go couriers and staff only, never to sellers._
 
@@ -90,10 +90,10 @@ _The address memory is visible to Faffa Go couriers and staff only, never to sel
 
 The courier taps **Scanner** and scans the label. A sheet opens with two large buttons.
 
-| Button | What happens |
-|---|---|
+| Button            | What happens                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Livré** (green) | Shows the COD amount to collect in large type; the courier confirms it. For an **Échange** parcel, he also confirms he collected the old item. The cash is added to Ma caisse. He can then save a note d'adresse. |
-| **Échec** (red) | He must choose a reason: Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé. Optional note. The parcel goes to À vérifier and moves to Retour au dépôt. |
+| **Échec** (red)   | He must choose a reason: Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé. Optional note. The parcel goes to À vérifier and moves to Retour au dépôt.                                |
 
 - **Fixed COD amount**: the customer pays exactly the COD. If he wants to pay less, it is an Échec with "Refusé", and the seller decides. **TO CONFIRM**
 - **Old item of an exchange**: tracked under the same parcel code as "article récupéré" and follows the return flow, without a new label. **TO CONFIRM**
@@ -162,28 +162,28 @@ In-app only: new parcels assigned, pickup added or changed, new chat message, Re
 
 The courier never picks a status. Each action produces one.
 
-| Courier action | Where | Result |
-|---|---|---|
-| Scan at pickup | At the seller | Parcel: Ramassé |
-| Scan Livré + confirm amount | At the customer | Parcel: Livré · cash: Chez le coursier |
-| Scan Échec + reason | At the customer | Parcel: À vérifier · [motif] |
+| Courier action                | Where                    | Result                                                |
+| ----------------------------- | ------------------------ | ----------------------------------------------------- |
+| Scan at pickup                | At the seller            | Parcel: Ramassé                                       |
+| Scan Livré + confirm amount   | At the customer          | Parcel: Livré · cash: Chez le coursier                |
+| Scan Échec + reason           | At the customer          | Parcel: À vérifier · [motif]                          |
 | Hands failed parcels to depot | Depot (scanned by staff) | À vérifier, at the depot (Changer de client unlocked) |
-| Scan bon de versement QR | At the seller | Bon: Remis · parcels: Payé |
-| Scan returned parcel | At the seller | Parcel: Retour reçu |
-| Hands cash to depot | Depot (Caisse) | Cash: Au dépôt · écart recorded if any |
-| Save note d'adresse | After Livré | Saved to the customer's phone number |
+| Scan bon de versement QR      | At the seller            | Bon: Remis · parcels: Payé                            |
+| Scan returned parcel          | At the seller            | Parcel: Retour reçu                                   |
+| Hands cash to depot           | Depot (Caisse)           | Cash: Au dépôt · écart recorded if any                |
+| Save note d'adresse           | After Livré              | Saved to the customer's phone number                  |
 
 ## 6. Business rules
 
-01. A parcel can only be marked Livré by scanning its label. Manual code entry (damaged label) is allowed but flagged to the admin.
-02. Every scan records who, when and the GPS position of the phone. Location permission is required.
-03. An Échec always has a reason from the fixed list, chosen only by the courier.
-04. The customer pays exactly the COD amount. **TO CONFIRM**
-05. A scan can be cancelled within 1 minute; after that, only the admin can correct it.
-06. The same parcel cannot be scanned twice for the same action, online or offline.
-07. Failed parcels are brought back to the depot the same day.
-08. All cash (deliveries and undelivered bons) is handed to the depot every day.
-09. Missing cash: for a livreur, a debt deducted from his pay; for a ramasseur, an écart reported to HR.
+1.  A parcel can only be marked Livré by scanning its label. Manual code entry (damaged label) is allowed but flagged to the admin.
+2.  Every scan records who, when and the GPS position of the phone. Location permission is required.
+3.  An Échec always has a reason from the fixed list, chosen only by the courier.
+4.  The customer pays exactly the COD amount. **TO CONFIRM**
+5.  A scan can be cancelled within 1 minute; after that, only the admin can correct it.
+6.  The same parcel cannot be scanned twice for the same action, online or offline.
+7.  Failed parcels are brought back to the depot the same day.
+8.  All cash (deliveries and undelivered bons) is handed to the depot every day.
+9.  Missing cash: for a livreur, a debt deducted from his pay; for a ramasseur, an écart reported to HR.
 10. Livreur and ramasseur are separate people. Only the ramasseur hands over bons de versement and bons de retour.
 11. Cash and returns are handed only to the seller's contact person, who signs the paper bon.
 12. The courier sees the seller's phone number and chats per parcel; the seller sees only the courier's first name.
@@ -192,25 +192,25 @@ The courier never picks a status. Each action produces one.
 
 ## 7. Out of scope for version 1
 
-| Item | Reason |
-|---|---|
-| Maps and navigation inside the app | Addresses are not precise enough; replaced by the tools in 4.3 |
-| Route optimisation | The courier orders his own stops |
-| Delivery proof photo, customer signature | Not needed for the Tunisian COD market |
-| Partial or different COD payments | The COD amount is fixed **TO CONFIRM** |
-| Courier changing his pay plan in the app | Requested from the admin |
-| iOS app and Google Play distribution | Android only; the APK is installed and updated directly by Faffa Go |
+| Item                                     | Reason                                                              |
+| ---------------------------------------- | ------------------------------------------------------------------- |
+| Maps and navigation inside the app       | Addresses are not precise enough; replaced by the tools in 4.3      |
+| Route optimisation                       | The courier orders his own stops                                    |
+| Delivery proof photo, customer signature | Not needed for the Tunisian COD market                              |
+| Partial or different COD payments        | The COD amount is fixed **TO CONFIRM**                              |
+| Courier changing his pay plan in the app | Requested from the admin                                            |
+| iOS app and Google Play distribution     | Android only; the APK is installed and updated directly by Faffa Go |
 
 ## 8. Decisions log
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | Maps in the courier app? | No. The courier sees the address; the app helps with landmarks, address memory, calls and WhatsApp. |
-| 2 | Can the courier see the seller's phone? | Yes, for quick answers, in addition to the parcel chat. |
-| 3 | Offline mode | Every action works offline; a parcel can never be scanned twice. |
-| 4 | Who changes the courier's pay plan? | The admin, at the courier's request. |
-| 5 | App language | **TO CONFIRM** French and Arabic. |
-| 6 | Can the customer pay a different amount? | **TO CONFIRM** No, the COD is fixed; otherwise Échec "Refusé". |
-| 7 | Old item of an exchange | **TO CONFIRM** Tracked under the same parcel code as "article récupéré". |
-| 8 | How is pickup work paid? | The ramasseur is an employee paid by HR, outside the app. The app shows him only his pickups, bons, returns and bon cash. |
-| 9 | What if a person changes role? | He receives a new account with the new role. The old account stays open (no new work) until he is fully paid. |
+| #   | Question                                 | Decision                                                                                                                  |
+| --- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Maps in the courier app?                 | No. The courier sees the address; the app helps with landmarks, address memory, calls and WhatsApp.                       |
+| 2   | Can the courier see the seller's phone?  | Yes, for quick answers, in addition to the parcel chat.                                                                   |
+| 3   | Offline mode                             | Every action works offline; a parcel can never be scanned twice.                                                          |
+| 4   | Who changes the courier's pay plan?      | The admin, at the courier's request.                                                                                      |
+| 5   | App language                             | **TO CONFIRM** French and Arabic.                                                                                         |
+| 6   | Can the customer pay a different amount? | **TO CONFIRM** No, the COD is fixed; otherwise Échec "Refusé".                                                            |
+| 7   | Old item of an exchange                  | **TO CONFIRM** Tracked under the same parcel code as "article récupéré".                                                  |
+| 8   | How is pickup work paid?                 | The ramasseur is an employee paid by HR, outside the app. The app shows him only his pickups, bons, returns and bon cash. |
+| 9   | What if a person changes role?           | He receives a new account with the new role. The old account stays open (no new work) until he is fully paid.             |

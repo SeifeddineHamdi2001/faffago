@@ -98,13 +98,13 @@ WebAssembly, so the triggers and CHECK constraints are genuinely exercised.
 
 ## Layout
 
-| Path | What |
-|---|---|
-| `apps/api` | NestJS, Prisma, PostgreSQL |
-| `apps/web` | Next.js: public site, seller space, back office (phase 2) |
-| `apps/courier` | React Native / Expo, Android (phase 4) |
+| Path              | What                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| `apps/api`        | NestJS, Prisma, PostgreSQL                                        |
+| `apps/web`        | Next.js: public site, seller space, back office (phase 2)         |
+| `apps/courier`    | React Native / Expo, Android (phase 4)                            |
 | `packages/shared` | Statuses, money, the parcel state machine — imported by all three |
-| `packages/config` | Shared TypeScript and ESLint configuration |
+| `packages/config` | Shared TypeScript and ESLint configuration                        |
 
 Money is integer millimes in `bigint`, everywhere, and every status change goes
 through the state machine in `packages/shared`. See `CLAUDE.md` for the rules

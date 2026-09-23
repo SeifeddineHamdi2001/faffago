@@ -4,6 +4,7 @@ Claude Code updates this file at the end of every task.
 Legend: [ ] not started · [~] in progress · [x] done
 
 ## Phase 0 — Foundation
+
 - [x] Monorepo (pnpm workspaces + Turborepo): apps/api, apps/web, apps/courier, packages/shared, packages/config
 - [x] packages/shared: status enums, money helpers (millimes), state machine, geo/CSV matching, chat lifecycle, zod schemas — 152 tests
 - [x] Full Prisma schema reviewed and approved (40 tables) + first migration, with append-only enforcement
@@ -13,13 +14,15 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Courier login with role choice (Livreur / Ramasseur)
 
 ## Phase 1 — Parcel core
+
 - [ ] Parcel model with fees frozen at creation (columns in place, service to write)
 - [~] Parcel event service (immutable events) + state machine with tests
-      — the state machine and its 48 tests are done in `packages/shared`;
-      the NestJS service that writes the events is not
+  — the state machine and its 48 tests are done in `packages/shared`;
+  the NestJS service that writes the events is not
 - [x] Append-only audit log (trigger + revoked privileges + tests)
 
 ## Phase 2 — Seller space
+
 - [ ] Seller accounts created by admin (statut, documents in private storage)
 - [ ] Créer un colis + validation
 - [ ] Import CSV (client preview + server validation)
@@ -28,6 +31,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Ramassage requests + pickup address at first request
 
 ## Phase 3 — Back office operations
+
 - [ ] Web scan station (camera + USB gun), 5 modes, scan deduplication
 - [ ] Zones (livreur + ramasseur, titular + backup) and absence switch
 - [ ] Tournées (parcels grouped by zone, manual moves)
@@ -35,6 +39,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Colis search + admin status override (with reason, audited)
 
 ## Phase 4 — Courier app
+
 - [ ] Expo dev build, login with role choice, PIN
 - [ ] Livreur: Ma journée, Ma tournée, Trouver le client, Livrer / Échec
 - [ ] Mémoire d'adresse (linked to customer phone)
@@ -44,12 +49,14 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] APK distribution, forced update (only with empty queue), OTA updates
 
 ## Phase 5 — À vérifier
+
 - [ ] Failure reasons (courier only), seller decisions (Relancer / Retourner / Changer de client)
 - [ ] Changer de client only at depot, 1,000 DT fee, attempt counter reset
 - [ ] 48-hour automatic return job, 3rd attempt rule
 - [ ] Service client call log (Appels Faffa Go)
 
 ## Phase 6 — Money
+
 - [ ] Caisse sessions (attendu / compté / écart), courier debts
 - [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
 - [ ] Bons de retour
@@ -57,25 +64,30 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
 
 ## Phase 6b — Public site
+
 - [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
 - [ ] Tarifs and Zones couvertes read from Paramètres
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
 
 ## Phase 7 — Communication and reporting
+
 - [ ] Chat per parcel (seller ↔ livreur, staff can join)
 - [ ] In-app notifications (all roles)
 - [ ] Exceptions queue
 - [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
 
 ## Phase 8 — Deployment
+
 - [ ] VPS setup, HTTPS, environment variables
 - [ ] Daily off-server backups + tested restore
 - [ ] Monitoring and logs
 - [ ] Full real-day test with real scans on a low-cost Android phone
 
 ## Decisions made during the build
+
 <!-- date — decision — reason -->
+
 - 2026-09-23 — **Monorepo**: pnpm workspaces + Turborepo, plus a fifth workspace
   `packages/config` holding the shared tsconfig and ESLint configs, so the three
   apps do not each carry their own copy.
@@ -84,7 +96,7 @@ Legend: [ ] not started · [~] in progress · [x] done
   percentage never touches a float. One `applyRateBps` holds the half-up
   rounding, which is the single place the accountant changes it (A-3b).
 - 2026-09-23 — **`ParcelLocation` is its own column** (D-1). Status and physical
-  position move independently: *Retour de tournée* keeps the status À vérifier
+  position move independently: _Retour de tournée_ keeps the status À vérifier
   while moving the parcel to the depot, and that move is what unlocks Changer de
   client. Encoding it in the status would have needed new statuses.
 - 2026-09-23 — **`SellerCharge` is the single deduction table** (D-2). Delivery,
@@ -136,6 +148,7 @@ Legend: [ ] not started · [~] in progress · [x] done
   is private until someone deliberately adds it.
 
 ## Open questions
+
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
   half-up at the millime" (A-3), still to be signed off by the accountant.
 - Back office scanning: browser camera enough, or add a Dépôt mode to the

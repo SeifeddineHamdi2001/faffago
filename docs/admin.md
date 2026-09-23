@@ -6,15 +6,15 @@
 
 The back office is where the Faffa Go team runs the operation: parcels coming in and going out, failed deliveries, courier cash, seller payments, returns, courier pay and the platform settings. It works on a phone as well as on a computer.
 
-| Principle | What it means |
-|---|---|
-| **Phone first.** | Scanning is done with the phone camera. A USB barcode gun is optional and can be added later without changes. |
-| **The scan is the status change.** | Parcels move only through scans and recorded actions. Every event is stored with who, when and where, and cannot be edited. |
-| **Money has an owner at every moment.** | Cash is always either with a courier, in the depot cash, or paid to a seller. The system knows which, parcel by parcel. |
-| **Couriers hand over cash every day.** | All cash from delivered parcels is handed to the admin daily, whatever the courier's pay plan. |
-| **Missing money is the courier's responsibility.** | A cash shortfall is recorded as a debt and deducted from the courier's pay. |
-| **The admin alone touches money and settings.** | Only the admin prepares seller payments, pays couriers, changes rates and rules, and overrides a status. |
-| **Returns are never decided by Faffa Go.** | A return comes only from the seller's choice, the 48-hour rule or the third failed attempt. |
+| Principle                                          | What it means                                                                                                               |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Phone first.**                                   | Scanning is done with the phone camera. A USB barcode gun is optional and can be added later without changes.               |
+| **The scan is the status change.**                 | Parcels move only through scans and recorded actions. Every event is stored with who, when and where, and cannot be edited. |
+| **Money has an owner at every moment.**            | Cash is always either with a courier, in the depot cash, or paid to a seller. The system knows which, parcel by parcel.     |
+| **Couriers hand over cash every day.**             | All cash from delivered parcels is handed to the admin daily, whatever the courier's pay plan.                              |
+| **Missing money is the courier's responsibility.** | A cash shortfall is recorded as a debt and deducted from the courier's pay.                                                 |
+| **The admin alone touches money and settings.**    | Only the admin prepares seller payments, pays couriers, changes rates and rules, and overrides a status.                    |
+| **Returns are never decided by Faffa Go.**         | A return comes only from the seller's choice, the 48-hour rule or the third failed attempt.                                 |
 
 ## 2. Roles and permissions
 
@@ -22,30 +22,30 @@ Three staff roles. At launch one person can hold all of them; the split exists s
 
 _**TO CONFIRM** Roles adopted as proposed during the discussion._
 
-| Action | Admin | Dépôt | Service client |
-|---|---|---|---|
-| Scan (entrée, sortie, retours, archivage) | **Oui** | **Oui** | — |
-| Plan pickups and tours | **Oui** | **Oui** | — |
-| Courier cash reconciliation (Caisse) | **Oui** | **Oui** | — |
-| À vérifier follow-up, log calls | **Oui** | — | **Oui** |
-| Read and join parcel chats | **Oui** | **Oui** | **Oui** |
-| Apply seller change requests | **Oui** | — | **Oui** |
-| Prepare bons de versement and bons de retour | **Oui** | — | — |
-| Courier pay, cancel a courier debt | **Oui** | — | — |
-| Create / suspend sellers and couriers | **Oui** | — | — |
-| Override a parcel status | **Oui** | — | — |
-| Paramètres, staff users, reports | **Oui** | — | — |
+| Action                                       | Admin   | Dépôt   | Service client |
+| -------------------------------------------- | ------- | ------- | -------------- |
+| Scan (entrée, sortie, retours, archivage)    | **Oui** | **Oui** | —              |
+| Plan pickups and tours                       | **Oui** | **Oui** | —              |
+| Courier cash reconciliation (Caisse)         | **Oui** | **Oui** | —              |
+| À vérifier follow-up, log calls              | **Oui** | —       | **Oui**        |
+| Read and join parcel chats                   | **Oui** | **Oui** | **Oui**        |
+| Apply seller change requests                 | **Oui** | —       | **Oui**        |
+| Prepare bons de versement and bons de retour | **Oui** | —       | —              |
+| Courier pay, cancel a courier debt           | **Oui** | —       | —              |
+| Create / suspend sellers and couriers        | **Oui** | —       | —              |
+| Override a parcel status                     | **Oui** | —       | —              |
+| Paramètres, staff users, reports             | **Oui** | —       | —              |
 
 ## 3. Navigation
 
 Sidebar on computer, bottom bar with Scan in the centre on phone. Each role only sees the menu items it can use.
 
-| Group | Menu items |
-|---|---|
-| **Journée** | Aujourd'hui · Scan · Colis · Ramassages · Tournées · À vérifier · Exceptions · Chats |
-| **Argent** | Caisse · Paiements vendeurs · Retours · Paie coursiers · Rapports |
-| **Gestion** | Vendeurs · Coursiers · Paramètres · Journal d'audit |
-| **Toujours visible** | Search (code, name, phone) · Notifications · User menu |
+| Group                | Menu items                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| **Journée**          | Aujourd'hui · Scan · Colis · Ramassages · Tournées · À vérifier · Exceptions · Chats |
+| **Argent**           | Caisse · Paiements vendeurs · Retours · Paie coursiers · Rapports                    |
+| **Gestion**          | Vendeurs · Coursiers · Paramètres · Journal d'audit                                  |
+| **Toujours visible** | Search (code, name, phone) · Notifications · User menu                               |
 
 ## 4. Features
 
@@ -65,13 +65,13 @@ Flow: À ramasser › Au dépôt › En livraison › Livrés › À vérifier �
 
 Scanning with the phone camera. The mode is chosen with large buttons, then the team scans parcel after parcel in **scan continu**, without tapping between scans.
 
-| Mode | Used when | Result of a valid scan |
-|---|---|---|
-| **Entrée dépôt** | Parcels arrive from a pickup | Au dépôt |
-| **Sortie coursier** | Morning dispatch; choose the courier first | En livraison, assigned to that courier |
-| **Retour de tournée** | Courier brings back failed parcels | Stays À vérifier, now physically at the depot (unlocks Changer de client) |
-| **Préparation retours** | Returns are grouped for a seller | Added to that seller's bon de retour |
-| **Archivage bons** | Signed paper bons come back | Bon marked Archivé |
+| Mode                    | Used when                                  | Result of a valid scan                                                    |
+| ----------------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
+| **Entrée dépôt**        | Parcels arrive from a pickup               | Au dépôt                                                                  |
+| **Sortie coursier**     | Morning dispatch; choose the courier first | En livraison, assigned to that courier                                    |
+| **Retour de tournée**   | Courier brings back failed parcels         | Stays À vérifier, now physically at the depot (unlocks Changer de client) |
+| **Préparation retours** | Returns are grouped for a seller           | Added to that seller's bon de retour                                      |
+| **Archivage bons**      | Signed paper bons come back                | Bon marked Archivé                                                        |
 
 - Every scan gives an immediate full-screen result: green (done) or red with the reason, e.g. "Colis déjà livré", "Mauvais mode", "Colis d'un autre coursier", "Code inconnu".
 - **Annuler le dernier scan** is possible within 1 minute; after that, only an admin override.
@@ -116,15 +116,15 @@ Flow: Échec › À vérifier › Relancé (1 tentative) › Livré ou À vérif
 
 Everything that is stuck, in one queue, each with its action:
 
-| Exception | Action |
-|---|---|
-| Parcel at the depot more than 48 h without a tour | Assign |
-| Parcel close to the 48-hour À vérifier limit | Call the customer / contact the seller |
-| Courier has not handed over his cash today | Open Caisse |
-| Bon en route not marked Remis after 24 h | Contact the courier |
-| Signed bon not archived after 48 h | Archive |
-| Pickup planned but not done | Re-plan |
-| Seller change request waiting | Apply / refuse |
+| Exception                                         | Action                                 |
+| ------------------------------------------------- | -------------------------------------- |
+| Parcel at the depot more than 48 h without a tour | Assign                                 |
+| Parcel close to the 48-hour À vérifier limit      | Call the customer / contact the seller |
+| Courier has not handed over his cash today        | Open Caisse                            |
+| Bon en route not marked Remis after 24 h          | Contact the courier                    |
+| Signed bon not archived after 48 h                | Archive                                |
+| Pickup planned but not done                       | Re-plan                                |
+| Seller change request waiting                     | Apply / refuse                         |
 
 ### 4.8 Chats
 
@@ -140,11 +140,11 @@ Every courier hands over all the cash from his delivered parcels **every day**. 
 - For each courier: **attendu** (sum of COD of the parcels he scanned Livré today) and **compté** (what he actually hands over).
 - **Écart** = compté − attendu. When the session is closed, the parcels move from "Chez le coursier" to "Au dépôt" and become payable to sellers.
 
-| Example | Amount |
-|---|---|
-| Oussama — 14 parcels delivered, attendu | 468,000 DT |
-| Compté | 463,000 DT |
-| **Écart** | **− 5,000 DT** › recorded as a courier debt, deducted from his next pay |
+| Example                                 | Amount                                                                  |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| Oussama — 14 parcels delivered, attendu | 468,000 DT                                                              |
+| Compté                                  | 463,000 DT                                                              |
+| **Écart**                               | **− 5,000 DT** › recorded as a courier debt, deducted from his next pay |
 
 - **Negative écart**: automatically becomes a courier debt, deducted from his next pay. The admin can cancel it with a note (e.g. money found later).
 - **Positive écart**: recorded and flagged for the admin to check; never absorbed silently.
@@ -172,12 +172,12 @@ Admin only. Preparing the bons de versement that couriers deliver in cash.
 
 Livreurs are paid per delivered parcel, on the pay plan they choose. Ramasseurs are employees paid by HR; their pay is **not** managed in the app.
 
-| Rule | Detail |
-|---|---|
-| Rate (livreur) | One rate per parcel Livré, set in Paramètres. Failed attempts are not paid. |
-| Pay plan | Chosen by the courier and saved on his profile: **Journalier**, **Hebdomadaire** or **Mensuel**. Cash handover to the depot stays daily in every case. |
-| Deductions | Courier debts from negative écarts in Caisse. |
-| Calculation | Parcels livrés in the period × rate − deductions = net. |
+| Rule           | Detail                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Rate (livreur) | One rate per parcel Livré, set in Paramètres. Failed attempts are not paid.                                                                            |
+| Pay plan       | Chosen by the courier and saved on his profile: **Journalier**, **Hebdomadaire** or **Mensuel**. Cash handover to the depot stays daily in every case. |
+| Deductions     | Courier debts from negative écarts in Caisse.                                                                                                          |
+| Calculation    | Parcels livrés in the period × rate − deductions = net.                                                                                                |
 
 - The **Paie coursiers** screen lists who is due today according to his plan, with a **fiche de paie** (period, parcels, rate, deductions, net) to print. The admin marks it **Payée**.
 - If deductions are larger than the pay, the rest of the debt carries over to the next period.
@@ -186,14 +186,14 @@ Livreurs are paid per delivered parcel, on the pay plan they choose. Ramasseurs 
 
 _**TO CONFIRM** List adopted as proposed._
 
-| Report | Content |
-|---|---|
+| Report              | Content                                                                         |
+| ------------------- | ------------------------------------------------------------------------------- |
 | Retenue à la source | Monthly total withheld per seller, for the tax declaration; certificates issued |
-| Chiffre d'affaires | Delivery, return and change-client fees by period |
-| Activité | Delivery rate, return rate, average delivery time — by seller, zone, courier |
-| Argent | Cash collected, handed over, paid to sellers, still held; courier debts |
-| Paie coursiers | Pay per livreur and period, deductions |
-| Écarts ramasseurs | Missing bon cash per ramasseur and month, to send to HR |
+| Chiffre d'affaires  | Delivery, return and change-client fees by period                               |
+| Activité            | Delivery rate, return rate, average delivery time — by seller, zone, courier    |
+| Argent              | Cash collected, handed over, paid to sellers, still held; courier debts         |
+| Paie coursiers      | Pay per livreur and period, deductions                                          |
+| Écarts ramasseurs   | Missing bon cash per ramasseur and month, to send to HR                         |
 
 _Every report can be exported to CSV / Excel._
 
@@ -218,20 +218,20 @@ _Every report can be exported to CSV / Excel._
 
 ### 4.16 Paramètres
 
-| Setting | Default |
-|---|---|
-| Delivery fee, return fee | Same for every seller |
-| Change-client fee | 1,000 DT |
-| Pickup fee and free threshold | 2,000 DT when fewer than 5 parcels are picked up; free from 5 |
-| Retenue à la source | 3% (CIN uniquement) |
-| Courier rate per parcel livré | Set by the admin |
-| À vérifier time limit | 48 hours |
-| Maximum delivery attempts | 3 |
-| Failure reasons | Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé |
-| Gouvernorats and délégations | Managed list |
-| Zones | Groups of délégations, each with a livreur (titular + backup) and a ramasseur (titular + backup), set by the admin |
-| Contact links (Devenir partenaire) | Social media, phone, WhatsApp |
-| Staff users and roles | Admin, Dépôt, Service client |
+| Setting                            | Default                                                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Delivery fee, return fee           | Same for every seller                                                                                              |
+| Change-client fee                  | 1,000 DT                                                                                                           |
+| Pickup fee and free threshold      | 2,000 DT when fewer than 5 parcels are picked up; free from 5                                                      |
+| Retenue à la source                | 3% (CIN uniquement)                                                                                                |
+| Courier rate per parcel livré      | Set by the admin                                                                                                   |
+| À vérifier time limit              | 48 hours                                                                                                           |
+| Maximum delivery attempts          | 3                                                                                                                  |
+| Failure reasons                    | Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé                                      |
+| Gouvernorats and délégations       | Managed list                                                                                                       |
+| Zones                              | Groups of délégations, each with a livreur (titular + backup) and a ramasseur (titular + backup), set by the admin |
+| Contact links (Devenir partenaire) | Social media, phone, WhatsApp                                                                                      |
+| Staff users and roles              | Admin, Dépôt, Service client                                                                                       |
 
 _Rate changes apply to parcels created after the change; existing parcels keep the fee they were created with._
 
@@ -240,11 +240,11 @@ _Rate changes apply to parcels created after the change; existing parcels keep t
 All accounts are created by the admin; there is no public sign-up and no
 self-service password reset anywhere in the platform.
 
-| Role | Logs in with |
-|---|---|
-| Vendeur | Email + password |
-| Admin, Dépôt, Service client | Username + password |
-| Livreur, Ramasseur | Phone + password, after choosing the role on the app login screen |
+| Role                         | Logs in with                                                      |
+| ---------------------------- | ----------------------------------------------------------------- |
+| Vendeur                      | Email + password                                                  |
+| Admin, Dépôt, Service client | Username + password                                               |
+| Livreur, Ramasseur           | Phone + password, after choosing the role on the app login screen |
 
 - **Créer un compte**: the admin picks the role, fills the information and the
   username (or the email for a seller). The password is generated at random
@@ -275,29 +275,29 @@ In-app only, filtered by role: new pickup requests, seller change requests, parc
 
 Parcel delivery and cash statuses are the same as in the seller specification. The back office adds the following.
 
-| Object | Statuses |
-|---|---|
-| Parcel (delivery) | Créé › Ramassé › Au dépôt › En livraison › Livré · À vérifier · Relancé · Retour au dépôt › Retour en route › Retour reçu · Annulé |
-| Parcel (cash) | Chez le coursier › Au dépôt › Payé |
-| Ramassage | Demandé › Planifié › Effectué · Annulé |
-| Bon de versement | Préparé › En route › Remis › Archivé |
-| Bon de retour | Préparé › En route › Remis › Archivé |
-| Session de caisse | Ouverte › Comptée › Clôturée |
-| Dette coursier | En cours › Déduite · Annulée (with note) |
-| Fiche de paie | À payer › Payée |
-| Vendeur / Coursier | Actif · Suspendu (vendeur) · Inactif (coursier) |
+| Object             | Statuses                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Parcel (delivery)  | Créé › Ramassé › Au dépôt › En livraison › Livré · À vérifier · Relancé · Retour au dépôt › Retour en route › Retour reçu · Annulé |
+| Parcel (cash)      | Chez le coursier › Au dépôt › Payé                                                                                                 |
+| Ramassage          | Demandé › Planifié › Effectué · Annulé                                                                                             |
+| Bon de versement   | Préparé › En route › Remis › Archivé                                                                                               |
+| Bon de retour      | Préparé › En route › Remis › Archivé                                                                                               |
+| Session de caisse  | Ouverte › Comptée › Clôturée                                                                                                       |
+| Dette coursier     | En cours › Déduite · Annulée (with note)                                                                                           |
+| Fiche de paie      | À payer › Payée                                                                                                                    |
+| Vendeur / Coursier | Actif · Suspendu (vendeur) · Inactif (coursier)                                                                                    |
 
 ## 6. Business rules
 
-01. Only the admin creates seller and courier accounts, prepares seller payments, pays couriers, changes settings and overrides a status.
-02. Scanning is done with the phone camera; a USB barcode gun is optional.
-03. Every scan and action is recorded (who, when, where) and cannot be edited. Corrections go through an override with a reason.
-04. Couriers hand over all cash from delivered parcels to the admin every day.
-05. Écart = compté − attendu. A negative écart becomes a courier debt deducted from his pay; only the admin can cancel it, with a note.
-06. A parcel becomes payable to the seller once the courier's Caisse session is closed.
-07. Seller payments are cash only, per parcel, prepared by the admin and delivered by the ramasseur with the bon; the contact person signs.
-08. The 3% retenue à la source applies to sellers with statut CIN uniquement, after Faffa Go fees.
-09. Signed bons are scanned back at the depot and archived.
+1.  Only the admin creates seller and courier accounts, prepares seller payments, pays couriers, changes settings and overrides a status.
+2.  Scanning is done with the phone camera; a USB barcode gun is optional.
+3.  Every scan and action is recorded (who, when, where) and cannot be edited. Corrections go through an override with a reason.
+4.  Couriers hand over all cash from delivered parcels to the admin every day.
+5.  Écart = compté − attendu. A negative écart becomes a courier debt deducted from his pay; only the admin can cancel it, with a note.
+6.  A parcel becomes payable to the seller once the courier's Caisse session is closed.
+7.  Seller payments are cash only, per parcel, prepared by the admin and delivered by the ramasseur with the bon; the contact person signs.
+8.  The 3% retenue à la source applies to sellers with statut CIN uniquement, after Faffa Go fees.
+9.  Signed bons are scanned back at the depot and archived.
 10. Returns and bons travel with the seller's pickup visit.
 11. A failed delivery goes to À vérifier. Relancer is free and gives one new attempt; a new failure returns the parcel to À vérifier.
 12. Changer de client (1,000 DT) is possible only when the parcel is at the depot.
@@ -312,34 +312,34 @@ Parcel delivery and cash statuses are the same as in the seller specification. T
 
 ## 7. Out of scope for version 1
 
-| Item | Reason |
-|---|---|
-| Required barcode gun or scanning hardware | Phone camera is enough; gun optional later |
-| Automatic route optimisation, live courier map | Later phase |
-| Several depots | One depot at launch |
-| Automatic zone balancing between couriers | The admin sets and adjusts zones; the Activité report shows imbalances |
-| Team deciding returns | Returns come only from the seller or automatic rules |
-| Courier pay for failed delivery attempts | Delivery pay is per parcel livré only |
-| Automatic tax filing | The system prepares the retenue report; filing is done outside |
-| SMS, WhatsApp or email notifications | In-app only |
-| API / Shopify / WooCommerce integration | Later phase |
+| Item                                           | Reason                                                                 |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| Required barcode gun or scanning hardware      | Phone camera is enough; gun optional later                             |
+| Automatic route optimisation, live courier map | Later phase                                                            |
+| Several depots                                 | One depot at launch                                                    |
+| Automatic zone balancing between couriers      | The admin sets and adjusts zones; the Activité report shows imbalances |
+| Team deciding returns                          | Returns come only from the seller or automatic rules                   |
+| Courier pay for failed delivery attempts       | Delivery pay is per parcel livré only                                  |
+| Automatic tax filing                           | The system prepares the retenue report; filing is done outside         |
+| SMS, WhatsApp or email notifications           | In-app only                                                            |
+| API / Shopify / WooCommerce integration        | Later phase                                                            |
 
 ## 8. Decisions log
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | How does the team scan without a barcode gun? | With the phone camera; gun optional later. |
-| 2 | How does Relancer work? | Free, one new attempt; a new failure returns the parcel to À vérifier. |
-| 3 | When can Changer de client be used? | Only when the parcel is at the depot. |
-| 4 | Can Faffa Go customer service decide a return? | No. |
-| 5 | What happens with missing cash (negative écart)? | Deducted from the courier's pay. |
-| 6 | How are couriers paid? | Per parcel livré. |
-| 7 | How often are couriers paid? | The courier chooses: journalier, hebdomadaire or mensuel. |
-| 8 | How often do couriers hand over cash? | Every day, whatever their pay plan. |
-| 9 | Staff roles | **TO CONFIRM** Admin, Dépôt, Service client (section 2). |
-| 10 | Parcel assignment to couriers | By zone. The admin assigns each zone a livreur and a ramasseur, each with a backup; the team can move any parcel. |
-| 11 | Reports | **TO CONFIRM** List in 4.13. |
-| 12 | Who does pickups? | The ramasseur of the seller's zone, a separate employee. He is the only one who hands over bons de versement and bons de retour. |
-| 13 | How is pickup work paid? | Ramasseurs are employees paid by HR, outside the app. Missing bon cash is reported to HR. |
-| 14 | What if a person changes role? | The admin creates a new account with the new role. The old account stays open (no new work) until the person is fully paid; the admin may deactivate it later. History is kept. |
-| 15 | Is a pickup charged? | Free from 5 parcels picked up; 2,000 DT below 5, counted on the parcels scanned. |
+| #   | Question                                         | Decision                                                                                                                                                                        |
+| --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | How does the team scan without a barcode gun?    | With the phone camera; gun optional later.                                                                                                                                      |
+| 2   | How does Relancer work?                          | Free, one new attempt; a new failure returns the parcel to À vérifier.                                                                                                          |
+| 3   | When can Changer de client be used?              | Only when the parcel is at the depot.                                                                                                                                           |
+| 4   | Can Faffa Go customer service decide a return?   | No.                                                                                                                                                                             |
+| 5   | What happens with missing cash (negative écart)? | Deducted from the courier's pay.                                                                                                                                                |
+| 6   | How are couriers paid?                           | Per parcel livré.                                                                                                                                                               |
+| 7   | How often are couriers paid?                     | The courier chooses: journalier, hebdomadaire or mensuel.                                                                                                                       |
+| 8   | How often do couriers hand over cash?            | Every day, whatever their pay plan.                                                                                                                                             |
+| 9   | Staff roles                                      | **TO CONFIRM** Admin, Dépôt, Service client (section 2).                                                                                                                        |
+| 10  | Parcel assignment to couriers                    | By zone. The admin assigns each zone a livreur and a ramasseur, each with a backup; the team can move any parcel.                                                               |
+| 11  | Reports                                          | **TO CONFIRM** List in 4.13.                                                                                                                                                    |
+| 12  | Who does pickups?                                | The ramasseur of the seller's zone, a separate employee. He is the only one who hands over bons de versement and bons de retour.                                                |
+| 13  | How is pickup work paid?                         | Ramasseurs are employees paid by HR, outside the app. Missing bon cash is reported to HR.                                                                                       |
+| 14  | What if a person changes role?                   | The admin creates a new account with the new role. The old account stays open (no new work) until the person is fully paid; the admin may deactivate it later. History is kept. |
+| 15  | Is a pickup charged?                             | Free from 5 parcels picked up; 2,000 DT below 5, counted on the parcels scanned.                                                                                                |
