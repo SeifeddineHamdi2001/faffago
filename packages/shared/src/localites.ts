@@ -243,7 +243,9 @@ export function resolveLocalite(
 
   const needle = normalizeForMatch(raw);
   let matches = localites.filter((localite) =>
-    [...namesOf(localite), localite.nameAr ?? ''].some((name) => normalizeForMatch(name) === needle),
+    [...namesOf(localite), localite.nameAr ?? ''].some(
+      (name) => normalizeForMatch(name) === needle,
+    ),
   );
   if (delegation) {
     const id = delegation.id;

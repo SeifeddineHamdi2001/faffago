@@ -165,8 +165,7 @@ export const SETTING_VALUE_SCHEMAS: Record<SettingKey, z.ZodType<SettingJsonValu
 };
 
 export type SettingParseResult =
-  | { ok: true; value: SettingJsonValue }
-  | { ok: false; message: string };
+  { ok: true; value: SettingJsonValue } | { ok: false; message: string };
 
 export function parseSettingValue(key: SettingKey, value: unknown): SettingParseResult {
   const result = SETTING_VALUE_SCHEMAS[key].safeParse(value);

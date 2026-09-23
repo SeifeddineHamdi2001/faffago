@@ -39,8 +39,7 @@ export interface SettingUpdateResult {
   changed: boolean;
 }
 
-const parametreInconnu = () =>
-  apiError(404, 'PARAMETRE_INCONNU', 'Ce paramètre n’existe pas.');
+const parametreInconnu = () => apiError(404, 'PARAMETRE_INCONNU', 'Ce paramètre n’existe pas.');
 
 /**
  * Paramètres (Admin 4.16, D-20), read from the `settings` table: the runtime

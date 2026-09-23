@@ -73,7 +73,13 @@ function insertParcel(localiteId: string, delegationId: string) {
        "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt")
      values (gen_random_uuid(),$1,$2,'Client','29876543',$3,$4,'Rue X','Article',
        85000,5500,2000,1000,$5,now())`,
-    [`FG-TEST${String(parcelCounter).padStart(4, '0')}`, SELLER_ID, delegationId, localiteId, USER_ID],
+    [
+      `FG-TEST${String(parcelCounter).padStart(4, '0')}`,
+      SELLER_ID,
+      delegationId,
+      localiteId,
+      USER_ID,
+    ],
   );
 }
 

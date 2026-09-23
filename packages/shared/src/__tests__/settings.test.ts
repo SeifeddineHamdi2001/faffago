@@ -94,7 +94,10 @@ describe('parseSettingValue', () => {
   });
 
   it('requires https links, or an empty field, in the contact links', () => {
-    const ok = parseSettingValue(SettingKey.CONTACT_LINKS, { ...DEFAULT_CONTACT_LINKS, tiktok: '' });
+    const ok = parseSettingValue(SettingKey.CONTACT_LINKS, {
+      ...DEFAULT_CONTACT_LINKS,
+      tiktok: '',
+    });
     expect(ok.ok).toBe(true);
 
     const insecure = parseSettingValue(SettingKey.CONTACT_LINKS, {

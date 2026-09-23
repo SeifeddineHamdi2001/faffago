@@ -88,7 +88,10 @@ const ENNASR_MOUROUJ = localite(MOUROUJ, 'Cité Ennasr 1', {
 const MENZAH_6 = localite(ARIANA_VILLE, 'El Menzah 6', { postalCode: '2091' });
 const AIN_ZAGHOUAN_NORD = localite(MARSA, 'Ain Zaghouan Nord', { aliases: ['Ain Zaghouan'] });
 const AIN_ZAGHOUAN_SUD = localite(MARSA, 'Ain Zaghouan Sud', { aliases: ['Ain Zaghouan'] });
-const MAAKEL = localite(SIDI_BECHIR, 'Maakel Ezzaïm', { nameAr: 'معقل الزعيم', postalCode: '1008' });
+const MAAKEL = localite(SIDI_BECHIR, 'Maakel Ezzaïm', {
+  nameAr: 'معقل الزعيم',
+  postalCode: '1008',
+});
 const AUTRE_ARIANA = localite(ARIANA_VILLE, 'Autre', { nameAr: 'أخرى', isOther: true });
 const AUTRE_MOUROUJ = localite(MOUROUJ, 'Autre', { nameAr: 'أخرى', isOther: true });
 const AUTRE_MARSA = localite(MARSA, 'Autre', { nameAr: 'أخرى', isOther: true });
@@ -296,7 +299,10 @@ describe('resolveLocalite: the CSV import (D-17, Q5)', () => {
   });
 
   it('refuses an unknown délégation before looking at the localité', () => {
-    const result = resolveLocalite({ localite: 'El Menzah 6', delegation: 'Nulle Part' }, LOCALITES);
+    const result = resolveLocalite(
+      { localite: 'El Menzah 6', delegation: 'Nulle Part' },
+      LOCALITES,
+    );
     expect(result).toMatchObject({ ok: false, error: LocaliteLookupError.DELEGATION_INCONNUE });
   });
 
