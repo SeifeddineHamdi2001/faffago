@@ -40,3 +40,7 @@ export function GET(request: NextRequest, context: Context) {
 export function POST(request: NextRequest, context: Context) {
   return forward(request, context, 'POST');
 }
+
+export function PATCH(request: NextRequest, context: Context) {
+  return forward(request, context, 'PATCH');
+}

@@ -11,11 +11,7 @@ import { Permission } from '@faffago/shared';
 const ITEMS: { href: string; label: string; permission: Permission }[] = [
   { href: '/admin/vendeurs', label: 'Vendeurs', permission: Permission.VENDEURS_LECTURE },
   { href: '/admin/coursiers', label: 'Coursiers', permission: Permission.COURSIERS_LECTURE },
-  {
-    href: '/admin/parametres/utilisateurs',
-    label: 'Paramètres',
-    permission: Permission.COMPTES_STAFF,
-  },
+  { href: '/admin/parametres', label: 'Paramètres', permission: Permission.PARAMETRES },
 ];
 
 export function AdminNav({ permissions }: { permissions: Permission[] }) {

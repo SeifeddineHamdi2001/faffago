@@ -262,3 +262,13 @@ export function readPlatformSettings(stored: Readonly<Record<string, unknown>>):
     },
   };
 }
+
+/**
+ * A count typed in Paramètres (hours, attempts, parcels): digits only, six at
+ * most. The apps never coerce with Number() (lint rule), so that no amount of
+ * money can slip through a float; counts go through here.
+ */
+export function parseWholeNumber(input: string): number | null {
+  const trimmed = String(input).trim();
+  return /^\d{1,6}$/.test(trimmed) ? Number.parseInt(trimmed, 10) : null;
+}

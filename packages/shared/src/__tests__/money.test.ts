@@ -8,6 +8,8 @@ import {
   parseDT,
   sumMillimes,
   tryParseDT,
+  formatRatePercent,
+  parseRatePercent,
 } from '../money.js';
 
 describe('formatDT', () => {
@@ -142,5 +144,28 @@ describe('JSON transport', () => {
   it('refuses a number that has already lost precision', () => {
     expect(() => millimesFromJson(1.5)).toThrow(TypeError);
     expect(() => millimesFromJson('85,000')).toThrow(TypeError);
+  });
+});
+
+describe('rates typed as a percentage (Paramètres, retenue)', () => {
+  it('shows basis points as a French percentage', () => {
+    expect(formatRatePercent(300)).toBe('3');
+    expect(formatRatePercent(250)).toBe('2,5');
+    expect(formatRatePercent(1)).toBe('0,01');
+    expect(formatRatePercent(0)).toBe('0');
+  });
+
+  it('reads a typed percentage into basis points without floats', () => {
+    expect(parseRatePercent('3')).toBe(300);
+    expect(parseRatePercent('2,5')).toBe(250);
+    expect(parseRatePercent('2.55')).toBe(255);
+    expect(parseRatePercent(' 3 % ')).toBe(300);
+    expect(parseRatePercent('100')).toBe(10_000);
+  });
+
+  it('refuses what is not a percentage between 0 and 100 with two decimals at most', () => {
+    for (const input of ['', 'abc', '-1', '2,555', '100,01', '1e2']) {
+      expect(parseRatePercent(input)).toBeNull();
+    }
   });
 });

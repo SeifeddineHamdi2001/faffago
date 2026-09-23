@@ -142,3 +142,28 @@ export function millimesFromJson(value: string | number | bigint): Millimes {
   }
   return BigInt(value);
 }
+
+/**
+ * A rate as the admin reads it in Paramètres: 300 bps → "3", 250 → "2,5".
+ * Integer arithmetic only, like the amounts.
+ */
+export function formatRatePercent(bps: BasisPoints): string {
+  const whole = Math.trunc(bps / 100);
+  const hundredths = String(bps % 100)
+    .padStart(2, '0')
+    .replace(/0+$/, '');
+  return hundredths ? `${whole}${DECIMAL_SEPARATOR}${hundredths}` : String(whole);
+}
+
+/**
+ * A percentage typed by the admin, back to basis points: "2,5" → 250. Two
+ * decimals at most (one basis point), between 0 and 100 %. `null` when the
+ * text is not such a percentage.
+ */
+export function parseRatePercent(input: string): BasisPoints | null {
+  const match = /^(\d{1,3})(?:[.,](\d{1,2}))?$/.exec(String(input).replace(/\s|%/g, ''));
+  if (!match) return null;
+  const bps =
+    Number.parseInt(match[1]!, 10) * 100 + Number.parseInt((match[2] ?? '').padEnd(2, '0'), 10);
+  return bps <= 10_000 ? bps : null;
+}

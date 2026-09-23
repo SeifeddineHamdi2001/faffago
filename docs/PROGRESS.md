@@ -45,21 +45,39 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 
 ## Phase 2 — Seed et Paramètres
 
-Branch `phase-2-seed`. Inserted as a new phase on 2026-09-23 (D-18).
+Done on branch `phase-2-seed`, ready to merge. Inserted as a new phase on
+2026-09-23 (D-18).
 
 - [x] Grand Tunis geography reviewed and approved (`docs/geo-review.md`, D-19)
-- [x] Localités data in `apps/api/prisma/data/localites-grand-tunis.csv` (D-17)
-- [ ] `Localite` model and migration; `localiteId` on parcels and pickup addresses
-- [ ] Seed: corrected geography (48 délégations), localités, the 15 initial zones
-- [ ] Settings service, tests first (every change audited, fees frozen on
-      existing parcels), money settings as digit strings (D-20)
-- [ ] API: Paramètres read and update; geography tree; localités add, rename,
-      deactivate; parcels filed under Autre
-- [ ] Shared: localité search across names and aliases, CSV resolution
-- [ ] Web Paramètres screen: fees, retenue, limits, contact links; failure
-      reasons read-only
+- [x] Localités data in `apps/api/prisma/data/localites-grand-tunis.csv`:
+      940 rows, 48 délégations, corrected as approved (D-17)
+- [x] `Localite` model; migration `20260926000000_localites` with the
+      (localité, délégation) keys on parcels, pickup addresses and the
+      Changer de client history; one Autre per délégation — 14 schema tests
+- [x] Seed: 48 délégations with the approved spellings, `MAN-DENDEN` removed,
+      940 localités create-only by seed key, the 15 initial zones created once,
+      settings with the starting values — 20 seed tests
+- [x] Settings service and API (`GET /settings`, `PATCH /settings/:key`,
+      admin only): every change audited in its transaction, rolled back if the
+      audit entry fails, fees frozen on existing parcels, money as digit
+      strings — 16 tests
+- [x] Geography API: `GET /geo` for every signed-in user; for the admin,
+      `/localites` (list, add, change) and `/localites/autre/parcels`, audited —
+      19 tests
+- [x] Shared: settings validation, `searchLocalites`, `resolveLocalite` with the
+      preview's dropdown options, computed ambiguity, `formatRatePercent` /
+      `parseRatePercent`, `parseWholeNumber`
+- [x] Web: Paramètres › Tarifs et règles (fees, retenue, limits, contact links;
+      failure reasons read-only) beside Utilisateurs; PATCH through the BFF
 - [x] Starting values for the delivery fee, return fee, courier rate and contact
       links, TikTok included (D-20)
+- [ ] Open, awaiting corrections: the localités marked "délégation à
+      confirmer" in the CSV, kept as they are for now. There are **7**, not the
+      8 first reported: ARI-VILLE Les Jardins d'El Menzah · TUN-ELKHADRA Centre
+      Urbain Nord · TUN-GOULETTE L'Aouina · TUN-MARSA Ain Zaghouan Nord ·
+      TUN-MARSA Ain Zaghouan Sud · TUN-MARSA Lac 2 · TUN-OMRANESUP Cité
+      Olympique. A correction reaches an existing database through Paramètres ›
+      Localités (the seed never overwrites a localité it created).
 
 ## Phase 3 — Parcel core
 
@@ -308,6 +326,25 @@ Branch `phase-2-seed`. Inserted as a new phase on 2026-09-23 (D-18).
   build that the specs do not word: approved for now, reviewed as a whole
   before launch. New texts are added there as they are written (CLAUDE.md, UI).
 
+- 2026-09-23 — **Phase 2 inserted** ("Seed et Paramètres", D-18); every later
+  phase shifts by one. Code comments and specs now use the new numbers.
+- 2026-09-23 — **Localités** (D-17): a third level, required on parcels and
+  pickup addresses, with the délégation stored beside it and a two-column key
+  so the two can never disagree. Ambiguity is computed from the names, never
+  stored. The seed imports the CSV create-only, recognised by a seed key.
+- 2026-09-23 — **Zones seeded once**: the 15 zones are created only while the
+  zones table is empty, so the seed never touches a zone the admin changed.
+- 2026-09-23 — **Settings**: money as digit strings (D-20); the seed only
+  creates keys, so a database seeded in phase 0 keeps its old zero fees until
+  they are set in Paramètres or the database is reset. Validation bounds per
+  key are typing guards, not business rules.
+- 2026-09-23 — **`GET /geo` is open to every signed-in role** (sellers,
+  couriers, staff, and Voir comme le vendeur). It carries no zone and no seed
+  key; zones stay a back office matter.
+- 2026-09-23 — **Counts typed in Paramètres go through `parseWholeNumber`** in
+  `packages/shared`: the apps' lint forbids `Number()` so that money never
+  passes through a float.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -316,7 +353,10 @@ Branch `phase-2-seed`. Inserted as a new phase on 2026-09-23 (D-18).
   courier app?
 - Seed: the Arabic names of the gouvernorats and délégations are the standard
   official spellings but have not been read by a native speaker; the public site
-  shows them to customers.
+  shows them to customers. Localités have no Arabic name yet except Autre and
+  Maakel Ezzaïm; the admin fills them in Paramètres › Localités (phase 5 screen).
+- CSV data: La Poste has no "El Mourouj 1"; the row added under El Mourouj
+  stays until you decide (D-17).
 - **UI texts**: approved for now; the full review before launch works from
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.

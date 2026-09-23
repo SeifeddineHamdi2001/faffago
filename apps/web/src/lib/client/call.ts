@@ -35,7 +35,7 @@ function toLogin(): never {
  * sends the person to the login page when the session is gone.
  */
 export async function bff<T>(
-  method: 'GET' | 'POST',
+  method: 'GET' | 'POST' | 'PATCH',
   path: string,
   body?: unknown,
 ): Promise<BffResult<T>> {

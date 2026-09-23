@@ -407,11 +407,26 @@ address), Admin 4.16 (a managed list of localités) and Coursier (what a stop
 shows). The délégation alone is too coarse to find a customer; sellers and
 customers name the neighbourhood.
 
-**The data.** `apps/api/prisma/data/localites-grand-tunis.csv`: 941 rows over
+**The data.** `apps/api/prisma/data/localites-grand-tunis.csv`: 940 rows over
 the 48 délégations, built from La Poste Tunisienne's postal code list
 (github.com/TangoRythm/Tunisia-Geodata-API), plus well-known neighbourhoods
 missing from it, plus one **Autre** per délégation. Imported by the seed,
 idempotently, keyed on délégation code + French name.
+
+Corrections made to the file as delivered (941 rows), approved 2026-09-23:
+
+- Two names garbled by an encoding error, already garbled in La Poste's own
+  file: **Ferme N°7** (El Battan) and **Maakel Ezzaïm** (Sidi El Béchir,
+  AR معقل الزعيم). No other encoding error in the file.
+- **El Mourouj 2** is kept where La Poste puts it, under **El Kabaria (1074)**;
+  the copy added under El Mourouj is removed. La Poste has **no "El Mourouj 1"**
+  at all; the row added under El Mourouj stays (reported, not decided).
+- The alias **Ain Zaghouan** stays on both Ain Zaghouan Nord and Sud: the
+  search shows both, and a CSV row that says only "Ain Zaghouan" is a row
+  error the seller settles in the dropdown.
+- The **7 rows marked "délégation à confirmer"** (first reported as 8) stay as
+  they are until the corrections arrive; they are listed as open in
+  `docs/PROGRESS.md`.
 
 **The model.**
 
@@ -433,6 +448,12 @@ API now):
   shown with its délégation**, in search results and in the CSV preview.
 - CSV import: accepts a localité name or alias, plus the délégation when the
   name is ambiguous. Unknown or ambiguous is a row error in the preview.
+- **A row with a délégation but no localité is a row error too** (decided
+  2026-09-23). The preview lets the seller fix any localité error **on the
+  spot**: a dropdown on that row with the délégation's localités, Autre
+  included and last (or the candidates of an ambiguous name), so he never
+  re-uploads the file for it. `resolveLocalite` returns that list with the
+  error; the screen comes with the CSV import (phase 4).
 - Label and courier app: localité + délégation.
 - Public tracking: délégation only, unchanged (Q1).
 - Parcels filed under **Autre** are listed for the admin so missing localités

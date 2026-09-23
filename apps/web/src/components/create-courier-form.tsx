@@ -153,7 +153,7 @@ export function Field({
   value: string;
   onChange: (value: string) => void;
   error?: string;
-  inputMode?: 'tel' | 'text';
+  inputMode?: 'tel' | 'text' | 'decimal' | 'url';
 }) {
   return (
     <div>

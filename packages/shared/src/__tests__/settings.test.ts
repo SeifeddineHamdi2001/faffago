@@ -6,6 +6,7 @@ import {
   SettingKey,
   defaultSettingValues,
   parseSettingValue,
+  parseWholeNumber,
   readPlatformSettings,
 } from '../settings.js';
 
@@ -143,5 +144,18 @@ describe('readPlatformSettings', () => {
     });
     expect(contactLinks.phone).toBe('1');
     expect(contactLinks.tiktok).toBe(DEFAULT_CONTACT_LINKS.tiktok);
+  });
+});
+
+describe('parseWholeNumber (Paramètres › Règles)', () => {
+  it('reads a count typed by the admin', () => {
+    expect(parseWholeNumber(' 48 ')).toBe(48);
+    expect(parseWholeNumber('0')).toBe(0);
+  });
+
+  it('refuses anything that is not a whole number', () => {
+    for (const input of ['', '4,5', '-1', 'abc', '1e3', '9999999']) {
+      expect(parseWholeNumber(input)).toBeNull();
+    }
   });
 });

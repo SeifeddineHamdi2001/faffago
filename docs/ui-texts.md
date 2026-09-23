@@ -134,16 +134,46 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 
 ## Messages de validation (`packages/shared`)
 
-| Key                          | Français                                                                                                                               |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `tunisianPhone`              | 8 chiffres, format tunisien                                                                                                            |
-| `codAmount`                  | Montant invalide. Format : 85,000                                                                                                      |
-| `codAmount`                  | Le montant COD ne peut pas être négatif                                                                                                |
-| `createParcelSchema`         | Nom du destinataire obligatoire · Délégation obligatoire · Adresse obligatoire · Description du produit obligatoire · Au moins 1 pièce |
-| login schemas                | Mot de passe obligatoire · Email obligatoire · Identifiant obligatoire                                                                 |
-| `username`                   | Identifiant : 4 caractères minimum, a-z 0-9 . _ -                                                                                      |
-| account schemas              | Obligatoire · 80 caractères maximum · CIN obligatoire · 20 caractères maximum                                                          |
-| `createCourierAccountSchema` | Plan de paie obligatoire · Le ramasseur est payé par les RH, sans plan de paie                                                         |
+| Key                          | Français                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `tunisianPhone`              | 8 chiffres, format tunisien                                                                                                          |
+| `codAmount`                  | Montant invalide. Format : 85,000                                                                                                    |
+| `codAmount`                  | Le montant COD ne peut pas être négatif                                                                                              |
+| `createParcelSchema`         | Nom du destinataire obligatoire · Localité obligatoire · Adresse obligatoire · Description du produit obligatoire · Au moins 1 pièce |
+| login schemas                | Mot de passe obligatoire · Email obligatoire · Identifiant obligatoire                                                               |
+| `username`                   | Identifiant : 4 caractères minimum, a-z 0-9 . _ -                                                                                    |
+| account schemas              | Obligatoire · 80 caractères maximum · CIN obligatoire · 20 caractères maximum                                                        |
+| `createCourierAccountSchema` | Plan de paie obligatoire · Le ramasseur est payé par les RH, sans plan de paie                                                       |
+
+## Paramètres › Tarifs et règles (`/admin/parametres`, phase 2)
+
+| Key                                   | Français                                                                                                                                                                                                         |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `parametres-tabs`                 | Tarifs et règles · Utilisateurs                                                                                                                                                                                  |
+| web `settings-screen` — sections      | Frais · Retenue à la source · Règles · Liens de contact · Raisons d'échec                                                                                                                                        |
+| web `settings-screen` — note Frais    | Les mêmes pour tous les vendeurs. Un nouveau tarif s'applique aux colis créés après la modification ; les colis existants gardent leurs frais.                                                                   |
+| web `settings-screen` — Frais         | Frais de livraison (DT) · Frais de retour (DT) · Frais de changement de client (DT) · Frais de ramassage (DT) · Ramassage gratuit à partir de (colis) · Tarif coursier par colis livré (DT)                      |
+| web `settings-screen` — Retenue       | Retenue à la source, CIN uniquement (%)                                                                                                                                                                          |
+| web `settings-screen` — Règles        | Délai À vérifier (heures) · Tentatives de livraison maximum · Changements de client par colis · Annulation d'un scan (secondes) · Écart d'horloge signalé (minutes) · Version minimale de l'application coursier |
+| web `settings-screen` — Liens         | Téléphone · WhatsApp · Facebook · Instagram · TikTok                                                                                                                                                             |
+| web `settings-screen` — note Liens    | Affichés sur le site public, dans Devenir partenaire.                                                                                                                                                            |
+| web `settings-screen` — note Raisons  | Liste fixe, choisie par le livreur. Non modifiable.                                                                                                                                                              |
+| web `settings-screen` — boutons, état | Enregistrer · Enregistré                                                                                                                                                                                         |
+| web `settings-screen` — erreurs       | Montant invalide. Format : 5,500 · Nombre entier attendu · Pourcentage invalide. Format : 3 ou 2,5 · Valeur obligatoire                                                                                          |
+| `SETTING_VALUE_SCHEMAS` (shared)      | Montant en millimes, en chiffres (ex. 5500) · Nombre entier attendu · Minimum {n} · Maximum {n} · Version au format 1.2.3 · Lien complet commençant par https://                                                 |
+| api `settings.service`                | Ce paramètre n'existe pas.                                                                                                                                                                                       |
+
+## Localités (D-17)
+
+| Key                                             | Français                                                                                                                                                          |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveLocalite` (shared, aperçu CSV)          | Localité obligatoire                                                                                                                                              |
+| `resolveLocalite`                               | Localité inconnue : « {nom} » · Localité inconnue à {délégation} : « {nom} »                                                                                      |
+| `resolveLocalite`                               | « {nom} » existe dans plusieurs délégations ({liste}). Précisez la délégation.                                                                                    |
+| `resolveLocalite`                               | « {nom} » correspond à plusieurs localités ({liste}). Choisissez la bonne.                                                                                        |
+| `createLocaliteSchema` / `updateLocaliteSchema` | Délégation obligatoire · Nom obligatoire · Code postal à 4 chiffres · Aucune modification                                                                         |
+| api `geo.service`                               | Localité introuvable. · Délégation introuvable. · Cette délégation a déjà une localité « {nom} ». · La localité « Autre » ne peut être ni renommée ni désactivée. |
+| seed, CSV data                                  | Autre · أخرى (the row every délégation has for places not yet listed)                                                                                             |
 
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 

@@ -123,6 +123,7 @@ A fast, keyboard-friendly form. After saving, the seller can print the label imm
 
 - **Télécharger le modèle**: a template file with the exact columns.
 - Validation preview before import: each row is **Valide**, **À vérifier** (e.g. localité not recognised) or **Erreur** (e.g. phone too short), with the reason.
+- A row whose localité is missing, unknown or ambiguous shows a dropdown with the délégation's localités (Autre last), or the possible localités, so the seller fixes it in the preview without re-uploading the file (v1.7, D-17).
 - Only valid rows are imported. The seller can fix the file and re-upload.
 - After import: print all labels in one batch.
 

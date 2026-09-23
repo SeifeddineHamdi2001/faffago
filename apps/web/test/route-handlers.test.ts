@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET as bffGet, POST as bffPost } from '@/app/api/bff/[...path]/route';
+import { GET as bffGet, PATCH as bffPatch, POST as bffPost } from '@/app/api/bff/[...path]/route';
 import { DELETE as impDelete, POST as impPost } from '@/app/api/impersonation/route';
 import { POST as login } from '@/app/api/session/login/[kind]/route';
 import { POST as logout } from '@/app/api/session/logout/route';
@@ -267,6 +267,33 @@ describe('/api/bff/[...path]', () => {
     );
     expect(crossSite.status).toBe(403);
     expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('forwards a Paramètres change with PATCH, and checks its origin (D-20)', async () => {
+    api(200, { key: 'delivery_fee_millimes', value: '6000', changed: true });
+    const response = await bffPatch(
+      request('/api/bff/settings/delivery_fee_millimes', {
+        method: 'PATCH',
+        body: { value: '6000' },
+        cookies: { fg_access: 'ADMIN' },
+      }),
+      params({ path: ['settings', 'delivery_fee_millimes'] }),
+    );
+    expect(response.status).toBe(200);
+    expect(apiFetch.mock.calls[0]![0]).toMatch(/\/api\/settings\/delivery_fee_millimes$/);
+    expect(apiFetch.mock.calls[0]![1].method).toBe('PATCH');
+
+    const crossSite = await bffPatch(
+      request('/api/bff/settings/delivery_fee_millimes', {
+        method: 'PATCH',
+        body: { value: '1' },
+        cookies: { fg_access: 'ADMIN' },
+        origin: 'https://evil.tn',
+      }),
+      params({ path: ['settings', 'delivery_fee_millimes'] }),
+    );
+    expect(crossSite.status).toBe(403);
+    expect(apiFetch).toHaveBeenCalledTimes(1);
   });
 
   it('reads through GET too', async () => {

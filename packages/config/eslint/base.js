@@ -38,12 +38,6 @@ export default tseslint.config(
     },
   },
   {
-    // The seed writes settings into a JSON column, where an amount is stored
-    // as a plain number rather than as a bigint.
-    files: ['**/prisma/seed.ts'],
-    rules: { 'no-restricted-syntax': 'off' },
-  },
-  {
     ignores: ['dist/**', '.next/**', 'node_modules/**', '**/*.config.js', '**/*.config.ts'],
   },
 );
