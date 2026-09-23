@@ -8,8 +8,13 @@ The specs in [`docs/`](docs/) are the source of truth;
 
 ## What exists today
 
-Phase 0 is done: the monorepo, the shared money and status layer, the full
-database schema and its first migration.
+Phase 0 is partly done: the monorepo, the shared money and status layer, the
+full database schema and its first migration.
+
+**Authentication is not built.** The last two items of phase 0 — the login and
+the role guards, and the courier login with its role choice — are still open,
+so there is no way to sign in to anything yet. The database enforces which
+identifier each role uses; nothing checks a password.
 
 **There is no user interface yet.** The seller space and back office
 (`apps/web`) and the courier app (`apps/courier`) are placeholders, built in
