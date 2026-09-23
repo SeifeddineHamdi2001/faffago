@@ -6,7 +6,7 @@ import Link from 'next/link';
  */
 const TEXT = {
   fr: { login: 'Se connecter', other: 'العربية', otherHref: '/ar' },
-  // TO VERIFY: to be read by a native speaker with the rest of the public site.
+  // Approved 2026-09-25.
   ar: { login: 'تسجيل الدخول', other: 'Français', otherHref: '/fr' },
 } as const;
 

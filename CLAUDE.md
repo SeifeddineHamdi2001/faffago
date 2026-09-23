@@ -58,6 +58,8 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 ### UI
 
 - All user-facing text in French, using the exact labels from the specs. The public site is French + Arabic (right-to-left layout for Arabic). The courier app also supports Arabic (TO CONFIRM).
+- Orange buttons and surfaces carry **navy text**, never white: white on #FF6B35 fails WCAG AA contrast. Orange text on white uses `orange-dark`.
+- Any user-facing text the specs do not word goes into `docs/ui-texts.md` (screen, key, French text), for review before launch.
 - Public tracking never exposes customer name, phone, address, failure reason or internal notes.
 - Courier app: large touch targets (≥ 56 px), main actions at the bottom, works offline.
 

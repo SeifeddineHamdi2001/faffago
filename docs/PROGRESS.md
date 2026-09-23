@@ -12,7 +12,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 
 ## Phase 1 — Auth and permissions
 
-Done: API and web. Ready to merge into `main` once reviewed.
+Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 
 - [x] Permission matrix from Admin 2, encoded in packages/shared and tested
       (`permissions.ts`: the test copies the spec table row by row)
@@ -102,6 +102,7 @@ Done: API and web. Ready to merge into `main` once reviewed.
 - [ ] Tarifs and Zones couvertes read from Paramètres
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
+- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
 
 ## Phase 9 — Communication and reporting
 
@@ -279,6 +280,14 @@ Done: API and web. Ready to merge into `main` once reviewed.
   vendeur and its exit, logout, `/ar` in RTL. Playwright replaces this in
   phase 3.
 
+- 2026-09-25 — **Phase 1 merged into `main`.** Approved: staying on Next.js 15
+  for now; Dépôt and Service client see active couriers only; navy text on
+  every orange button (now a CLAUDE.md UI rule); the Arabic "Se connecter" =
+  تسجيل الدخول.
+- 2026-09-25 — **`docs/ui-texts.md`** collects every text written during the
+  build that the specs do not word: approved for now, reviewed as a whole
+  before launch. New texts are added there as they are written (CLAUDE.md, UI).
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -290,13 +299,7 @@ Done: API and web. Ready to merge into `main` once reviewed.
   shows them to customers.
 - Delivery fee, return fee and courier rate are seeded at 0 because no spec
   gives a value. They must be set in Paramètres before the first parcel.
-- **UI texts not worded by the specs** (TO CONFIRM): the courier deactivation
-  refusal and its blocker labels (`packages/shared/src/accounts.ts`); on the web,
-  "Mot de passe généré", "Ce mot de passe ne sera plus affiché…", "J'ai noté le
-  mot de passe", the confirmation texts of Régénérer and Désactiver, "Remplissez
-  les deux champs.", "Mot de passe oublié ? Contactez Faffa Go…", and the
-  placeholder home and Tableau de bord texts.
-- **Arabic on the public placeholder**: "تسجيل الدخول" (Se connecter) waits for
-  a native speaker, with the rest of the public site (phase 8).
+- **UI texts**: approved for now; the full review before launch works from
+  `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 5 implementation.
