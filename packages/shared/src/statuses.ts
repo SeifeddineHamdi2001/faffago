@@ -247,7 +247,7 @@ export const ChargeStatus = {
 export type ChargeStatus = (typeof ChargeStatus)[keyof typeof ChargeStatus];
 
 /**
- * Why a parcel is in RELANCE (decision 6).
+ * Why a parcel is in RELANCE (D-9).
  *
  * VENDEUR: the seller chose Relancer after a failure, and picked the date.
  * CLIENT: the customer asked to postpone, so the courier planned it directly
@@ -267,7 +267,7 @@ export const RELAUNCH_ORIGIN_LABELS_FR: Record<RelaunchOrigin, string> = {
   CLIENT: 'Reporté par le client',
 };
 
-/** Time slots a postponement can name (decision 6). */
+/** Time slots a postponement can name (D-9). */
 export const RelaunchSlot = {
   MATIN: 'MATIN',
   APRES_MIDI: 'APRES_MIDI',

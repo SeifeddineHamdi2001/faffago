@@ -68,7 +68,7 @@ export const ParcelAction = {
   DECISION_RELANCER: 'DECISION_RELANCER',
   DECISION_RETOURNER: 'DECISION_RETOURNER',
   DECISION_CHANGER_CLIENT: 'DECISION_CHANGER_CLIENT',
-  /** The seller moves the date of an already planned relance (decision 6). */
+  /** The seller moves the date of an already planned relance (D-9). */
   DECISION_CHANGER_DATE: 'DECISION_CHANGER_DATE',
   DEPART_RETOUR: 'DEPART_RETOUR',
   AUTO_RETOUR_48H: 'AUTO_RETOUR_48H',
@@ -77,7 +77,7 @@ export type ParcelAction = (typeof ParcelAction)[keyof typeof ParcelAction];
 
 /**
  * A customer postponement is planned for tomorrow at the earliest and a week
- * ahead at the latest (decision 6). Beyond that the seller should decide what
+ * ahead at the latest (D-9). Beyond that the seller should decide what
  * to do with the parcel rather than let it sit in the depot.
  */
 export const POSTPONEMENT_MIN_DAYS = 1;
@@ -166,7 +166,7 @@ export interface ParcelSnapshot {
   isExchange: boolean;
   /** Set while the parcel is RELANCE: the day it should go out again. */
   relaunchDate: Date | null;
-  /** Who asked for that date: the seller, or the customer (decision 6). */
+  /** Who asked for that date: the seller, or the customer (D-9). */
   relaunchOrigin: RelaunchOrigin | null;
   relaunchSlot: RelaunchSlot | null;
 }
@@ -438,7 +438,7 @@ export function applyParcelAction(
 
       // A customer postponement is planned, not verified: the parcel goes
       // straight to Relancé with its date and never enters À vérifier, so no
-      // 48-hour clock starts and the seller has nothing to decide (decision 6).
+      // 48-hour clock starts and the seller has nothing to decide (D-9).
       // The three-attempt rule still wins on the last attempt.
       if (isPostponement && !exhausted) {
         return {
@@ -596,7 +596,7 @@ export function applyParcelAction(
 
     case ParcelAction.DECISION_CHANGER_DATE: {
       // Only while the parcel is still waiting: once it is out with a livreur
-      // again, the date has been acted on (decision 6).
+      // again, the date has been acted on (D-9).
       if (parcel.status !== ParcelStatus.RELANCE) return refuseByStatus(parcel);
       if (!command.postponedTo) return refuse(ScanRefusal.DATE_REPORT_REQUISE);
       if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
@@ -643,7 +643,7 @@ export function applyParcelAction(
     }
 
     case ParcelAction.DECISION_CHANGER_CLIENT: {
-      // Also from Relancé, once the parcel is back at the depot (decision 6).
+      // Also from Relancé, once the parcel is back at the depot (D-9).
       if (parcel.status !== ParcelStatus.A_VERIFIER && parcel.status !== ParcelStatus.RELANCE) {
         return refuseByStatus(parcel);
       }
@@ -825,7 +825,7 @@ export function canRelaunch(parcel: ParcelSnapshot, maxAttempts: number): boolea
 }
 
 /**
- * Whether the parcel belongs in today's Tournées list (Admin 4.5, decision 6).
+ * Whether the parcel belongs in today's Tournées list (Admin 4.5, D-9).
  *
  * A relancé or postponed parcel waits at the depot and only appears on the day
  * chosen for it. An overdue one keeps appearing rather than disappearing

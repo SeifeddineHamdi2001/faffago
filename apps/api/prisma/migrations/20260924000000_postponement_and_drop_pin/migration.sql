@@ -1,4 +1,4 @@
--- Customer postponement ("Reporté par le client", decision 6) and the removal
+-- Customer postponement ("Reporté par le client", D-9) and the removal
 -- of the unused courier PIN hash.
 --
 -- A postponement is planned, not verified: the parcel goes straight to Relancé

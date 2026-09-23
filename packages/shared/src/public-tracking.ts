@@ -92,7 +92,7 @@ export function isPublicTimelineEvent(type: ParcelEventType): boolean {
  *
  * Relancé normally reads "le vendeur va vous contacter", which is wrong when it
  * is the customer who asked for another day: he is expecting the parcel, not a
- * call. That case gets its own label and the date he chose (decision 6).
+ * call. That case gets its own label and the date he chose (D-9).
  */
 export function publicStatusFor(parcel: {
   status: ParcelStatus;
@@ -128,7 +128,7 @@ export interface PublicTrackingView {
   livreurFirstName: string | null;
   /**
    * Set only when the customer asked to postpone: the day he chose. He asked
-   * for it himself, so showing it back to him reveals nothing (decision 6).
+   * for it himself, so showing it back to him reveals nothing (D-9).
    */
   postponedTo: string | null;
   timeline: Array<{ type: ParcelEventType; at: string }>;

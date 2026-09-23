@@ -347,7 +347,7 @@ describe('parcels', () => {
   });
 });
 
-describe('customer postponement (decision 6)', () => {
+describe('customer postponement (D-9)', () => {
   const RELAUNCH_COLUMNS = '"relaunchDate","relaunchOrigin","relaunchSlot"';
 
   function insertParcel(id: string, code: string, extraColumns = '', extraValues = '') {

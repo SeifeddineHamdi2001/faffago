@@ -1,4 +1,4 @@
-# Faffa Go — Site public : landing page & suivi de colis (spécification v1.1)
+# Faffa Go — Site public : landing page & suivi de colis (spécification v1.2)
 
 > **How to read this document.** Page text and labels are shown in French, as they will appear on the site; each has an Arabic version. Explanations are in English. This document completes the seller (v1.5), admin (v1.9) and courier (v1.7) specifications and uses the same statuses and rules.
 
@@ -104,19 +104,22 @@ End customers enter the code printed on their parcel and see where it is. Same p
 
 The customer sees simple labels, not internal ones:
 
-| Internal status     | Public label                                          |
-| ------------------- | ----------------------------------------------------- |
-| Créé                | Commande enregistrée                                  |
-| Ramassé, Au dépôt   | Chez Faffa Go                                         |
-| En livraison        | En cours de livraison (with the livreur's first name) |
-| Livré               | Livré                                                 |
-| À vérifier, Relancé | Livraison reportée — le vendeur va vous contacter     |
-| Retour (all stages) | Retourné au vendeur                                   |
-| Annulé              | Commande annulée                                      |
+| Internal status                             | Public label                                            |
+| ------------------------------------------- | ------------------------------------------------------- |
+| Créé                                        | Commande enregistrée                                    |
+| Ramassé, Au dépôt                           | Chez Faffa Go                                           |
+| En livraison                                | En cours de livraison (with the livreur's first name)   |
+| Livré                                       | Livré                                                   |
+| À vérifier, Relancé (décidé par le vendeur) | Livraison reportée — le vendeur va vous contacter       |
+| Relancé (reporté par le client)             | Livraison reportée, avec la date demandée par le client |
+| Retour (all stages)                         | Retourné au vendeur                                     |
+| Annulé                                      | Commande annulée                                        |
 
 ### 4.3 What is never shown
 
 > **Privacy.** The public page never shows the customer's name, phone number or address, the failure reason, the livreur's phone number, or any internal note. Only the livreur's first name, as on the seller side.
+
+_When the customer himself asked to postpone, the page shows the date he chose. He named it, so repeating it back to him reveals nothing (D-9)._
 
 ### 4.4 Protection
 
@@ -166,10 +169,11 @@ The customer sees simple labels, not internal ones:
 
 ## 9. Decisions log
 
-| #   | Question                      | Decision                                    |
-| --- | ----------------------------- | ------------------------------------------- |
-| 1   | Show prices publicly?         | Yes, from Paramètres.                       |
-| 2   | Public parcel tracking?       | Yes, by parcel code, without personal data. |
-| 3   | Languages                     | French and Arabic.                          |
-| 4   | Are pickups free for sellers? | Free from 5 parcels; 2,000 DT below 5.      |
-| 5   | Meta Pixel on the site?       | **TO CONFIRM** Yes, to measure the ads.     |
+| #   | Question                                  | Decision                                                                                                                                                                         |
+| --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Show prices publicly?                     | Yes, from Paramètres.                                                                                                                                                            |
+| 2   | Public parcel tracking?                   | Yes, by parcel code, without personal data.                                                                                                                                      |
+| 3   | Languages                                 | French and Arabic.                                                                                                                                                               |
+| 4   | Are pickups free for sellers?             | Free from 5 parcels; 2,000 DT below 5.                                                                                                                                           |
+| 5   | Meta Pixel on the site?                   | **TO CONFIRM** Yes, to measure the ads.                                                                                                                                          |
+| 6   | A delivery the customer himself postponed | Shown as **Livraison reportée** with the date he asked for, not as "le vendeur va vous contacter": he is expecting his parcel, not a call. The reason text is never shown (D-9). |

@@ -23,7 +23,7 @@ import {
 } from '../statuses.js';
 
 /**
- * "Reporté par le client" (decision 6).
+ * "Reporté par le client" (D-9).
  *
  * The one exception to "a failed delivery always goes to À vérifier": when the
  * customer himself asks for another day, the courier plans it and the parcel

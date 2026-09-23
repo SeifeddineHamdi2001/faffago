@@ -99,7 +99,7 @@ enum ParcelCashStatus {
   PAYE
 }
 
-/// Why a parcel is in RELANCE (decision 6). The seller's own Relancer and a
+/// Why a parcel is in RELANCE (D-9). The seller's own Relancer and a
 /// customer postponement reach the same status but are shown differently.
 enum RelaunchOrigin {
   VENDEUR
@@ -593,7 +593,7 @@ model Parcel {
   /// Set on entering À vérifier, cleared by any decision. The scheduled job
   /// reads it; it stops at the decision, not at the return scan (A-7).
   verifyDeadlineAt  DateTime?
-  /// The day the parcel goes out again, and who asked for it (decision 6).
+  /// The day the parcel goes out again, and who asked for it (D-9).
   relaunchDate      DateTime?       @db.Date
   relaunchSlot      RelaunchSlot?
   relaunchOrigin    RelaunchOrigin?
