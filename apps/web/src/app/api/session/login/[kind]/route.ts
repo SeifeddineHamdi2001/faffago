@@ -9,7 +9,7 @@ import {
   type SessionTokensJson,
 } from '@/lib/session-cookies';
 
-/** The two web logins (A-20). Couriers log in from the app (phase 5). */
+/** The two web logins (A-20). Couriers log in from the app (phase 6). */
 const KINDS = new Set(['vendeur', 'staff']);
 
 export async function POST(

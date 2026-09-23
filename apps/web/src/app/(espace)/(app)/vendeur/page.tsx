@@ -1,6 +1,6 @@
 import { requireMe } from '@/lib/server/session';
 
-/** Tableau de bord (Vendeur 4.1): filled in phase 3 with parcels and money. */
+/** Tableau de bord (Vendeur 4.1): filled in phase 4 with parcels and money. */
 export default async function TableauDeBord() {
   const me = await requireMe('vendeur');
   return (

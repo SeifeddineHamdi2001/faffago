@@ -1,4 +1,4 @@
-# Faffa Go — Interface Vendeur (spécification v1.6)
+# Faffa Go — Interface Vendeur (spécification v1.7)
 
 > **How to read this document.** Screen names, buttons and statuses are written in French, exactly as the seller will see them in the interface. Explanations are in English. Section 8 records the decisions taken during the design discussion.
 
@@ -105,24 +105,24 @@ The first screen after login. It answers three questions: how much am I owed, wh
 
 A fast, keyboard-friendly form. After saving, the seller can print the label immediately.
 
-| Field                    | Required | Rule                                                                                                 |
-| ------------------------ | -------- | ---------------------------------------------------------------------------------------------------- |
-| Nom du destinataire      | Yes      |                                                                                                      |
-| Téléphone                | Yes      | 8 digits, Tunisian format                                                                            |
-| Téléphone 2              | No       | 8 digits                                                                                             |
-| Gouvernorat / Délégation | Yes      | Chosen from a fixed list (delivery zones depend on it)                                               |
-| Adresse                  | Yes      | Free text, with landmark                                                                             |
-| Description du produit   | Yes      | What is inside, e.g. "2 bracelets"                                                                   |
-| Nombre de pièces         | Yes      | Default 1                                                                                            |
-| Montant COD (DT)         | Yes      | Three decimals. 0 allowed if already paid                                                            |
-| Colis d'échange          | No       | Toggle. The courier delivers the new item and brings back the old one, which follows the return flow |
-| Ouverture autorisée      | No       | Toggle. The customer may open the parcel before paying                                               |
-| Note pour le coursier    | No       | e.g. "sonner deux fois"                                                                              |
+| Field                               | Required | Rule                                                                                                                                                                                                             |
+| ----------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nom du destinataire                 | Yes      |                                                                                                                                                                                                                  |
+| Téléphone                           | Yes      | 8 digits, Tunisian format                                                                                                                                                                                        |
+| Téléphone 2                         | No       | 8 digits                                                                                                                                                                                                         |
+| Gouvernorat / Délégation / Localité | Yes      | Chosen from a fixed list: gouvernorat → délégation → localité, or one search box across localités and their other names. The délégation always comes from the localité; delivery zones depend on it (v1.7, D-17) |
+| Adresse                             | Yes      | Free text, with landmark                                                                                                                                                                                         |
+| Description du produit              | Yes      | What is inside, e.g. "2 bracelets"                                                                                                                                                                               |
+| Nombre de pièces                    | Yes      | Default 1                                                                                                                                                                                                        |
+| Montant COD (DT)                    | Yes      | Three decimals. 0 allowed if already paid                                                                                                                                                                        |
+| Colis d'échange                     | No       | Toggle. The courier delivers the new item and brings back the old one, which follows the return flow                                                                                                             |
+| Ouverture autorisée                 | No       | Toggle. The customer may open the parcel before paying                                                                                                                                                           |
+| Note pour le coursier               | No       | e.g. "sonner deux fois"                                                                                                                                                                                          |
 
 ### 4.3 Import CSV
 
 - **Télécharger le modèle**: a template file with the exact columns.
-- Validation preview before import: each row is **Valide**, **À vérifier** (e.g. délégation not recognised) or **Erreur** (e.g. phone too short), with the reason.
+- Validation preview before import: each row is **Valide**, **À vérifier** (e.g. localité not recognised) or **Erreur** (e.g. phone too short), with the reason.
 - Only valid rows are imported. The seller can fix the file and re-upload.
 - After import: print all labels in one batch.
 
@@ -131,13 +131,13 @@ A fast, keyboard-friendly form. After saving, the seller can print the label imm
 Labels are printed by the seller and stuck on each package before pickup. The whole system runs on scanning this label.
 
 - Formats: thermal 100 × 150 mm, and A4 with 4 labels per sheet for sellers without a thermal printer.
-- Content: barcode + QR, tracking code (FG-XXXXXX), COD amount in large type, recipient name, phone, délégation and address, seller shop name, flags **Échange** and **Ouverture autorisée**.
+- Content: barcode + QR, tracking code (FG-XXXXXX), COD amount in large type, recipient name, phone, localité, délégation and address, seller shop name, flags **Échange** and **Ouverture autorisée**.
 - Single or batch printing; reprint anytime.
 
 ### 4.5 Ramassages
 
 - **Demander un ramassage**: the seller selects the parcels ready (or states how many), chooses a time window, adds a note.
-- **First request only:** the seller fills the pickup address (gouvernorat, délégation, address, landmark). It is saved in the profile and pre-filled next time. The seller can save more than one address.
+- **First request only:** the seller fills the pickup address (gouvernorat, délégation, localité, address, landmark). It is saved in the profile and pre-filled next time. The seller can save more than one address.
 - Statuses: **Demandé** › **Planifié** › **Effectué**, or **Annulé**.
 - **Pickup fee**: free from 5 parcels picked up. Below 5 parcels, a fee of **2,000 DT** applies, counted on the parcels actually scanned by the ramasseur and deducted in the next bon de versement. The request screen shows the rule before the seller confirms ("Moins de 5 colis : ramassage à 2,000 DT").
 - At pickup, the courier scans each parcel. The seller sees exactly which parcels were picked up and which were not.

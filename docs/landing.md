@@ -1,4 +1,4 @@
-# Faffa Go — Site public : landing page & suivi de colis (spécification v1.2)
+# Faffa Go — Site public : landing page & suivi de colis (spécification v1.3)
 
 > **How to read this document.** Page text and labels are shown in French, as they will appear on the site; each has an Arabic version. Explanations are in English. This document completes the seller (v1.5), admin (v1.9) and courier (v1.7) specifications and uses the same statuses and rules.
 
@@ -73,7 +73,7 @@ See section 3.
 
 ### 2.8 Contact and footer
 
-- **Devenir partenaire** block: WhatsApp, phone, Facebook, Instagram (the same contact links as in Paramètres).
+- **Devenir partenaire** block: WhatsApp, phone, Facebook, Instagram, TikTok (the same contact links as in Paramètres; TikTok added in v1.3, D-20).
 - Footer: logo, contact, social links, legal information of the company, language switch.
 
 ## 3. Tarifs

@@ -1,7 +1,24 @@
 # Faffa Go — géographie : draft for review
 
-Status: **draft, not approved.** Nothing in this file goes into the seed until
-it is approved. Written 2026-09-23 on branch `phase-2-seed`.
+Status: **approved on 2026-09-23 with the corrections below** (D-19). The
+tables further down are the draft as reviewed; where they differ from this
+box, this box wins.
+
+> **Outcome**
+>
+> - **48 délégations.** Den Den is not a délégation — La Poste lists it as a
+>   localité of La Manouba — so `MAN-DENDEN` is removed; Manouba has 8.
+> - **Codes**: our own, `TUN-MARSA` style, approved.
+> - **Spellings** (the form customers recognise): FR Ariana, Manouba
+>   (gouvernorats); La Médina, Bab El Bhar, Djebel Jelloud, Séjoumi, Djedeida,
+>   Kalâat el-Andalous, Cité Ettadhamen, La Nouvelle Médina, Bou Mhel
+>   el-Bassatine, La Manouba. AR باب بحر, الكبارية, سكرة, حي التضامن, المنيهلة.
+> - **Zones**: the 15 zones approved, except zone 14 = La Manouba + Oued Ellil.
+>   Seeded as initial data with no courier; the seed never overwrites a zone
+>   the admin has changed. Small zones, reassigned as the team grows.
+> - **Localités** are added as a third level (D-17).
+
+Written 2026-09-23 on branch `phase-2-seed`.
 
 > **Already in the seed.** `apps/api/prisma/seed.ts` on `main` has carried a
 > Grand Tunis list since phase 0: the same 49 délégations and the same codes as
@@ -179,7 +196,7 @@ Ramasseurs work from sellers' pickup addresses, far fewer stops, so one
 ramasseur will likely hold many zones at first — the same zones serve both
 roles (Admin 4.5).
 
-**Questions for you on zones**
+### Questions on zones (answered: see the box at the top)
 
 1. Small zones re-assigned as the team grows (above), or larger zones that
    are redrawn later?

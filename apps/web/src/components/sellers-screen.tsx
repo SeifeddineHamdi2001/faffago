@@ -16,7 +16,7 @@ import { ErrorAlert, useAccountActions } from './account-actions';
  * Vendeurs (Admin 4.14, D-11). Dépôt and Service client see the shop and the
  * contact; the admin also sees the login email and the statut, regenerates
  * the password and opens "Voir comme le vendeur". Creating a seller comes in
- * phase 3, with the CIN documents.
+ * phase 4, with the CIN documents.
  */
 export function SellersScreen({
   rows,

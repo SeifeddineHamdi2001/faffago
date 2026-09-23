@@ -13,7 +13,7 @@ export const CourierBlockerType = {
   ARGENT_CHEZ_LE_COURSIER: 'ARGENT_CHEZ_LE_COURSIER',
   BON_VERSEMENT_EN_ROUTE: 'BON_VERSEMENT_EN_ROUTE',
   BON_RETOUR_EN_ROUTE: 'BON_RETOUR_EN_ROUTE',
-  // Checked from phase 7, with the Caisse and the pay.
+  // Checked from phase 8, with the Caisse and the pay.
   CAISSE_NON_CLOTUREE: 'CAISSE_NON_CLOTUREE',
   FICHE_DE_PAIE_A_PAYER: 'FICHE_DE_PAIE_A_PAYER',
   DETTE_EN_COURS: 'DETTE_EN_COURS',

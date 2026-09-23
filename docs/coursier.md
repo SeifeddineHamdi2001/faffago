@@ -1,4 +1,4 @@
-# Faffa Go — Application Coursier (spécification v1.8)
+# Faffa Go — Application Coursier (spécification v1.9)
 
 > **How to read this document.** Screen names, buttons and statuses are in French, as the courier will see them. Explanations are in English. This document completes the seller specification (v1.5) and the admin specification (v1.9); all three share the same statuses and rules. Items marked **TO CONFIRM** were adopted as defaults and still need a final yes (see section 8).
 
@@ -65,7 +65,7 @@ Flow: À livrer › Ramassages › Bons et retours › Cash porté
 
 The parcels scanned out to him at the depot, grouped by délégation.
 
-- Each stop shows: customer name, full address in large text, landmark, COD amount in large type, attempt number (e.g. 2/3), seller's note, and flags **Échange** and **Ouverture autorisée**.
+- Each stop shows: customer name, localité and délégation (v1.9, D-17), full address in large text, landmark, COD amount in large type, attempt number (e.g. 2/3), seller's note, and flags **Échange** and **Ouverture autorisée**.
 - **Déjà livré ici** badge when this customer has been delivered before, with the saved address note (see 4.3).
 - The courier **reorders his stops** by dragging them; he knows the fastest route.
 - Relancé parcels show the date and time slot chosen by the seller.

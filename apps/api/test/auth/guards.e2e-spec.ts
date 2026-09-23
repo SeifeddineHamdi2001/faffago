@@ -99,7 +99,7 @@ describe('every route declares who may call it', () => {
         }
       }
     }
-    // The scan upload arrives in phase 5; until then, no route at all.
+    // The scan upload arrives in phase 6; until then, no route at all.
     expect(outdatedAllowed.filter((route) => route !== 'ScansController.upload')).toEqual([]);
   });
 

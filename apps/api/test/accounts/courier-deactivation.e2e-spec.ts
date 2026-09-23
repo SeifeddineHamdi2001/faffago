@@ -213,7 +213,7 @@ describe('with work still open', () => {
     expect((await deactivate(idle)).status).toBe(200);
   });
 
-  // Phase 7 adds these checks, with the Caisse and the pay.
+  // Phase 8 adds these checks, with the Caisse and the pay.
   it.todo('refuses while a caisse session of the courier is not CLOTUREE');
   it.todo('refuses while a payslip of the livreur is A_PAYER');
   it.todo('refuses while a debt of the livreur is EN_COURS');

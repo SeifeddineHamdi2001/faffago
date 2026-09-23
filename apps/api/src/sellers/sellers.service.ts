@@ -22,7 +22,7 @@ export interface SellerAdminView extends SellerContactView {
 /**
  * Sellers, as far as phase 1 needs them: the list behind the Vendeurs screen,
  * for Régénérer le mot de passe and Voir comme le vendeur. Creating a seller
- * comes in phase 3, with the documents.
+ * comes in phase 4, with the documents.
  */
 @Injectable()
 export class SellersService {

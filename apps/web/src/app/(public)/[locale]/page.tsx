@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 /**
- * Placeholder until the landing page (phase 8, docs/landing.md). It only
+ * Placeholder until the landing page (phase 9, docs/landing.md). It only
  * carries the entry point that already exists: Se connecter.
  */
 const TEXT = {

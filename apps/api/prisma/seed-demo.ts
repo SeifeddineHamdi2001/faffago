@@ -9,7 +9,7 @@ import { generatePassword } from '@faffago/shared';
  *   pnpm --filter @faffago/api db:seed:demo
  *
  * One seller, one Dépôt and one Service client, a livreur and a ramasseur, so
- * the screens can be tried before seller creation exists (phase 3). Refused
+ * the screens can be tried before seller creation exists (phase 4). Refused
  * when NODE_ENV=production; never called by the normal seed nor by
  * prisma:deploy. Run the normal seed first: the seller is "created by" the
  * first admin.

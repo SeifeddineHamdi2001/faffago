@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-16** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-16 are rules |
+| **D-1 … D-20** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-20 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-16**
+**Rules decided during the build — D-4 to D-20**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -45,6 +45,10 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-14 · Outdated courier apps reach the scan upload only](#d-14--outdated-courier-apps-reach-the-scan-upload-only)
 - [D-15 · The browser never holds a token](#d-15--the-browser-never-holds-a-token)
 - [D-16 · Demo accounts for development only](#d-16--demo-accounts-for-development-only)
+- [D-17 · Localités: a third level under the délégation](#d-17--localités-a-third-level-under-the-délégation)
+- [D-18 · "Seed et Paramètres" is phase 2](#d-18--seed-et-paramètres-is-phase-2)
+- [D-19 · The Grand Tunis geography](#d-19--the-grand-tunis-geography)
+- [D-20 · Paramètres](#d-20--paramètres)
 
 **Money — A-1 to A-5**
 
@@ -320,7 +324,7 @@ enforced, in two steps:
 2. **The deactivation** is refused while anything is open, and the refusal
    lists every blocker with a count: parcels in his hands, delivered parcels
    whose cash is still `CHEZ_LE_COURSIER`, a bon de versement or bon de retour
-   `EN_ROUTE` with him. From phase 7: a caisse session not `CLOTUREE`, a
+   `EN_ROUTE` with him. From phase 8: a caisse session not `CLOTUREE`, a
    payslip `A_PAYER`, a debt `EN_COURS`.
 
 Step 1 is also what keeps step 2 honest: nothing new can be assigned between
@@ -328,7 +332,7 @@ the check and the deactivation. **Réactiver** restores the login and the work.
 
 **Where.** `deactivateCourier` in `apps/api/src/accounts/accounts.service.ts`,
 `courier-open-work.ts`, and `CourierBlockerType` in `packages/shared`; the
-three phase 7 checks are `it.todo` tests.
+three phase 8 checks are `it.todo` tests.
 
 ### D-13 · A 10-second grace window on refresh tokens
 
@@ -351,7 +355,7 @@ would trip that and log the user out, so:
 
 Tech-stack 5 wants the app to empty its scan queue before it blocks for an
 update, and the API to refuse old versions. Both hold: the **scan upload** is
-the one route marked `@AllowOutdatedCourierApp` (phase 5); every other courier
+the one route marked `@AllowOutdatedCourierApp` (phase 6); every other courier
 route, the login and the refresh included, refuses a version below the
 minimum set in Paramètres. A test fails if the marker appears on any other
 route.
@@ -395,6 +399,108 @@ changes an existing password, and is never run by `db:seed` or
 `prisma:deploy`. Tests hold all of this.
 
 **Where.** `apps/api/prisma/seed-demo.ts`, `apps/api/test/seed-demo.spec.ts`.
+
+### D-17 · Localités: a third level under the délégation
+
+**This changes the specs**: Vendeur (parcel form, CSV, label, pickup
+address), Admin 4.16 (a managed list of localités) and Coursier (what a stop
+shows). The délégation alone is too coarse to find a customer; sellers and
+customers name the neighbourhood.
+
+**The data.** `apps/api/prisma/data/localites-grand-tunis.csv`: 941 rows over
+the 48 délégations, built from La Poste Tunisienne's postal code list
+(github.com/TangoRythm/Tunisia-Geodata-API), plus well-known neighbourhoods
+missing from it, plus one **Autre** per délégation. Imported by the seed,
+idempotently, keyed on délégation code + French name.
+
+**The model.**
+
+- `Localite`: délégation, French name, Arabic name (optional), postal code
+  (the first one; any others go into the aliases), aliases, active.
+- **The Arabic name is optional.** When it is empty every screen shows the
+  French name. The admin fills Arabic names in Paramètres.
+- `Parcel.localiteId` and `PickupAddress.localiteId` are **required**. The
+  délégation is always derived from the localité, never entered separately.
+- **Zones stay at délégation level**: a localité inherits its délégation's zone.
+
+**How it is used** (each screen comes with its own phase; the model and the
+API now):
+
+- Seller parcel form and pickup addresses: cascading gouvernorat → délégation
+  → localité, plus one search box across localités and aliases. "Ennasr"
+  proposes "Cité Ennasr 1 — Ariana Ville, Ariana" and fills all three.
+- A name that exists in more than one délégation (`nom_ambigu`) is **always
+  shown with its délégation**, in search results and in the CSV preview.
+- CSV import: accepts a localité name or alias, plus the délégation when the
+  name is ambiguous. Unknown or ambiguous is a row error in the preview.
+- Label and courier app: localité + délégation.
+- Public tracking: délégation only, unchanged (Q1).
+- Parcels filed under **Autre** are listed for the admin so missing localités
+  can be added. The admin adds, renames and deactivates localités.
+
+> Refines **Q5** (the CSV now resolves a localité) and **A-18** (localités
+> have an optional Arabic name).
+
+### D-18 · "Seed et Paramètres" is phase 2
+
+A new phase 2 is inserted and every later phase shifts by one, as in D-10:
+parcel core is phase 3, the seller space 4, back office operations 5, the
+courier app 6, À vérifier 7, money 8, the public site 9, communication 10,
+deployment 11.
+
+Phase 2 is the seed data (geography, localités, zones, Paramètres), the
+settings service and its API, and the web **Paramètres** screen for fees,
+retenue, limits and contact links. The screens for zones, délégations and
+localités stay with the zones and Tournées (phase 5), alongside courier zone
+assignment.
+
+### D-19 · The Grand Tunis geography
+
+Reviewed in `docs/geo-review.md`.
+
+- **48 délégations**: Tunis 21, Ariana 7, Ben Arous 12, **Manouba 8**. Den Den
+  is not a délégation: La Poste lists it as a localité of La Manouba, and the
+  seed no longer creates `MAN-DENDEN`.
+- **Codes are ours**, `TUN-MARSA` style, not INS codes. They never change.
+- **Spellings are the ones customers recognise.** French: Ariana and Manouba
+  (gouvernorats); La Médina, Bab El Bhar, Djebel Jelloud, Séjoumi, Djedeida,
+  Kalâat el-Andalous, Cité Ettadhamen, La Nouvelle Médina, Bou Mhel
+  el-Bassatine, La Manouba (délégations). Arabic: باب بحر, الكبارية, سكرة,
+  حي التضامن, المنيهلة.
+- **Zones**: the 15 zones of the review are seeded as initial data, with no
+  courier assigned, zone 14 being La Manouba + Oued Ellil. Small zones are
+  reassigned as the team grows rather than redrawn; a zone may cross a
+  gouvernorat border. The seed never overwrites a zone the admin has changed.
+
+### D-20 · Paramètres
+
+- **Money settings are stored as digit strings** in the JSON column
+  (`"2000"`) and read as `bigint`, like every other amount.
+- **Failure reasons are shown read-only** in Paramètres. The list stays fixed
+  in `packages/shared`: "Reporté par le client" has its own rule (D-9) and the
+  courier app translates every reason.
+- **Minimum courier app version**: `1.0.0` to start.
+- The other defaults — change-client fee 1,000 DT, pickup fee 2,000 DT below 5
+  parcels, retenue 3 %, 48 hours, 3 attempts, one client change per parcel,
+  60 s scan cancel window, 15 min clock skew — are approved as seeded.
+- **Starting values** given on 2026-09-23, seeded on a fresh database; the
+  admin changes them in Paramètres afterwards:
+
+  | Setting                       | Value                                   |
+  | ----------------------------- | --------------------------------------- |
+  | Delivery fee                  | 5,500 DT = `5500` millimes              |
+  | Return fee                    | 2,000 DT = `2000` millimes              |
+  | Courier rate per parcel livré | 3,500 DT = `3500` millimes              |
+  | Phone                         | +216 99 602 208                         |
+  | WhatsApp                      | https://wa.me/21699602208 (same number) |
+  | Facebook                      | https://www.facebook.com/Faffago        |
+  | Instagram                     | https://www.instagram.com/faffago/      |
+  | TikTok                        | https://www.tiktok.com/@faffa_goo       |
+
+- **TikTok is added to the contact links.** This changes landing 2.8, now
+  **v1.3**; Admin 4.16 already says "social media".
+- The seed only **creates** settings, never overwrites them, so a value the
+  admin has changed survives every later run.
 
 ---
 
@@ -485,7 +591,7 @@ failure reason, no new status.
 
 After a client change, or a phone or address correction, the depot reprints the
 label with the **same code**. **Réimprimer l'étiquette** is available to DEPOT
-and ADMIN. _(Screen: phase 4.)_
+and ADMIN. _(Screen: phase 5.)_
 
 ### A-10 · The recovered item of an exchange
 
@@ -562,6 +668,8 @@ and each interface shows the one for its language. The CSV import accepts either
 name or the code.
 
 > Refined by **Q4**: only the public site and the courier app ever show Arabic.
+> Refined by **D-17**: localités carry an optional Arabic name, falling back to
+> the French one.
 
 ### A-19 · Parcel codes
 
@@ -599,7 +707,7 @@ courier screen shows it separately and large.
 
 ### A-22 · Manual code entry surfaces in Exceptions
 
-A **Saisie manuelle** row is added to the Exceptions queue. _(Screen: phase 4.)_
+A **Saisie manuelle** row is added to the Exceptions queue. _(Screen: phase 5.)_
 
 **Where.** `scans.manualEntry`, indexed for that query.
 
@@ -651,6 +759,7 @@ the courier's language rather than as text.
   délégation** together. Names are matched without case or accents, in French or
   Arabic. Ambiguous or unknown is a **row error** in the preview, never a guess.
   The template page offers a downloadable délégation list with codes.
+  _Refined by **D-17**: a row now resolves to a localité._
 - **Q6.** The printed label always uses `nameFr`.
 
 **Where.** `packages/shared/src/geo.ts` — `delegationNameFor`,

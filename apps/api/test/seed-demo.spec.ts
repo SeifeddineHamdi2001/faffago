@@ -9,7 +9,7 @@ import { applyMigrations } from './migrations';
 
 /**
  * db:seed:demo — demo accounts to try the screens before seller creation
- * exists (phase 3). Never in production, never by the normal seed.
+ * exists (phase 4). Never in production, never by the normal seed.
  */
 
 let db: PGlite;

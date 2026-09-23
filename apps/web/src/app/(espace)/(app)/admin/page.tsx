@@ -1,6 +1,6 @@
 import { requireMe } from '@/lib/server/session';
 
-/** Until Aujourd'hui is built (phase 4), the back office opens here. */
+/** Until Aujourd'hui is built (phase 5), the back office opens here. */
 export default async function AdminHome() {
   const me = await requireMe('admin');
   return (

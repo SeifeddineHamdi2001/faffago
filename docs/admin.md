@@ -1,4 +1,4 @@
-# Faffa Go — Interface Admin (spécification v1.11)
+# Faffa Go — Interface Admin (spécification v1.12)
 
 > **How to read this document.** Screen names, buttons and statuses are in French, as the team will see them. Explanations are in English. This document completes the seller specification (Interface Vendeur v1.5); both follow the same statuses and rules. Items marked **TO CONFIRM** were adopted as defaults and still need a final yes (see section 8).
 
@@ -226,27 +226,27 @@ _Every report can be exported to CSV / Excel._
 - Zones are assigned by the admin, per role, as titular or backup. A courier only receives the work matching his role.
 - **Changer de rôle**: when a livreur becomes a ramasseur (or the reverse), the admin creates a **new account** with the new role, and the person logs in to it.
 - The **old account stays open**, so the person can still see what he is owed (e.g. livreur pay not yet paid). It receives no new work: no parcels, pickups or bons can be assigned to it. Cash, bons and failed parcels still on it must be handed over as usual.
-- The admin can deactivate the old account later, once nothing is owed; it is never deleted, so its history stays. **Désactiver** stops new work at once, then is refused while anything is still open — parcels in his hands, cash not handed over, a bon en route, and from phase 7 an open caisse session, an unpaid fiche de paie or a debt en cours — and lists what blocks it (D-12).
+- The admin can deactivate the old account later, once nothing is owed; it is never deleted, so its history stays. **Désactiver** stops new work at once, then is refused while anything is still open — parcels in his hands, cash not handed over, a bon en route, and from phase 8 an open caisse session, an unpaid fiche de paie or a debt en cours — and lists what blocks it (D-12).
 - Both accounts can use the same phone number. On the login screen, the person chooses **Livreur** or **Ramasseur**, then enters his phone number and password; each account can have its own password.
 - Actions: activate / deactivate, **Régénérer le mot de passe** (shown once, sessions revoked), change zones or pay plan, mark absent for a day.
 - Courier page: today's run, cash carried now, Caisse history with écarts, current debt, pay history, delivery rate.
 
 ### 4.16 Paramètres
 
-| Setting                            | Default                                                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Delivery fee, return fee           | Same for every seller                                                                                              |
-| Change-client fee                  | 1,000 DT                                                                                                           |
-| Pickup fee and free threshold      | 2,000 DT when fewer than 5 parcels are picked up; free from 5                                                      |
-| Retenue à la source                | 3% (CIN uniquement)                                                                                                |
-| Courier rate per parcel livré      | Set by the admin                                                                                                   |
-| À vérifier time limit              | 48 hours                                                                                                           |
-| Maximum delivery attempts          | 3                                                                                                                  |
-| Failure reasons                    | Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé                                      |
-| Gouvernorats and délégations       | Managed list                                                                                                       |
-| Zones                              | Groups of délégations, each with a livreur (titular + backup) and a ramasseur (titular + backup), set by the admin |
-| Contact links (Devenir partenaire) | Social media, phone, WhatsApp                                                                                      |
-| Staff users and roles              | Admin, Dépôt, Service client                                                                                       |
+| Setting                                 | Default                                                                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Delivery fee, return fee                | Same for every seller                                                                                                               |
+| Change-client fee                       | 1,000 DT                                                                                                                            |
+| Pickup fee and free threshold           | 2,000 DT when fewer than 5 parcels are picked up; free from 5                                                                       |
+| Retenue à la source                     | 3% (CIN uniquement)                                                                                                                 |
+| Courier rate per parcel livré           | Set by the admin                                                                                                                    |
+| À vérifier time limit                   | 48 hours                                                                                                                            |
+| Maximum delivery attempts               | 3                                                                                                                                   |
+| Failure reasons                         | Ne répond pas, Injoignable, Adresse incorrecte, Reporté par le client, Refusé — shown read-only (D-20)                              |
+| Gouvernorats, délégations and localités | Managed list. Localités: add, rename, deactivate, fill the optional Arabic name; parcels filed under Autre are listed (v1.12, D-17) |
+| Zones                                   | Groups of délégations, each with a livreur (titular + backup) and a ramasseur (titular + backup), set by the admin                  |
+| Contact links (Devenir partenaire)      | Social media, phone, WhatsApp                                                                                                       |
+| Staff users and roles                   | Admin, Dépôt, Service client                                                                                                        |
 
 _Rate changes apply to parcels created after the change; existing parcels keep the fee they were created with._
 

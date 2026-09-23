@@ -8,7 +8,7 @@ Next.js 15 (App Router) with three areas in one app (tech-stack 3):
 | Espace vendeur | `/vendeur/...` | French only (Q4)                 |
 | Back office    | `/admin/...`   | French only (Q4)                 |
 
-The public site is a placeholder until phase 8; its `[locale]` layout already
+The public site is a placeholder until phase 9; its `[locale]` layout already
 sets `lang` and `dir="rtl"`, so right-to-left is never retrofitted.
 
 ## Sessions (D-13, D-15)
@@ -42,5 +42,5 @@ To try the screens locally: `pnpm --filter @faffago/api db:seed`, then
 `pnpm --filter @faffago/api db:seed:demo` for a demo seller, Dépôt, Service
 client, livreur and ramasseur. The passwords are printed once.
 
-End-to-end tests (Playwright) come at the end of phase 3, when a full flow
+End-to-end tests (Playwright) come at the end of phase 4, when a full flow
 exists.

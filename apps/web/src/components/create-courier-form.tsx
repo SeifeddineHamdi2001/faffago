@@ -9,7 +9,7 @@ import { Dialog } from './dialog';
 
 /**
  * Créer un coursier (Admin 4.15): name, phone, CIN, vehicle, the role, and a
- * pay plan for a livreur only. Zones are assigned in phase 4.
+ * pay plan for a livreur only. Zones are assigned in phase 5.
  */
 export function CreateCourierForm({
   onCreated,

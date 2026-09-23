@@ -18,7 +18,7 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
       (`permissions.ts`: the test copies the spec table row by row)
 - [x] Login: vendeur = email, staff = username, coursier = téléphone + role choice (A-20)
 - [x] Admin-generated passwords (argon2id), shown once, no self-service reset (A-20, Q7).
-      Staff and courier creation; seller creation comes in phase 3 with the documents
+      Staff and courier creation; seller creation comes in phase 4 with the documents
 - [x] Role guards on every endpoint, deny by default; seller scoped to his own data
 - [x] Régénérer le mot de passe; last active admin protected; admin:reset CLI (Q9)
 - [x] Login throttling, no permanent lockout (D-6); session lifetimes (Q11)
@@ -28,7 +28,7 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 - [x] Screen access for Dépôt and Service client in the matrix (D-11, Admin v1.11);
       the seller's email is admin-only
 - [x] Désactiver un coursier: new work stops at once, refused while work is open
-      (D-12). The caisse, payslip and debt checks are `it.todo` until phase 7
+      (D-12). The caisse, payslip and debt checks are `it.todo` until phase 8
 - [x] Refresh token grace window, 10 s (D-13)
 - [x] List endpoints: `GET /accounts/staff`, `GET /accounts/couriers`,
       `GET /sellers`, each narrowed by role
@@ -41,9 +41,27 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
       Coursiers, Vendeurs, Paramètres › Utilisateurs, "Copier les
       identifiants", Régénérer le mot de passe, Désactiver / Réactiver with the
       blocker list, Voir comme le vendeur with its banner
-- [ ] Courier login screen with role choice — phase 5
+- [ ] Courier login screen with role choice — phase 6
 
-## Phase 2 — Parcel core
+## Phase 2 — Seed et Paramètres
+
+Branch `phase-2-seed`. Inserted as a new phase on 2026-09-23 (D-18).
+
+- [x] Grand Tunis geography reviewed and approved (`docs/geo-review.md`, D-19)
+- [x] Localités data in `apps/api/prisma/data/localites-grand-tunis.csv` (D-17)
+- [ ] `Localite` model and migration; `localiteId` on parcels and pickup addresses
+- [ ] Seed: corrected geography (48 délégations), localités, the 15 initial zones
+- [ ] Settings service, tests first (every change audited, fees frozen on
+      existing parcels), money settings as digit strings (D-20)
+- [ ] API: Paramètres read and update; geography tree; localités add, rename,
+      deactivate; parcels filed under Autre
+- [ ] Shared: localité search across names and aliases, CSV resolution
+- [ ] Web Paramètres screen: fees, retenue, limits, contact links; failure
+      reasons read-only
+- [x] Starting values for the delivery fee, return fee, courier rate and contact
+      links, TikTok included (D-20)
+
+## Phase 3 — Parcel core
 
 - [ ] Parcel model with fees frozen at creation (columns in place, service to write)
 - [~] Parcel event service (immutable events) + state machine with tests
@@ -51,7 +69,7 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
   the NestJS service that writes the events is not
 - [x] Append-only audit log (trigger + revoked privileges + tests)
 
-## Phase 3 — Seller space
+## Phase 4 — Seller space
 
 - [ ] Seller accounts created by admin (statut, documents in private storage)
 - [ ] Créer un colis + validation
@@ -63,15 +81,17 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
       the seller logs in → creates a parcel. Covers the phase 1 screens too
       (logins, Copier les identifiants, Voir comme le vendeur)
 
-## Phase 4 — Back office operations
+## Phase 5 — Back office operations
 
 - [ ] Web scan station (camera + USB gun), 5 modes, scan deduplication
 - [ ] Zones (livreur + ramasseur, titular + backup) and absence switch
+- [ ] Screens for zones, délégations and localités, with courier zone
+      assignment (D-18); the list of parcels filed under Autre
 - [ ] Tournées (parcels grouped by zone, manual moves)
 - [ ] Ramassages planning + À emporter
 - [ ] Colis search + admin status override (with reason, audited)
 
-## Phase 5 — Courier app
+## Phase 6 — Courier app
 
 - [ ] Expo dev build, login with role choice, PIN
 - [ ] Livreur: Ma journée, Ma tournée, Trouver le client, Livrer / Échec
@@ -81,14 +101,14 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 - [ ] Ma caisse, notifications, profile
 - [ ] APK distribution, forced update (only with empty queue), OTA updates
 
-## Phase 6 — À vérifier
+## Phase 7 — À vérifier
 
 - [ ] Failure reasons (courier only), seller decisions (Relancer / Retourner / Changer de client)
 - [ ] Changer de client only at depot, 1,000 DT fee, attempt counter reset
 - [ ] 48-hour automatic return job, 3rd attempt rule
 - [ ] Service client call log (Appels Faffa Go)
 
-## Phase 7 — Money
+## Phase 8 — Money
 
 - [ ] Caisse sessions (attendu / compté / écart), courier debts
 - [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
@@ -96,7 +116,7 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 - [ ] Retenue à la source certificates + monthly report
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
 
-## Phase 8 — Public site
+## Phase 9 — Public site
 
 - [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
 - [ ] Tarifs and Zones couvertes read from Paramètres
@@ -104,14 +124,14 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
 - [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
 
-## Phase 9 — Communication and reporting
+## Phase 10 — Communication and reporting
 
 - [ ] Chat per parcel (seller ↔ livreur, staff can join)
 - [ ] In-app notifications (all roles)
 - [ ] Exceptions queue
 - [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
 
-## Phase 10 — Deployment
+## Phase 11 — Deployment
 
 - [ ] VPS setup, HTTPS, environment variables
 - [ ] Verify the API connects as `faffago_app` with its password, and that an
@@ -297,9 +317,7 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 - Seed: the Arabic names of the gouvernorats and délégations are the standard
   official spellings but have not been read by a native speaker; the public site
   shows them to customers.
-- Delivery fee, return fee and courier rate are seeded at 0 because no spec
-  gives a value. They must be set in Paramètres before the first parcel.
 - **UI texts**: approved for now; the full review before launch works from
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
-  Nothing enforces that yet — it is a rule for the phase 5 implementation.
+  Nothing enforces that yet — it is a rule for the phase 6 implementation.

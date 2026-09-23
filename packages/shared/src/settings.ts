@@ -58,18 +58,18 @@ export interface PlatformSettings {
  * TO CONFIRM values from the specs are implemented as these defaults and are
  * changed in one place (CLAUDE.md, Source of truth).
  *
- * The delivery fee, the return fee and the courier rate have no value in the
- * specs: "set by the admin". They are seeded at 0 on purpose, so that an
- * unconfigured platform is obviously unconfigured rather than quietly wrong.
+ * The delivery fee, the return fee and the courier rate are the starting
+ * values given on 2026-09-23 (D-20); the specs leave them to the admin, who
+ * changes them in Paramètres.
  */
 export const DEFAULT_SETTINGS: PlatformSettings = {
-  deliveryFeeMillimes: 0n,
-  returnFeeMillimes: 0n,
+  deliveryFeeMillimes: 5500n,
+  returnFeeMillimes: 2000n,
   changeClientFeeMillimes: 1000n,
   pickupFeeMillimes: 2000n,
   pickupFreeThreshold: 5,
   retenueRateBps: 300,
-  courierRatePerParcelMillimes: 0n,
+  courierRatePerParcelMillimes: 3500n,
   verifyDeadlineHours: 48,
   maxDeliveryAttempts: 3,
   maxClientChangesPerParcel: 1,
@@ -80,8 +80,21 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
 
 /** Contact links behind "Devenir partenaire". Landing 2.8, Admin 4.16. */
 export interface ContactLinks {
+  /** As shown and dialled: "+216 99 602 208". */
   phone: string;
+  /** The link the WhatsApp button opens. */
   whatsapp: string;
   facebook: string;
   instagram: string;
+  /** Added on 2026-09-23 (D-20, landing v1.3). */
+  tiktok: string;
 }
+
+/** Starting values (D-20); the admin changes them in Paramètres. */
+export const DEFAULT_CONTACT_LINKS: ContactLinks = {
+  phone: '+216 99 602 208',
+  whatsapp: 'https://wa.me/21699602208',
+  facebook: 'https://www.facebook.com/Faffago',
+  instagram: 'https://www.instagram.com/faffago/',
+  tiktok: 'https://www.tiktok.com/@faffa_goo',
+};

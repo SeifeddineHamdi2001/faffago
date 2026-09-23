@@ -174,7 +174,7 @@ export const createStaffAccountSchema = z.object({
   phone: tunisianPhone,
 });
 
-/** Admin 4.15. Zones are assigned separately, per role (phase 4). */
+/** Admin 4.15. Zones are assigned separately, per role (phase 5). */
 export const createCourierAccountSchema = z
   .object({
     role: z.enum([Role.LIVREUR, Role.RAMASSEUR]),

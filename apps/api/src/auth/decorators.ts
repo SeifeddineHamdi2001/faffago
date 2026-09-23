@@ -43,7 +43,7 @@ export const ImpersonationExit = (): MethodDecorator => SetMetadata(IMPERSONATIO
 export const CourierAppRoute = (): MethodDecorator => SetMetadata(COURIER_APP_ROUTE, true);
 
 /**
- * The scan sync (phase 5): an outdated app must still be able to empty its
+ * The scan sync (phase 6): an outdated app must still be able to empty its
  * queue before it blocks for the update (tech-stack 5, Q12).
  */
 export const AllowOutdatedCourierApp = (): MethodDecorator =>

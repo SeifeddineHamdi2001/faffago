@@ -68,7 +68,7 @@ const introuvable = () => apiError(404, 'INTROUVABLE', 'Compte introuvable');
  * by the admin with a generated password shown once; only the admin can
  * regenerate it. Each change and its audit entry commit together.
  *
- * Seller accounts arrive with the seller module (phase 3), because creating
+ * Seller accounts arrive with the seller module (phase 4), because creating
  * one needs the CIN documents in private storage.
  */
 @Injectable()
@@ -94,7 +94,7 @@ export class AccountsService {
    * Coursiers (D-11). Dépôt and Service client read name, phone, role and
    * zones of the active couriers; the admin also reads the account (state,
    * CIN, vehicle) and, with PAIE_COURSIERS, the pay plan. Today's parcels
-   * join the list with the Tournées in phase 4.
+   * join the list with the Tournées in phase 5.
    */
   async listCouriers(role: Role): Promise<Record<string, unknown>[]> {
     const withAccount = can(role, Permission.GERER_VENDEURS_COURSIERS);
@@ -166,7 +166,7 @@ export class AccountsService {
     return { user: view(user), password };
   }
 
-  /** Admin 4.15. Zones are assigned separately (phase 4). */
+  /** Admin 4.15. Zones are assigned separately (phase 5). */
   async createCourier(
     actor: UserPrincipal,
     input: CreateCourierAccountValues,

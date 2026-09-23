@@ -1,7 +1,12 @@
 import { randomBytes } from 'node:crypto';
 import { PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { DEFAULT_SETTINGS, SettingKey, generatePassword } from '@faffago/shared';
+import {
+  DEFAULT_CONTACT_LINKS,
+  DEFAULT_SETTINGS,
+  SettingKey,
+  generatePassword,
+} from '@faffago/shared';
 
 /**
  * Seed: the geography of Grand Tunis, the platform settings and one admin.
@@ -154,7 +159,7 @@ async function seedSettings(): Promise<void> {
     [SettingKey.SCAN_CANCEL_WINDOW_SECONDS, DEFAULT_SETTINGS.scanCancelWindowSeconds],
     [SettingKey.CLOCK_SKEW_FLAG_MINUTES, DEFAULT_SETTINGS.clockSkewFlagMinutes],
     [SettingKey.COURIER_MIN_APP_VERSION, DEFAULT_SETTINGS.courierMinAppVersion],
-    [SettingKey.CONTACT_LINKS, { phone: '', whatsapp: '', facebook: '', instagram: '' }],
+    [SettingKey.CONTACT_LINKS, DEFAULT_CONTACT_LINKS],
   ];
 
   for (const [key, value] of values) {
@@ -168,12 +173,6 @@ async function seedSettings(): Promise<void> {
   }
 
   console.log(`Paramètres : ${values.length} clés en place.`);
-  if (DEFAULT_SETTINGS.deliveryFeeMillimes === 0n || DEFAULT_SETTINGS.returnFeeMillimes === 0n) {
-    console.log(
-      '  ! Frais de livraison, frais de retour et tarif coursier sont à 0 : ' +
-        'ils ne figurent pas dans les specs et doivent être saisis dans Paramètres.',
-    );
-  }
 }
 
 async function seedFirstAdmin(): Promise<void> {

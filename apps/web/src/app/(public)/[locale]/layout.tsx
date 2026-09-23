@@ -6,7 +6,7 @@ import { arabic, grotesk, manrope } from '../../fonts';
 
 /**
  * The public site: /fr and /ar, right to left in Arabic (tech-stack 3,
- * landing 5). Built in phase 8; the layout exists from the first commit so
+ * landing 5). Built in phase 9; the layout exists from the first commit so
  * the right-to-left direction is never retrofitted.
  */
 const LOCALES = ['fr', 'ar'] as const;

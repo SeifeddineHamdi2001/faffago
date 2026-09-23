@@ -113,7 +113,7 @@ where the text lives, so a change is made in one place.
 
 The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 
-## Site public (placeholder, phase 8)
+## Site public (placeholder, phase 9)
 
 | Key                                     | Français     | العربية                            |
 | --------------------------------------- | ------------ | ---------------------------------- |

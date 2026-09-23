@@ -5,7 +5,7 @@ import { CourierBlockerType, courierBlocker, type CourierBlocker } from '@faffag
  * What still ties a courier to the operation (D-12). The deactivation is
  * refused while this list is not empty, and the admin sees it whole.
  *
- * Phase 7 adds, with the Caisse and the pay — see the it.todo tests in
+ * Phase 8 adds, with the Caisse and the pay — see the it.todo tests in
  * test/accounts/courier-deactivation.e2e-spec.ts:
  *   CAISSE_NON_CLOTUREE    a caisse session of his that is not CLOTUREE
  *   FICHE_DE_PAIE_A_PAYER  a payslip of his that is A_PAYER
