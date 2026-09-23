@@ -111,7 +111,9 @@ describe('creating a parcel', () => {
 
   it('is refused when the event names another state', async () => {
     const id = nextParcelId();
-    await expectRefused(transaction(insertParcel(id), insertEvent(id, 'CREATION', 'CREE', 'AU_DEPOT')));
+    await expectRefused(
+      transaction(insertParcel(id), insertEvent(id, 'CREATION', 'CREE', 'AU_DEPOT')),
+    );
     expect(await stateOf(id)).toBeUndefined();
   });
 });
