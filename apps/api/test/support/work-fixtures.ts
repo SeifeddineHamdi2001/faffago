@@ -5,21 +5,27 @@ import type { ParcelCashStatus, ParcelLocation, ParcelStatus, PrismaClient } fro
 /**
  * Just enough operational data to put work "in a courier's hands": parcels,
  * pickups and bons, written straight to the tables. The services that will
- * write them for real come in phases 2 to 7.
+ * write them for real come in phases 3 to 8.
  */
 
 let counter = 0;
 
-async function delegation(prisma: PrismaClient): Promise<string> {
-  const existing = await prisma.delegation.findFirst();
-  if (existing) return existing.id;
+/** A localité and its délégation (D-17): the pair a parcel or an address names. */
+export async function place(
+  prisma: PrismaClient,
+): Promise<{ delegationId: string; localiteId: string }> {
+  const existing = await prisma.localite.findFirst();
+  if (existing) return { delegationId: existing.delegationId, localiteId: existing.id };
   const gouvernorat = await prisma.gouvernorat.create({
     data: { code: 'TUN', nameFr: 'Tunis', nameAr: 'تونس' },
   });
-  const created = await prisma.delegation.create({
+  const delegation = await prisma.delegation.create({
     data: { gouvernoratId: gouvernorat.id, code: 'TUN-BARDO', nameFr: 'Le Bardo', nameAr: 'باردو' },
   });
-  return created.id;
+  const localite = await prisma.localite.create({
+    data: { delegationId: delegation.id, nameFr: 'Khaznadar', postalCode: '2017' },
+  });
+  return { delegationId: delegation.id, localiteId: localite.id };
 }
 
 export async function createParcel(
@@ -39,7 +45,7 @@ export async function createParcel(
       sellerId: input.sellerId,
       recipientName: 'Client',
       recipientPhone: '29876543',
-      delegationId: await delegation(prisma),
+      ...(await place(prisma)),
       address: 'Rue de Test',
       productDescription: 'Article',
       codAmountMillimes: 85000n,
@@ -64,7 +70,7 @@ export async function createPickupWithParcel(
   const address = await prisma.pickupAddress.create({
     data: {
       sellerId: input.sellerId,
-      delegationId: await delegation(prisma),
+      ...(await place(prisma)),
       address: 'Entrepôt du vendeur',
     },
   });

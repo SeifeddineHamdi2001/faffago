@@ -19,6 +19,7 @@ const USER_ID = '11111111-1111-1111-1111-111111111111';
 const SELLER_ID = '22222222-2222-2222-2222-222222222222';
 const GOUVERNORAT_ID = '33333333-3333-3333-3333-333333333333';
 const DELEGATION_ID = '44444444-4444-4444-4444-444444444444';
+const LOCALITE_ID = '77777777-7777-7777-7777-777777777777';
 const PARCEL_ID = '55555555-5555-5555-5555-555555555555';
 const EVENT_ID = '66666666-6666-6666-6666-666666666666';
 
@@ -49,11 +50,15 @@ beforeAll(async () => {
     [DELEGATION_ID, GOUVERNORAT_ID],
   );
   await db.query(
-    `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",address,
+    `insert into localites (id,"delegationId","nameFr","updatedAt") values ($1,$2,'Khaznadar',now())`,
+    [LOCALITE_ID, DELEGATION_ID],
+  );
+  await db.query(
+    `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
        "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
        "changeClientFeeMillimes","createdByUserId","updatedAt")
-     values ($1,'FG-8K2QX7AB',$2,'Client','29876543',$3,'Rue X','2 bracelets',85000,7000,5000,1000,$4,now())`,
-    [PARCEL_ID, SELLER_ID, DELEGATION_ID, USER_ID],
+     values ($1,'FG-8K2QX7AB',$2,'Client','29876543',$3,$5,'Rue X','2 bracelets',85000,7000,5000,1000,$4,now())`,
+    [PARCEL_ID, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
   );
   await db.query(
     `insert into parcel_events (id,"parcelId",type,"newStatus") values ($1,$2,'CREATION','CREE')`,
@@ -206,11 +211,11 @@ describe('money', () => {
   it('refuses a negative COD', async () => {
     await expect(
       db.query(
-        `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",address,
+        `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
            "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
            "changeClientFeeMillimes","createdByUserId","updatedAt")
-         values (gen_random_uuid(),'FG-NEGATIV1',$1,'C','29876543',$2,'R','p',-1,0,0,0,$3,now())`,
-        [SELLER_ID, DELEGATION_ID, USER_ID],
+         values (gen_random_uuid(),'FG-NEGATIV1',$1,'C','29876543',$2,$4,'R','p',-1,0,0,0,$3,now())`,
+        [SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
       ),
     ).rejects.toThrow(/money_non_negative/);
   });
@@ -307,11 +312,11 @@ describe('parcels', () => {
   it('keeps the code unique', async () => {
     await expect(
       db.query(
-        `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",address,
+        `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
            "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
            "changeClientFeeMillimes","createdByUserId","updatedAt")
-         values (gen_random_uuid(),'FG-8K2QX7AB',$1,'C','29876543',$2,'R','p',0,0,0,0,$3,now())`,
-        [SELLER_ID, DELEGATION_ID, USER_ID],
+         values (gen_random_uuid(),'FG-8K2QX7AB',$1,'C','29876543',$2,$4,'R','p',0,0,0,0,$3,now())`,
+        [SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
       ),
     ).rejects.toThrow(/parcels_code_key/);
   });
@@ -353,10 +358,10 @@ describe('customer postponement (D-9)', () => {
   function insertParcel(id: string, code: string, extraColumns = '', extraValues = '') {
     return db.query(
       `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
-         address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
+         "localiteId",address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
          "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt"${extraColumns})
-       values ($1,$2,$3,'Client','29876543',$4,'Rue X','p',0,0,0,0,$5,now()${extraValues})`,
-      [id, code, SELLER_ID, DELEGATION_ID, USER_ID],
+       values ($1,$2,$3,'Client','29876543',$4,$6,'Rue X','p',0,0,0,0,$5,now()${extraValues})`,
+      [id, code, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
     );
   }
 

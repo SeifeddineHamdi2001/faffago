@@ -18,6 +18,7 @@ const USER_ID = '11111111-1111-1111-1111-111111111111';
 const SELLER_ID = '22222222-2222-2222-2222-222222222222';
 const GOUVERNORAT_ID = '33333333-3333-3333-3333-333333333333';
 const DELEGATION_ID = '44444444-4444-4444-4444-444444444444';
+const LOCALITE_ID = '77777777-7777-7777-7777-777777777777';
 const PARCEL_ID = '55555555-5555-5555-5555-555555555555';
 const EVENT_ID = '66666666-6666-6666-6666-666666666666';
 
@@ -48,10 +49,12 @@ beforeAll(async () => {
       values ('${GOUVERNORAT_ID}','TUN','Tunis','تونس');
     insert into delegations (id,"gouvernoratId",code,"nameFr","nameAr")
       values ('${DELEGATION_ID}','${GOUVERNORAT_ID}','TUN-BARDO','Le Bardo','باردو');
-    insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",address,
+    insert into localites (id,"delegationId","nameFr","updatedAt")
+      values ('${LOCALITE_ID}','${DELEGATION_ID}','Khaznadar',now());
+    insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
         "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
         "changeClientFeeMillimes","createdByUserId","updatedAt")
-      values ('${PARCEL_ID}','FG-8K2QX7AB','${SELLER_ID}','Client','29876543','${DELEGATION_ID}',
+      values ('${PARCEL_ID}','FG-8K2QX7AB','${SELLER_ID}','Client','29876543','${DELEGATION_ID}','${LOCALITE_ID}',
               'Rue X','2 bracelets',85000,7000,5000,1000,'${USER_ID}',now());
     insert into parcel_events (id,"parcelId",type,"newStatus")
       values ('${EVENT_ID}','${PARCEL_ID}','CREATION','CREE');

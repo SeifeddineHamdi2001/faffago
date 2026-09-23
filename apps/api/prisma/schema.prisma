@@ -439,6 +439,9 @@ model PickupAddress {
   sellerId     String  @db.Uuid
   label        String?
   delegationId String  @db.Uuid
+  /// The délégation always comes from the localité (D-17); the two-column key
+  /// below makes a disagreement impossible.
+  localiteId   String  @db.Uuid
   address      String
   landmark     String?
   isDefault    Boolean @default(false)
@@ -446,6 +449,7 @@ model PickupAddress {
 
   seller     Seller     @relation(fields: [sellerId], references: [id])
   delegation Delegation @relation(fields: [delegationId], references: [id])
+  localite   Localite   @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
   pickups    Pickup[]
 
   @@index([sellerId])
@@ -528,6 +532,7 @@ model Delegation {
 
   gouvernorat     Gouvernorat     @relation(fields: [gouvernoratId], references: [id])
   zone            Zone?           @relation(fields: [zoneId], references: [id])
+  localites       Localite[]
   parcels         Parcel[]
   pickupAddresses PickupAddress[]
 
@@ -536,6 +541,37 @@ model Delegation {
   @@unique([gouvernoratId, nameFr])
   @@index([zoneId])
   @@map("delegations")
+}
+
+/// The third level under the délégation (D-17). Zones stay at délégation
+/// level: a localité inherits its délégation's zone. Whether a name is
+/// ambiguous is computed from the list, never stored.
+model Localite {
+  id           String   @id @default(uuid()) @db.Uuid
+  delegationId String   @db.Uuid
+  nameFr       String
+  /// Optional: when empty, every screen shows the French name.
+  nameAr       String?
+  /// The first postal code; any others are in the aliases.
+  postalCode   String?  @db.VarChar(4)
+  aliases      String[] @default([])
+  /// The "Autre" row: one per délégation, never renamed or deactivated.
+  isOther      Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  /// "ARI-VILLE|Cité Ennasr 1", written by the seed only, so a localité the
+  /// admin has renamed is never created again by a later seed run.
+  sourceKey    String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  delegation      Delegation      @relation(fields: [delegationId], references: [id])
+  parcels         Parcel[]
+  pickupAddresses PickupAddress[]
+
+  @@unique([delegationId, nameFr])
+  /// Target of the two-column keys of parcels and pickup addresses.
+  @@unique([id, delegationId])
+  @@map("localites")
 }
 
 model Zone {
@@ -605,6 +641,8 @@ model Parcel {
   recipientPhone  String  @db.VarChar(8)
   recipientPhone2 String? @db.VarChar(8)
   delegationId    String  @db.Uuid
+  /// The délégation always comes from the localité (D-17).
+  localiteId      String  @db.Uuid
   address         String
   /// Shown large on the courier screen, so it is its own field (A-21).
   landmark        String?
@@ -665,6 +703,7 @@ model Parcel {
 
   seller           Seller                @relation(fields: [sellerId], references: [id])
   delegation       Delegation            @relation(fields: [delegationId], references: [id])
+  localite         Localite              @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
   plannedLivreur   Courier?              @relation("ParcelPlannedLivreur", fields: [plannedLivreurId], references: [id])
   currentLivreur   Courier?              @relation("ParcelLivreur", fields: [currentLivreurId], references: [id])
   events           ParcelEvent[]
@@ -684,6 +723,7 @@ model Parcel {
   @@index([status, location])
   @@index([currentLivreurId, status])
   @@index([delegationId, status])
+  @@index([localiteId])
   @@index([cashStatus, sellerId])
   @@index([verifyDeadlineAt])
   @@index([recipientPhone])
@@ -700,6 +740,8 @@ model ParcelClientChange {
   previousName         String
   previousPhone        String   @db.VarChar(8)
   previousDelegationId String   @db.Uuid
+  /// Keyed with previousDelegationId in the migration, like the parcel (D-17).
+  previousLocaliteId   String   @db.Uuid
   previousAddress      String
   previousCodMillimes  BigInt
   newCodMillimes       BigInt
