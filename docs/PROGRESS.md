@@ -45,8 +45,9 @@ Done: API and web. Merged into `main` on 2026-09-25 after a browser test.
 
 ## Phase 2 — Seed et Paramètres
 
-Done on branch `phase-2-seed`, ready to merge. Inserted as a new phase on
-2026-09-23 (D-18).
+Done. Merged into `main` on 2026-09-23 after a browser test on a reset
+database (Paramètres shows the right values and saves). Inserted as a new phase
+on 2026-09-23 (D-18).
 
 - [x] Grand Tunis geography reviewed and approved (`docs/geo-review.md`, D-19)
 - [x] Localités data in `apps/api/prisma/data/localites-grand-tunis.csv`:
@@ -71,13 +72,13 @@ Done on branch `phase-2-seed`, ready to merge. Inserted as a new phase on
       failure reasons read-only) beside Utilisateurs; PATCH through the BFF
 - [x] Starting values for the delivery fee, return fee, courier rate and contact
       links, TikTok included (D-20)
-- [ ] Open, awaiting corrections: the localités marked "délégation à
-      confirmer" in the CSV, kept as they are for now. There are **7**, not the
-      8 first reported: ARI-VILLE Les Jardins d'El Menzah · TUN-ELKHADRA Centre
-      Urbain Nord · TUN-GOULETTE L'Aouina · TUN-MARSA Ain Zaghouan Nord ·
-      TUN-MARSA Ain Zaghouan Sud · TUN-MARSA Lac 2 · TUN-OMRANESUP Cité
-      Olympique. A correction reaches an existing database through Paramètres ›
-      Localités (the seed never overwrites a localité it created).
+- [ ] Open, awaiting corrections: the **8** localités marked "délégation à
+      confirmer" in the CSV, kept as they are for now: ARI-VILLE Les Jardins
+      d'El Menzah · TUN-ELKHADRA Centre Urbain Nord · TUN-GOULETTE L'Aouina ·
+      TUN-MARSA Ain Zaghouan Nord · TUN-MARSA Ain Zaghouan Sud · TUN-MARSA Lac 2 ·
+      TUN-OMRANESUP Cité Olympique · BEN-MOUROUJ El Mourouj 1 (not in La
+      Poste's list at all). A correction reaches an existing database through
+      Paramètres › Localités (the seed never overwrites a localité it created).
 
 ## Phase 3 — Parcel core
 
@@ -337,7 +338,11 @@ Done on branch `phase-2-seed`, ready to merge. Inserted as a new phase on
 - 2026-09-23 — **Settings**: money as digit strings (D-20); the seed only
   creates keys, so a database seeded in phase 0 keeps its old zero fees until
   they are set in Paramètres or the database is reset. Validation bounds per
-  key are typing guards, not business rules.
+  key are typing guards, not business rules; approved on 2026-09-23.
+- 2026-09-23 — **El Mourouj 1** stays under BEN-MOUROUJ, marked "délégation à
+  confirmer" with the other 7 (D-17).
+- 2026-09-23 — **Phase 2 merged into `main`** after lint, typecheck, test and
+  build passed through turbo, and a browser test on a reset database.
 - 2026-09-23 — **`GET /geo` is open to every signed-in role** (sellers,
   couriers, staff, and Voir comme le vendeur). It carries no zone and no seed
   key; zones stay a back office matter.
@@ -355,8 +360,6 @@ Done on branch `phase-2-seed`, ready to merge. Inserted as a new phase on
   official spellings but have not been read by a native speaker; the public site
   shows them to customers. Localités have no Arabic name yet except Autre and
   Maakel Ezzaïm; the admin fills them in Paramètres › Localités (phase 5 screen).
-- CSV data: La Poste has no "El Mourouj 1"; the row added under El Mourouj
-  stays until you decide (D-17).
 - **UI texts**: approved for now; the full review before launch works from
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.

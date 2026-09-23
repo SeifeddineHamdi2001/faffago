@@ -420,13 +420,13 @@ Corrections made to the file as delivered (941 rows), approved 2026-09-23:
   AR معقل الزعيم). No other encoding error in the file.
 - **El Mourouj 2** is kept where La Poste puts it, under **El Kabaria (1074)**;
   the copy added under El Mourouj is removed. La Poste has **no "El Mourouj 1"**
-  at all; the row added under El Mourouj stays (reported, not decided).
+  at all; it stays under El Mourouj, marked "délégation à confirmer".
 - The alias **Ain Zaghouan** stays on both Ain Zaghouan Nord and Sud: the
   search shows both, and a CSV row that says only "Ain Zaghouan" is a row
   error the seller settles in the dropdown.
-- The **7 rows marked "délégation à confirmer"** (first reported as 8) stay as
-  they are until the corrections arrive; they are listed as open in
-  `docs/PROGRESS.md`.
+- The **8 rows marked "délégation à confirmer"** — the 7 of the original file
+  plus El Mourouj 1 — stay as they are until the corrections arrive; they are
+  listed as open in `docs/PROGRESS.md`.
 
 **The model.**
 
@@ -501,6 +501,10 @@ Reviewed in `docs/geo-review.md`.
   in `packages/shared`: "Reporté par le client" has its own rule (D-9) and the
   courier app translates every reason.
 - **Minimum courier app version**: `1.0.0` to start.
+- **The validation bounds** of each setting (`SETTING_VALUE_SCHEMAS`: fees up
+  to 9 digits of millimes, retenue 0–100 %, 1–720 hours, 1–10 attempts, 0–10
+  client changes, 0–3600 s, 1–1440 min, 1–100 parcels, versions x.y.z, https
+  links) are typing guards, approved on 2026-09-23.
 - The other defaults — change-client fee 1,000 DT, pickup fee 2,000 DT below 5
   parcels, retenue 3 %, 48 hours, 3 attempts, one client change per parcel,
   60 s scan cancel window, 15 min clock skew — are approved as seeded.
