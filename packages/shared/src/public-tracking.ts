@@ -1,5 +1,5 @@
 import { ParcelEventType } from './parcel-state-machine.js';
-import type { ParcelStatus } from './statuses.js';
+import { ParcelStatus, RelaunchOrigin } from './statuses.js';
 
 /**
  * Public parcel tracking (Landing 4).
@@ -15,6 +15,8 @@ export const PublicStatus = {
   EN_COURS_DE_LIVRAISON: 'EN_COURS_DE_LIVRAISON',
   LIVRE: 'LIVRE',
   LIVRAISON_REPORTEE: 'LIVRAISON_REPORTEE',
+  /** The customer himself asked for another day, so the page names it. */
+  LIVRAISON_REPORTEE_CLIENT: 'LIVRAISON_REPORTEE_CLIENT',
   RETOURNE_AU_VENDEUR: 'RETOURNE_AU_VENDEUR',
   COMMANDE_ANNULEE: 'COMMANDE_ANNULEE',
 } as const;
@@ -40,6 +42,7 @@ export const PUBLIC_STATUS_LABELS_FR: Record<PublicStatus, string> = {
   EN_COURS_DE_LIVRAISON: 'En cours de livraison',
   LIVRE: 'Livré',
   LIVRAISON_REPORTEE: 'Livraison reportée — le vendeur va vous contacter',
+  LIVRAISON_REPORTEE_CLIENT: 'Livraison reportée',
   RETOURNE_AU_VENDEUR: 'Retourné au vendeur',
   COMMANDE_ANNULEE: 'Commande annulée',
 };
@@ -56,13 +59,13 @@ export const PUBLIC_STATUS_TRANSLATION_KEYS: Record<PublicStatus, string> = {
   EN_COURS_DE_LIVRAISON: 'tracking.status.enCoursDeLivraison',
   LIVRE: 'tracking.status.livre',
   LIVRAISON_REPORTEE: 'tracking.status.livraisonReportee',
+  LIVRAISON_REPORTEE_CLIENT: 'tracking.status.livraisonReporteeClient',
   RETOURNE_AU_VENDEUR: 'tracking.status.retourneAuVendeur',
   COMMANDE_ANNULEE: 'tracking.status.commandeAnnulee',
 };
 
 /**
- * The only events the public timeline may show (A-17, and Q2 which is still
- * open — this is the conservative list I proposed).
+ * The only events the public timeline may show (A-17, Q2).
  *
  * Failed attempts are deliberately absent: Landing 4.2 collapses À vérifier
  * and Relancé into one reassuring label, and listing three failures would
@@ -82,6 +85,23 @@ export const PUBLIC_TIMELINE_EVENT_TYPES: readonly ParcelEventType[] = [
 
 export function isPublicTimelineEvent(type: ParcelEventType): boolean {
   return PUBLIC_TIMELINE_EVENT_TYPES.includes(type);
+}
+
+/**
+ * The public label for a parcel.
+ *
+ * Relancé normally reads "le vendeur va vous contacter", which is wrong when it
+ * is the customer who asked for another day: he is expecting the parcel, not a
+ * call. That case gets its own label and the date he chose (decision 6).
+ */
+export function publicStatusFor(parcel: {
+  status: ParcelStatus;
+  relaunchOrigin: RelaunchOrigin | null;
+}): PublicStatus {
+  if (parcel.status === ParcelStatus.RELANCE && parcel.relaunchOrigin === RelaunchOrigin.CLIENT) {
+    return PublicStatus.LIVRAISON_REPORTEE_CLIENT;
+  }
+  return PUBLIC_STATUS_BY_PARCEL_STATUS[parcel.status];
 }
 
 /**
@@ -106,5 +126,10 @@ export interface PublicTrackingView {
   /** Millimes, as a decimal string. Formatted with `formatDT` in the page. */
   codAmountMillimes: string;
   livreurFirstName: string | null;
+  /**
+   * Set only when the customer asked to postpone: the day he chose. He asked
+   * for it himself, so showing it back to him reveals nothing (decision 6).
+   */
+  postponedTo: string | null;
   timeline: Array<{ type: ParcelEventType; at: string }>;
 }

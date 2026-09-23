@@ -3,22 +3,22 @@
 COD express delivery in Grand Tunis. Seller space, back office and courier app
 in one monorepo.
 
-The specs in [`docs/`](docs/) are the source of truth;
+The specs in [`docs/`](docs/) are the source of truth,
+[`docs/decisions.md`](docs/decisions.md) records the rules decided since, and
 [`docs/PROGRESS.md`](docs/PROGRESS.md) says what is built.
 
 ## What exists today
 
-Phase 0 is partly done: the monorepo, the shared money and status layer, the
-full database schema and its first migration.
+Phase 0 is done: the monorepo, the shared money and status layer, the database
+schema and its migrations.
 
-**Authentication is not built.** The last two items of phase 0 — the login and
-the role guards, and the courier login with its role choice — are still open,
-so there is no way to sign in to anything yet. The database enforces which
-identifier each role uses; nothing checks a password.
+**Authentication is not built.** It is phase 1, still open, so there is no way
+to sign in to anything yet. The database enforces which identifier each role
+uses; nothing checks a password.
 
 **There is no user interface yet.** The seller space and back office
 (`apps/web`) and the courier app (`apps/courier`) are placeholders, built in
-phases 2 to 4. The API boots but serves no endpoints. What you can look at
+phases 3 to 5. The API boots but serves no endpoints. What you can look at
 today is the database, through Prisma Studio, and the test suite.
 
 ## Requirements
@@ -106,8 +106,8 @@ WebAssembly, so the triggers and CHECK constraints are genuinely exercised.
 | Path              | What                                                              |
 | ----------------- | ----------------------------------------------------------------- |
 | `apps/api`        | NestJS, Prisma, PostgreSQL                                        |
-| `apps/web`        | Next.js: public site, seller space, back office (phase 2)         |
-| `apps/courier`    | React Native / Expo, Android (phase 4)                            |
+| `apps/web`        | Next.js: public site, seller space, back office (phase 3)         |
+| `apps/courier`    | React Native / Expo, Android (phase 5)                            |
 | `packages/shared` | Statuses, money, the parcel state machine — imported by all three |
 | `packages/config` | Shared TypeScript and ESLint configuration                        |
 

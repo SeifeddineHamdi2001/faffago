@@ -1,19 +1,27 @@
 # Faffa Go — build progress
 
 Claude Code updates this file at the end of every task.
+Business rules decided after the specs are recorded in `docs/decisions.md`.
 Legend: [ ] not started · [~] in progress · [x] done
 
-## Phase 0 — Foundation
+## Phase 0 — Foundation (done)
 
 - [x] Monorepo (pnpm workspaces + Turborepo): apps/api, apps/web, apps/courier, packages/shared, packages/config
 - [x] packages/shared: status enums, money helpers (millimes), state machine, geo/CSV matching, chat lifecycle, zod schemas — 152 tests
 - [x] Full Prisma schema reviewed and approved (40 tables) + first migration, with append-only enforcement proved from the `faffago_app` role
-- [ ] Auth and role guards (ADMIN, DEPOT, SERVICE_CLIENT, VENDEUR, LIVREUR, RAMASSEUR).
-      Vendeur = email, staff = username, coursier = téléphone + choix du rôle (A-20).
-      Admin-generated passwords (argon2id), shown once, no self-service reset.
-- [ ] Courier login with role choice (Livreur / Ramasseur)
 
-## Phase 1 — Parcel core
+## Phase 1 — Auth and permissions
+
+- [ ] Permission matrix from Admin 2, encoded in packages/shared and tested
+- [ ] Login: vendeur = email, staff = username, coursier = téléphone + role choice (A-20)
+- [ ] Admin-generated passwords (argon2id), shown once, no self-service reset (A-20, Q7)
+- [ ] Role guards on every endpoint, deny by default; seller scoped to his own data
+- [ ] Régénérer le mot de passe; last active admin protected; admin:reset CLI (Q9)
+- [ ] Login throttling, no permanent lockout (D-3); session lifetimes (Q11)
+- [ ] Voir comme le vendeur: read-only, 30 min, audited (D-2)
+- [ ] Minimum courier app version enforced by the API
+
+## Phase 2 — Parcel core
 
 - [ ] Parcel model with fees frozen at creation (columns in place, service to write)
 - [~] Parcel event service (immutable events) + state machine with tests
@@ -21,7 +29,7 @@ Legend: [ ] not started · [~] in progress · [x] done
   the NestJS service that writes the events is not
 - [x] Append-only audit log (trigger + revoked privileges + tests)
 
-## Phase 2 — Seller space
+## Phase 3 — Seller space
 
 - [ ] Seller accounts created by admin (statut, documents in private storage)
 - [ ] Créer un colis + validation
@@ -30,7 +38,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Mes colis + Détail du colis
 - [ ] Ramassage requests + pickup address at first request
 
-## Phase 3 — Back office operations
+## Phase 4 — Back office operations
 
 - [ ] Web scan station (camera + USB gun), 5 modes, scan deduplication
 - [ ] Zones (livreur + ramasseur, titular + backup) and absence switch
@@ -38,7 +46,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Ramassages planning + À emporter
 - [ ] Colis search + admin status override (with reason, audited)
 
-## Phase 4 — Courier app
+## Phase 5 — Courier app
 
 - [ ] Expo dev build, login with role choice, PIN
 - [ ] Livreur: Ma journée, Ma tournée, Trouver le client, Livrer / Échec
@@ -48,14 +56,14 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Ma caisse, notifications, profile
 - [ ] APK distribution, forced update (only with empty queue), OTA updates
 
-## Phase 5 — À vérifier
+## Phase 6 — À vérifier
 
 - [ ] Failure reasons (courier only), seller decisions (Relancer / Retourner / Changer de client)
 - [ ] Changer de client only at depot, 1,000 DT fee, attempt counter reset
 - [ ] 48-hour automatic return job, 3rd attempt rule
 - [ ] Service client call log (Appels Faffa Go)
 
-## Phase 6 — Money
+## Phase 7 — Money
 
 - [ ] Caisse sessions (attendu / compté / écart), courier debts
 - [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
@@ -63,21 +71,21 @@ Legend: [ ] not started · [~] in progress · [x] done
 - [ ] Retenue à la source certificates + monthly report
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
 
-## Phase 6b — Public site
+## Phase 8 — Public site
 
 - [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
 - [ ] Tarifs and Zones couvertes read from Paramètres
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
 
-## Phase 7 — Communication and reporting
+## Phase 9 — Communication and reporting
 
 - [ ] Chat per parcel (seller ↔ livreur, staff can join)
 - [ ] In-app notifications (all roles)
 - [ ] Exceptions queue
 - [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
 
-## Phase 8 — Deployment
+## Phase 10 — Deployment
 
 - [ ] VPS setup, HTTPS, environment variables
 - [ ] Daily off-server backups + tested restore
@@ -148,6 +156,13 @@ Legend: [ ] not started · [~] in progress · [x] done
   `pnpm@12` dependency in the root `package.json` that broke
   `pnpm install --frozen-lockfile`, and a `.prettierrc` plugin that was never
   installed, so `pnpm format` exited 1 on a fresh machine. Both fixed.
+- 2026-09-24 — **Decisions D-1 to D-7 recorded in `docs/decisions.md`.** The one
+  that changes behaviour is D-6: "Reporté par le client" is planned, not
+  verified, and is the single exception to "a failed delivery always goes to
+  À vérifier". It adds `Parcel.relaunchOrigin`, the `RelaunchSlot` enum and the
+  public status `LIVRAISON_REPORTEE_CLIENT`.
+- 2026-09-24 — **Phases renumbered**: auth is phase 1, everything after shifts
+  by one, and the old "phase 6b" becomes phase 8.
 - 2026-09-23 — **The public timeline is a whitelist**, not a filter. Only the
   events in `PUBLIC_TIMELINE_EVENT_TYPES` are ever exposed, so a new event type
   is private until someone deliberately adds it.
@@ -158,11 +173,6 @@ Legend: [ ] not started · [~] in progress · [x] done
   half-up at the millime" (A-3), still to be signed off by the accountant.
 - Back office scanning: browser camera enough, or add a Dépôt mode to the
   courier app?
-- **A-6 gives 5 attempts in practice, not 6.** Changer de client resets the
-  counter, but it needs the status À vérifier, and the third failure returns the
-  parcel automatically. So the seller must change customer after the second
-  failure at the latest: 2 + 3. To reach 6, Changer de client would also have to
-  be allowed from Retour au dépôt, before the return ships.
 - Seed: the Arabic names of the gouvernorats and délégations are the standard
   official spellings but have not been read by a native speaker; the public site
   shows them to customers.
@@ -172,4 +182,7 @@ Legend: [ ] not started · [~] in progress · [x] done
   hatch (`admin:reset`) and the database constraints are built. The throttling,
   the session lifetimes and the last-admin guard belong to the auth task.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
-  Nothing enforces that yet — it is a rule for the phase 4 implementation.
+  Nothing enforces that yet — it is a rule for the phase 5 implementation.
+- D-6 splits a row of `docs/landing.md` 4.2: Relancé now maps to two public
+  labels depending on who asked for the delay. The spec has not been amended
+  yet — say the word and I will bump it to v1.2.

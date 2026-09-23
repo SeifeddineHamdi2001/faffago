@@ -31,6 +31,9 @@ function parcel(overrides: Partial<ParcelSnapshot> = {}): ParcelSnapshot {
     changeClientCount: 0,
     currentLivreurId: null,
     isExchange: false,
+    relaunchDate: null,
+    relaunchOrigin: null,
+    relaunchSlot: null,
     ...overrides,
   };
 }
@@ -393,7 +396,11 @@ describe('seller decisions on À vérifier', () => {
     const result = expectOk(applyParcelAction(atDepot, command(ParcelAction.DECISION_RELANCER)));
     expect(result.next.status).toBe(ParcelStatus.RELANCE);
     expect(result.next.attemptCount).toBe(1);
-    expect(result.events[0]?.effects).toEqual([ParcelEffect.ARRETER_DELAI_VERIFICATION]);
+    expect(result.events[0]?.effects).toEqual([
+      ParcelEffect.ARRETER_DELAI_VERIFICATION,
+      // The seller picks a date too, so the relance is planned like any other.
+      ParcelEffect.PLANIFIER_RELANCE,
+    ]);
   });
 
   it('Relancer can be chosen while the courier still has the parcel', () => {

@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { applyMigrations } from './migrations';
 
 /**
  * The rules the database enforces on its own.
@@ -16,15 +15,6 @@ import { PGlite } from '@electric-sql/pglite';
  * Testcontainers instead and live beside their feature.
  */
 
-const MIGRATION = join(
-  __dirname,
-  '..',
-  'prisma',
-  'migrations',
-  '20260923000000_init',
-  'migration.sql',
-);
-
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const SELLER_ID = '22222222-2222-2222-2222-222222222222';
 const GOUVERNORAT_ID = '33333333-3333-3333-3333-333333333333';
@@ -36,7 +26,7 @@ let db: PGlite;
 
 beforeAll(async () => {
   db = await PGlite.create();
-  await db.exec(readFileSync(MIGRATION, 'utf8'));
+  await applyMigrations(db);
 
   await db.query(
     `insert into users (id,role,username,phone,"passwordHash","firstName","lastName","updatedAt")
@@ -354,5 +344,66 @@ describe('parcels', () => {
         [other.rows[0]!.id, PARCEL_ID],
       ),
     ).rejects.toThrow(/parcelId/);
+  });
+});
+
+describe('customer postponement (decision 6)', () => {
+  const RELAUNCH_COLUMNS = '"relaunchDate","relaunchOrigin","relaunchSlot"';
+
+  function insertParcel(id: string, code: string, extraColumns = '', extraValues = '') {
+    return db.query(
+      `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
+         address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
+         "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt"${extraColumns})
+       values ($1,$2,$3,'Client','29876543',$4,'Rue X','p',0,0,0,0,$5,now()${extraValues})`,
+      [id, code, SELLER_ID, DELEGATION_ID, USER_ID],
+    );
+  }
+
+  it('accepts a date together with its origin', async () => {
+    await expect(
+      insertParcel(
+        'aaaaaaaa-0000-0000-0000-000000000002',
+        'FG-REPORT01',
+        `,${RELAUNCH_COLUMNS}`,
+        `,'2026-09-25','CLIENT','APRES_MIDI'`,
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('refuses a date with no origin, and an origin with no date', async () => {
+    await expect(
+      insertParcel(
+        'aaaaaaaa-0000-0000-0000-000000000003',
+        'FG-REPORT02',
+        `,"relaunchDate"`,
+        `,'2026-09-25'`,
+      ),
+    ).rejects.toThrow(/parcels_relaunch_is_complete/);
+
+    await expect(
+      insertParcel(
+        'aaaaaaaa-0000-0000-0000-000000000004',
+        'FG-REPORT03',
+        `,"relaunchOrigin"`,
+        `,'CLIENT'`,
+      ),
+    ).rejects.toThrow(/parcels_relaunch_is_complete/);
+  });
+
+  it('refuses a slot outside Matin / Après-midi / Soir', async () => {
+    await expect(
+      db.query(
+        `update parcels set "relaunchSlot" = 'NUIT' where id = 'aaaaaaaa-0000-0000-0000-000000000002'`,
+      ),
+    ).rejects.toThrow(/invalid input value for enum "RelaunchSlot"/);
+  });
+
+  it('no longer stores a courier PIN (Q7)', async () => {
+    const result = await db.query<{ n: number }>(
+      `select count(*)::int as n from information_schema.columns
+       where table_name = 'couriers' and column_name = 'pinHash'`,
+    );
+    expect(result.rows[0]?.n).toBe(0);
   });
 });

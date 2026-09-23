@@ -4,8 +4,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "echo \"apps/web est créé en phase 2 (docs/PROGRESS.md)\"",
-    "dev": "echo \"apps/web est créé en phase 2 (docs/PROGRESS.md)\"",
+    "build": "echo \"apps/web est créé en phase 3 (docs/PROGRESS.md)\"",
+    "dev": "echo \"apps/web est créé en phase 3 (docs/PROGRESS.md)\"",
     "test": "echo \"aucun test pour l'instant\"",
     "lint": "echo \"aucun code pour l'instant\"",
     "typecheck": "echo \"aucun code pour l'instant\""

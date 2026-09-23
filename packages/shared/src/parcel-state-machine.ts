@@ -1,5 +1,12 @@
 import { Role, SYSTEM_ACTOR, type Actor } from './roles.js';
-import { ParcelCashStatus, ParcelLocation, ParcelStatus, type FailureReason } from './statuses.js';
+import {
+  FailureReason,
+  ParcelCashStatus,
+  ParcelLocation,
+  ParcelStatus,
+  RelaunchOrigin,
+  type RelaunchSlot,
+} from './statuses.js';
 
 /**
  * The parcel state machine.
@@ -61,10 +68,31 @@ export const ParcelAction = {
   DECISION_RELANCER: 'DECISION_RELANCER',
   DECISION_RETOURNER: 'DECISION_RETOURNER',
   DECISION_CHANGER_CLIENT: 'DECISION_CHANGER_CLIENT',
+  /** The seller moves the date of an already planned relance (decision 6). */
+  DECISION_CHANGER_DATE: 'DECISION_CHANGER_DATE',
   DEPART_RETOUR: 'DEPART_RETOUR',
   AUTO_RETOUR_48H: 'AUTO_RETOUR_48H',
 } as const;
 export type ParcelAction = (typeof ParcelAction)[keyof typeof ParcelAction];
+
+/**
+ * A customer postponement is planned for tomorrow at the earliest and a week
+ * ahead at the latest (decision 6). Beyond that the seller should decide what
+ * to do with the parcel rather than let it sit in the depot.
+ */
+export const POSTPONEMENT_MIN_DAYS = 1;
+export const POSTPONEMENT_MAX_DAYS = 7;
+
+/** Compares two dates by their day, ignoring the time of day. */
+function daysBetween(from: Date, to: Date): number {
+  const startOfDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return Math.round((startOfDay(to) - startOfDay(from)) / 86_400_000);
+}
+
+export function isValidPostponementDate(postponedTo: Date, today: Date): boolean {
+  const offset = daysBetween(today, postponedTo);
+  return offset >= POSTPONEMENT_MIN_DAYS && offset <= POSTPONEMENT_MAX_DAYS;
+}
 
 /** Side effects the caller must perform in the same transaction. */
 export const ParcelEffect = {
@@ -75,6 +103,8 @@ export const ParcelEffect = {
   DEMARRER_DELAI_VERIFICATION: 'DEMARRER_DELAI_VERIFICATION',
   ARRETER_DELAI_VERIFICATION: 'ARRETER_DELAI_VERIFICATION',
   REINITIALISER_TENTATIVES: 'REINITIALISER_TENTATIVES',
+  /** Record the date and slot, and tell the seller the customer postponed. */
+  PLANIFIER_RELANCE: 'PLANIFIER_RELANCE',
   ARTICLE_ECHANGE_A_RECUPERER: 'ARTICLE_ECHANGE_A_RECUPERER',
   /** Create the thread, or reopen it with the livreur who just took the parcel. */
   OUVRIR_CHAT: 'OUVRIR_CHAT',
@@ -99,6 +129,8 @@ export const ScanRefusal = {
   TENTATIVES_EPUISEES: 'TENTATIVES_EPUISEES',
   CHANGEMENT_CLIENT_DEJA_UTILISE: 'CHANGEMENT_CLIENT_DEJA_UTILISE',
   COURSIER_NON_PRECISE: 'COURSIER_NON_PRECISE',
+  DATE_REPORT_REQUISE: 'DATE_REPORT_REQUISE',
+  DATE_REPORT_INVALIDE: 'DATE_REPORT_INVALIDE',
 } as const;
 export type ScanRefusal = (typeof ScanRefusal)[keyof typeof ScanRefusal];
 
@@ -115,6 +147,8 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   TENTATIVES_EPUISEES: 'Nombre maximum de tentatives atteint',
   CHANGEMENT_CLIENT_DEJA_UTILISE: 'Changement de client déjà utilisé pour ce colis',
   COURSIER_NON_PRECISE: 'Choisissez un coursier avant de scanner',
+  DATE_REPORT_REQUISE: 'Choisissez la date de report demandée par le client',
+  DATE_REPORT_INVALIDE: 'La date doit être comprise entre demain et 7 jours',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -130,6 +164,11 @@ export interface ParcelSnapshot {
   changeClientCount: number;
   currentLivreurId: string | null;
   isExchange: boolean;
+  /** Set while the parcel is RELANCE: the day it should go out again. */
+  relaunchDate: Date | null;
+  /** Who asked for that date: the seller, or the customer (decision 6). */
+  relaunchOrigin: RelaunchOrigin | null;
+  relaunchSlot: RelaunchSlot | null;
 }
 
 export interface ParcelActionCommand {
@@ -140,6 +179,14 @@ export interface ParcelActionCommand {
   /** Sortie coursier: the livreur chosen on the scan screen before scanning. */
   assignToCourierId?: string | null;
   failureReason?: FailureReason;
+  /**
+   * Required when the reason is REPORTE_PAR_LE_CLIENT, and when the seller
+   * moves an existing date. Between tomorrow and seven days out.
+   */
+  postponedTo?: Date | null;
+  relaunchSlot?: RelaunchSlot | null;
+  /** The business day the action happens on, used to validate that window. */
+  today?: Date;
   maxAttempts: number;
   maxClientChanges: number;
 }
@@ -173,6 +220,7 @@ const ALLOWED_ACTORS: Record<ParcelAction, readonly Actor[]> = {
   DECISION_RELANCER: [Role.VENDEUR],
   DECISION_RETOURNER: [Role.VENDEUR],
   DECISION_CHANGER_CLIENT: [Role.VENDEUR],
+  DECISION_CHANGER_DATE: [Role.VENDEUR],
   DEPART_RETOUR: [Role.ADMIN, Role.DEPOT],
   AUTO_RETOUR_48H: [SYSTEM_ACTOR],
 };
@@ -309,6 +357,10 @@ export function applyParcelAction(
           status: ParcelStatus.EN_LIVRAISON,
           location: ParcelLocation.AVEC_LE_LIVREUR,
           currentLivreurId: command.assignToCourierId,
+          // The planned date has been acted on; the parcel is out.
+          relaunchDate: null,
+          relaunchSlot: null,
+          relaunchOrigin: null,
         },
         events: [
           event(
@@ -372,6 +424,46 @@ export function applyParcelAction(
 
       const attemptCount = parcel.attemptCount + 1;
       const exhausted = attemptCount >= command.maxAttempts;
+      const isPostponement = command.failureReason === FailureReason.REPORTE_PAR_LE_CLIENT;
+
+      // A postponement carries the date the customer asked for. It is checked
+      // even on the last attempt, so the courier gets the same message
+      // whatever the attempt number rather than a confusing silent return.
+      if (isPostponement) {
+        if (!command.postponedTo) return refuse(ScanRefusal.DATE_REPORT_REQUISE);
+        if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
+          return refuse(ScanRefusal.DATE_REPORT_INVALIDE);
+        }
+      }
+
+      // A customer postponement is planned, not verified: the parcel goes
+      // straight to Relancé with its date and never enters À vérifier, so no
+      // 48-hour clock starts and the seller has nothing to decide (decision 6).
+      // The three-attempt rule still wins on the last attempt.
+      if (isPostponement && !exhausted) {
+        return {
+          ok: true,
+          next: {
+            ...parcel,
+            status: ParcelStatus.RELANCE,
+            location: ParcelLocation.AVEC_LE_LIVREUR,
+            attemptCount,
+            relaunchDate: command.postponedTo ?? null,
+            relaunchSlot: command.relaunchSlot ?? null,
+            relaunchOrigin: RelaunchOrigin.CLIENT,
+          },
+          events: [
+            {
+              type: ParcelEventType.ECHEC_LIVRAISON,
+              previousStatus: parcel.status,
+              newStatus: ParcelStatus.RELANCE,
+              previousLocation: parcel.location,
+              newLocation: ParcelLocation.AVEC_LE_LIVREUR,
+              effects: [ParcelEffect.PLANIFIER_RELANCE],
+            },
+          ],
+        };
+      }
 
       // A failed delivery always goes to À vérifier first (CLAUDE.md), even
       // when it is the last attempt, so the timeline records the failure and
@@ -475,21 +567,64 @@ export function applyParcelAction(
       if (parcel.attemptCount >= command.maxAttempts) {
         return refuse(ScanRefusal.TENTATIVES_EPUISEES);
       }
+      // The seller picks a date and a slot (Vendeur 4.9), validated in the same
+      // window as a customer postponement so the two cannot diverge.
+      if (command.postponedTo) {
+        if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
+          return refuse(ScanRefusal.DATE_REPORT_INVALIDE);
+        }
+      }
       // Relancer is free and gives one new attempt. It can be chosen while the
       // courier still has the parcel, so the location does not move.
       return {
         ok: true,
-        next: { ...parcel, status: ParcelStatus.RELANCE },
+        next: {
+          ...parcel,
+          status: ParcelStatus.RELANCE,
+          relaunchDate: command.postponedTo ?? null,
+          relaunchSlot: command.relaunchSlot ?? null,
+          relaunchOrigin: RelaunchOrigin.VENDEUR,
+        },
         events: [
           event(ParcelEventType.DECISION_RELANCER, parcel, ParcelStatus.RELANCE, parcel.location, [
             ParcelEffect.ARRETER_DELAI_VERIFICATION,
+            ParcelEffect.PLANIFIER_RELANCE,
+          ]),
+        ],
+      };
+    }
+
+    case ParcelAction.DECISION_CHANGER_DATE: {
+      // Only while the parcel is still waiting: once it is out with a livreur
+      // again, the date has been acted on (decision 6).
+      if (parcel.status !== ParcelStatus.RELANCE) return refuseByStatus(parcel);
+      if (!command.postponedTo) return refuse(ScanRefusal.DATE_REPORT_REQUISE);
+      if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
+        return refuse(ScanRefusal.DATE_REPORT_INVALIDE);
+      }
+      // The origin does not change: a date the customer asked for stays shown
+      // as "Reporté" even after the seller moves it.
+      return {
+        ok: true,
+        next: {
+          ...parcel,
+          relaunchDate: command.postponedTo,
+          relaunchSlot: command.relaunchSlot ?? parcel.relaunchSlot,
+        },
+        events: [
+          event(ParcelEventType.DECISION_RELANCER, parcel, parcel.status, parcel.location, [
+            ParcelEffect.PLANIFIER_RELANCE,
           ]),
         ],
       };
     }
 
     case ParcelAction.DECISION_RETOURNER: {
-      if (parcel.status !== ParcelStatus.A_VERIFIER) return refuseByStatus(parcel);
+      // Also from Relancé: a seller who sees a postponement he does not believe
+      // in can return the parcel without waiting for it to fail again.
+      if (parcel.status !== ParcelStatus.A_VERIFIER && parcel.status !== ParcelStatus.RELANCE) {
+        return refuseByStatus(parcel);
+      }
       // The status flips on the decision; the parcel may still be in the
       // courier's bag until the Retour de tournée scan (A-7).
       return {
@@ -508,7 +643,10 @@ export function applyParcelAction(
     }
 
     case ParcelAction.DECISION_CHANGER_CLIENT: {
-      if (parcel.status !== ParcelStatus.A_VERIFIER) return refuseByStatus(parcel);
+      // Also from Relancé, once the parcel is back at the depot (decision 6).
+      if (parcel.status !== ParcelStatus.A_VERIFIER && parcel.status !== ParcelStatus.RELANCE) {
+        return refuseByStatus(parcel);
+      }
       // Never while the courier has it (Vendeur rule 14, Admin rule 12).
       if (parcel.location !== ParcelLocation.AU_DEPOT) {
         return refuse(ScanRefusal.COLIS_PAS_AU_DEPOT);
@@ -526,6 +664,10 @@ export function applyParcelAction(
           status: ParcelStatus.AU_DEPOT,
           attemptCount: 0,
           changeClientCount: parcel.changeClientCount + 1,
+          // A new customer means any date planned for the old one is void.
+          relaunchDate: null,
+          relaunchSlot: null,
+          relaunchOrigin: null,
         },
         events: [
           event(
@@ -680,6 +822,26 @@ export function canChangeClient(parcel: ParcelSnapshot, maxClientChanges: number
 
 export function canRelaunch(parcel: ParcelSnapshot, maxAttempts: number): boolean {
   return parcel.status === ParcelStatus.A_VERIFIER && parcel.attemptCount < maxAttempts;
+}
+
+/**
+ * Whether the parcel belongs in today's Tournées list (Admin 4.5, decision 6).
+ *
+ * A relancé or postponed parcel waits at the depot and only appears on the day
+ * chosen for it. An overdue one keeps appearing rather than disappearing
+ * quietly, so nothing is forgotten in a corner of the depot.
+ */
+export function isDueForTour(parcel: ParcelSnapshot, today: Date): boolean {
+  if (parcel.location !== ParcelLocation.AU_DEPOT) return false;
+  if (parcel.status === ParcelStatus.AU_DEPOT) return true;
+  if (parcel.status !== ParcelStatus.RELANCE) return false;
+  if (!parcel.relaunchDate) return true;
+  return daysBetween(today, parcel.relaunchDate) <= 0;
+}
+
+/** True when the parcel is waiting on a date the customer asked for. */
+export function isPostponedByCustomer(parcel: ParcelSnapshot): boolean {
+  return parcel.status === ParcelStatus.RELANCE && parcel.relaunchOrigin === RelaunchOrigin.CLIENT;
 }
 
 /** A parcel can be edited freely only before it is picked up (Vendeur 4.6). */

@@ -99,6 +99,19 @@ enum ParcelCashStatus {
   PAYE
 }
 
+/// Why a parcel is in RELANCE (decision 6). The seller's own Relancer and a
+/// customer postponement reach the same status but are shown differently.
+enum RelaunchOrigin {
+  VENDEUR
+  CLIENT
+}
+
+enum RelaunchSlot {
+  MATIN
+  APRES_MIDI
+  SOIR
+}
+
 enum FailureReason {
   NE_REPOND_PAS
   INJOIGNABLE
@@ -253,6 +266,7 @@ enum NotificationType {
   COURSIER_A_PAYER
   NOUVEAUX_COLIS_ASSIGNES
   COLIS_RELANCE_AUJOURDHUI
+  COLIS_REPORTE_PAR_CLIENT
   RAPPEL_FIN_DE_JOURNEE
 }
 
@@ -406,8 +420,6 @@ model Courier {
   /// Livreurs only. Ramasseurs are employees paid by HR outside the app.
   payPlan      PayPlan?
   accountState CourierAccountState @default(ACTIF)
-  /// Protects the app when it is reopened. Set on the device by the courier.
-  pinHash      String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
@@ -575,15 +587,17 @@ model Parcel {
   location   ParcelLocation    @default(CHEZ_LE_VENDEUR)
   cashStatus ParcelCashStatus?
 
-  attemptCount      Int            @default(0)
+  attemptCount      Int             @default(0)
   lastFailureReason FailureReason?
   lastFailureNote   String?
   /// Set on entering À vérifier, cleared by any decision. The scheduled job
   /// reads it; it stops at the decision, not at the return scan (A-7).
   verifyDeadlineAt  DateTime?
-  relaunchDate      DateTime?      @db.Date
-  relaunchSlot      String?
-  changeClientCount Int            @default(0)
+  /// The day the parcel goes out again, and who asked for it (decision 6).
+  relaunchDate      DateTime?       @db.Date
+  relaunchSlot      RelaunchSlot?
+  relaunchOrigin    RelaunchOrigin?
+  changeClientCount Int             @default(0)
   /// Recorded when the customer prefers to meet somewhere (Coursier 4.3).
   meetingPoint      String?
 

@@ -246,6 +246,41 @@ export const ChargeStatus = {
 } as const;
 export type ChargeStatus = (typeof ChargeStatus)[keyof typeof ChargeStatus];
 
+/**
+ * Why a parcel is in RELANCE (decision 6).
+ *
+ * VENDEUR: the seller chose Relancer after a failure, and picked the date.
+ * CLIENT: the customer asked to postpone, so the courier planned it directly
+ * and the parcel never passed through À vérifier.
+ *
+ * The two are shown differently to the seller and on the public tracking page,
+ * which is why the origin is stored rather than inferred.
+ */
+export const RelaunchOrigin = {
+  VENDEUR: 'VENDEUR',
+  CLIENT: 'CLIENT',
+} as const;
+export type RelaunchOrigin = (typeof RelaunchOrigin)[keyof typeof RelaunchOrigin];
+
+export const RELAUNCH_ORIGIN_LABELS_FR: Record<RelaunchOrigin, string> = {
+  VENDEUR: 'Relancé',
+  CLIENT: 'Reporté par le client',
+};
+
+/** Time slots a postponement can name (decision 6). */
+export const RelaunchSlot = {
+  MATIN: 'MATIN',
+  APRES_MIDI: 'APRES_MIDI',
+  SOIR: 'SOIR',
+} as const;
+export type RelaunchSlot = (typeof RelaunchSlot)[keyof typeof RelaunchSlot];
+
+export const RELAUNCH_SLOT_LABELS_FR: Record<RelaunchSlot, string> = {
+  MATIN: 'Matin',
+  APRES_MIDI: 'Après-midi',
+  SOIR: 'Soir',
+};
+
 export const Langue = {
   FR: 'FR',
   AR: 'AR',

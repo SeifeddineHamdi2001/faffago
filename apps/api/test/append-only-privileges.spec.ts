@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
+import { applyMigrations } from './migrations';
 
 /**
  * Append-only, proved from the application's own database role.
@@ -14,15 +13,6 @@ import { PGlite } from '@electric-sql/pglite';
  * The migration's grant block is conditional on the role existing, so the role
  * is created here first, exactly as the VPS does before the first deploy.
  */
-
-const MIGRATION = join(
-  __dirname,
-  '..',
-  'prisma',
-  'migrations',
-  '20260923000000_init',
-  'migration.sql',
-);
 
 const USER_ID = '11111111-1111-1111-1111-111111111111';
 const SELLER_ID = '22222222-2222-2222-2222-222222222222';
@@ -46,7 +36,7 @@ async function asApp(sql: string): Promise<void> {
 beforeAll(async () => {
   db = await PGlite.create();
   await db.exec(`CREATE ROLE faffago_app LOGIN PASSWORD 'test';`);
-  await db.exec(readFileSync(MIGRATION, 'utf8'));
+  await applyMigrations(db);
 
   await db.exec(`
     insert into users (id,role,username,phone,"passwordHash","firstName","lastName","updatedAt")

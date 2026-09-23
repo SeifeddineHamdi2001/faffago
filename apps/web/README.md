@@ -7,7 +7,7 @@ Next.js application with three areas, all in one app (tech-stack 3):
 - **Espace vendeur** — the seller interface of `docs/vendeur.md`.
 - **Back office** — Admin, Dépôt and Service client, from `docs/admin.md`.
 
-Not scaffolded yet. It is built in phase 2 and phase 6b of `docs/PROGRESS.md`,
+Not scaffolded yet. It is built in phase 3 and phase 8 of `docs/PROGRESS.md`,
 after the API has the endpoints it needs.
 
 Two things must be in place from its very first commit, because retrofitting
