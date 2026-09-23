@@ -77,8 +77,8 @@ describe('the geography (D-19)', () => {
 });
 
 describe('the localités (D-17)', () => {
-  it('imports the 940 rows of the CSV, one Autre per délégation', async () => {
-    expect(await prisma.localite.count()).toBe(940);
+  it('imports the 938 rows of the CSV, one Autre per délégation', async () => {
+    expect(await prisma.localite.count()).toBe(938);
     const others = await prisma.localite.findMany({ where: { isOther: true } });
     expect(others).toHaveLength(48);
     expect(others.every((row) => row.nameFr === 'Autre' && row.nameAr === 'أخرى')).toBe(true);
@@ -123,6 +123,28 @@ describe('the localités (D-17)', () => {
         where: { delegationId: omraneSup.id, nameFr: 'Cité Olympique' },
       }),
     ).toBeNull();
+  });
+
+  it('puts both lake areas under La Goulette', async () => {
+    const lac1 = await localite('TUN-GOULETTE', 'Les Berges du Lac');
+    expect(lac1).toMatchObject({ postalCode: '1053', aliases: ['Berge Du Lac', 'Lac 1'] });
+    expect((await localite('TUN-GOULETTE', 'Lac 2')).postalCode).toBe('1053');
+    const marsa = await delegation('TUN-MARSA');
+    expect(
+      await prisma.localite.findFirst({
+        where: { delegationId: marsa.id, nameFr: { startsWith: 'Les Berges' } },
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps one Cité Olympique, La Poste's two spellings as its aliases", async () => {
+    const olympique = await localite('TUN-ELKHADRA', 'Cité Olympique');
+    expect(olympique.aliases).toEqual(['Cite Olympique', 'Cité Oplympique', 'Cité Olympeade']);
+    expect(
+      await prisma.localite.count({
+        where: { nameFr: { in: ['Cité Oplympique', 'Cité Olympeade'] } },
+      }),
+    ).toBe(0);
   });
 
   it('puts Den Den under La Manouba, as La Poste does', async () => {

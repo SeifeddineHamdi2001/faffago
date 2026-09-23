@@ -407,7 +407,7 @@ address), Admin 4.16 (a managed list of localités) and Coursier (what a stop
 shows). The délégation alone is too coarse to find a customer; sellers and
 customers name the neighbourhood.
 
-**The data.** `apps/api/prisma/data/localites-grand-tunis.csv`: 940 rows over
+**The data.** `apps/api/prisma/data/localites-grand-tunis.csv`: 938 rows over
 the 48 délégations, built from La Poste Tunisienne's postal code list
 (github.com/TangoRythm/Tunisia-Geodata-API), plus well-known neighbourhoods
 missing from it, plus one **Autre** per délégation. Imported by the seed,
@@ -440,6 +440,14 @@ Corrections made to the file as delivered (941 rows), approved 2026-09-23:
 
   The second postal code of Les Jardins d'El Menzah is an alias, like every
   extra code. The file now has no row left to confirm.
+
+- **Both lake areas are in La Goulette** (decided 2026-09-23): "Les Berges du
+  Lac" (Lac 1, 1053) moves from La Marsa, where La Poste lists it, to sit
+  next to Lac 2.
+- **One Cité Olympique** (Cité El Khadra, 1003): La Poste's "Cité Oplympique"
+  and "Cité Olympeade" rows are removed and kept as its aliases, so a seller
+  or a CSV that uses either spelling still finds it. The file goes from 940
+  to 938 rows.
 
 **The model.**
 

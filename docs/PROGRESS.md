@@ -51,12 +51,12 @@ on 2026-09-23 (D-18).
 
 - [x] Grand Tunis geography reviewed and approved (`docs/geo-review.md`, D-19)
 - [x] Localités data in `apps/api/prisma/data/localites-grand-tunis.csv`:
-      940 rows, 48 délégations, corrected as approved (D-17)
+      938 rows, 48 délégations, corrected as approved (D-17)
 - [x] `Localite` model; migration `20260926000000_localites` with the
       (localité, délégation) keys on parcels, pickup addresses and the
       Changer de client history; one Autre per délégation — 14 schema tests
 - [x] Seed: 48 délégations with the approved spellings, `MAN-DENDEN` removed,
-      940 localités create-only by seed key, the 15 initial zones created once,
+      938 localités create-only by seed key, the 15 initial zones created once,
       settings with the starting values — 20 seed tests
 - [x] Settings service and API (`GET /settings`, `PATCH /settings/:key`,
       admin only): every change audited in its transaction, rolled back if the
@@ -155,6 +155,9 @@ on 2026-09-23 (D-18).
       layer, so the authentication path is only ever exercised here.
 - [ ] Daily off-server backups + tested restore
 - [ ] Monitoring and logs
+- [ ] The VPS has limited memory: CI and test runs there use fewer workers
+      than the development machine (API tests are already capped at half the
+      cores; lower it further, or run in band, on a small VPS or CI runner)
 - [ ] Full real-day test with real scans on a low-cost Android phone
 
 ## Decisions made during the build
@@ -351,6 +354,12 @@ on 2026-09-23 (D-18).
   unreachable", "Memory allocation error"). Reproduced by running the suite
   twice at once; with the cap, 5 turbo runs out of 5 pass. Two suites at once
   still fail, so a smaller machine or CI runner may need fewer workers.
+- 2026-09-23 — **Lac 1 joins Lac 2 in La Goulette; Cité Olympique is one row**
+  with La Poste's two misspellings as aliases (D-17). 938 localités. A database
+  seeded before must be reset.
+- 2026-09-23 — **CLAUDE.md, How to work, 8**: never commit when lint,
+  typecheck or tests fail; chain with `&&` so a failure stops before the
+  commit.
 - 2026-09-23 — **`GET /geo` is open to every signed-in role** (sellers,
   couriers, staff, and Voir comme le vendeur). It carries no zone and no seed
   key; zones stay a back office matter.

@@ -81,7 +81,7 @@ describe('GET /geo', () => {
       'TUN',
     ]);
     expect(delegations).toHaveLength(48);
-    expect(delegations.flatMap((d) => d.localites)).toHaveLength(940);
+    expect(delegations.flatMap((d) => d.localites)).toHaveLength(938);
 
     const sidiBechir = delegations.find((d) => d.code === 'TUN-SIDIBECHIR')!;
     expect(sidiBechir.localites).toContainEqual(
