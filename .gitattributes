@@ -1,0 +1,17 @@
+# Normalise to LF in the repository, whatever the developer's platform.
+# Without this, a Windows checkout rewrites every file to CRLF and the next
+# person on Linux sees the whole tree as modified.
+* text=auto eol=lf
+
+# Binary
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.apk   binary
+*.keystore binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
+
+# Generated; keep them out of diffs and out of language statistics.
+pnpm-lock.yaml -diff linguist-generated
