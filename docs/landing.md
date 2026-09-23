@@ -1,4 +1,4 @@
-# Faffa Go — Site public : landing page & suivi de colis (spécification v1.3)
+# Faffa Go — Site public : landing page & suivi de colis (spécification v1.4)
 
 > **How to read this document.** Page text and labels are shown in French, as they will appear on the site; each has an Arabic version. Explanations are in English. This document completes the seller (v1.5), admin (v1.9) and courier (v1.7) specifications and uses the same statuses and rules.
 
@@ -114,6 +114,7 @@ The customer sees simple labels, not internal ones:
 | Relancé (reporté par le client)             | Livraison reportée, avec la date demandée par le client |
 | Retour (all stages)                         | Retourné au vendeur                                     |
 | Annulé                                      | Commande annulée                                        |
+| Annulé après ramassage, retour en cours     | Commande annulée (v1.4, D-28)                           |
 
 ### 4.3 What is never shown
 

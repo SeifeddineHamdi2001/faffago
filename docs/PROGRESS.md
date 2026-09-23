@@ -78,11 +78,31 @@ on 2026-09-23 (D-18).
 
 ## Phase 3 — Parcel core
 
-- [ ] Parcel model with fees frozen at creation (columns in place, service to write)
-- [~] Parcel event service (immutable events) + state machine with tests
-  — the state machine and its 48 tests are done in `packages/shared`;
-  the NestJS service that writes the events is not
+Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
+
+- [x] `ParcelsService.create`: fees frozen from `feesForNewParcel` at creation,
+      délégation taken from the localité, CREATION event in the same
+      transaction, random code with retry on collision; refuses a suspended
+      seller (D-25) and a deactivated localité (D-27) — 16 tests
+- [x] `ParcelEventService`: the only way a parcel moves. Locks the row, runs
+      the shared state machine, writes the parcel, one event per step (who,
+      when, GPS, device, previous → new, reason, metadata) and the charges it
+      owes, in one transaction or the caller's. Actor from the principal
+      only; another seller's parcel is "Code inconnu" (D-26) — 21 tests
+- [x] `parcelWriteFor` (shared): columns and charges per transition; charges
+      copied from the parcel's frozen fees, courier rate frozen at delivery,
+      48-hour deadline, timestamps, échange item (D-23), `closedAt` (D-24) —
+      18 tests
+- [x] Cancellation after pickup in the state machine (D-28) and "Commande
+      annulée" on public tracking — 25 tests
+- [x] No status change without its event, enforced by a deferred trigger
+      (D-21) — 10 schema tests
 - [x] Append-only audit log (trigger + revoked privileges + tests)
+- [ ] **Required before phase 8 (money)**: two actions on the same parcel at
+      the same instant — above all two Livré scans — tested on a real
+      PostgreSQL server (Testcontainers). The service takes a
+      `SELECT … FOR UPDATE` lock; PGlite has a single connection and cannot
+      prove it. No money is counted until this test passes.
 
 ## Phase 4 — Seller space
 
@@ -249,7 +269,7 @@ on 2026-09-23 (D-18).
   pushed forward on each use). Opaque random strings stored as an HMAC. An
   already-rotated token presented again revokes the whole session, since it
   was evidently copied. Two tabs refreshing at the same instant can trigger
-  this; the web app must serialise its refreshes (phase 3).
+  this; the web app serialises its refreshes (done in phase 1: D-13, D-15).
 - 2026-09-25 — **Staff idle logout is enforced on the server**, from the
   session's `lastUsedAt` (written at most once a minute). Sellers and couriers
   have none (Q11).
@@ -316,7 +336,7 @@ on 2026-09-23 (D-18).
   behind `next start`, driven with curl — login, cookies, middleware refresh,
   courier creation, cross-origin refusal, Dépôt's narrowed views, Voir comme le
   vendeur and its exit, logout, `/ar` in RTL. Playwright replaces this in
-  phase 3.
+  phase 4.
 
 - 2026-09-25 — **Phase 1 merged into `main`.** Approved: staying on Next.js 15
   for now; Dépôt and Service client see active couriers only; navy text on
@@ -367,6 +387,23 @@ on 2026-09-23 (D-18).
   `packages/shared`: the apps' lint forbids `Number()` so that money never
   passes through a float.
 
+- 2026-09-24 — **Phase 3 decisions D-21 to D-28** recorded in
+  `docs/decisions.md`. Specs amended: `docs/vendeur.md` **v1.8** (4.1 delivery
+  rate on the outcome date, 4.6 cancellation after pickup and what a suspended
+  seller keeps), `docs/landing.md` **v1.4** (Commande annulée after pickup).
+- 2026-09-24 — **Test adapter**: `pglite-prisma-adapter` swallowed errors
+  raised by COMMIT, so a write refused by a deferred trigger looked committed.
+  `test/support/pglite-adapter.ts` fires deferred constraints before COMMIT;
+  every test that builds a PGlite client uses it.
+- 2026-09-24 — **Settings read inside the caller's transaction**
+  (`SettingsService.current(tx)`). On PGlite's single connection a read from
+  outside waited behind the open transaction until it timed out.
+- 2026-09-24 — **The 48-hour clock starts at the server time** the failure is
+  recorded, not the device time: a scan synced late reaches the seller late,
+  and he cannot decide before he knows.
+- 2026-09-24 — **README** phase numbers corrected (web from phase 1, courier
+  app phase 6).
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -381,3 +418,11 @@ on 2026-09-23 (D-18).
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 6 implementation.
+- **Entrée dépôt for a parcel cancelled while the ramasseur carries it**
+  (D-28): accepted as a location-only move, like Retour de tournée. To
+  confirm.
+- **Relancer without a date**: the state machine accepts it, but the database
+  requires the date and the origin together (D-9, `parcels_relaunch_is_complete`),
+  so it would fail with a server error. To settle with the Relancer endpoint
+  (phase 7): the machine should refuse it with a message worded for the
+  seller (the current `DATE_REPORT_REQUISE` speaks of the customer).

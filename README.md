@@ -106,8 +106,8 @@ WebAssembly, so the triggers and CHECK constraints are genuinely exercised.
 | Path              | What                                                              |
 | ----------------- | ----------------------------------------------------------------- |
 | `apps/api`        | NestJS, Prisma, PostgreSQL                                        |
-| `apps/web`        | Next.js: public site, seller space, back office (phase 3)         |
-| `apps/courier`    | React Native / Expo, Android (phase 5)                            |
+| `apps/web`        | Next.js: back office (from phase 1), seller space, public site    |
+| `apps/courier`    | React Native / Expo, Android (phase 6)                            |
 | `packages/shared` | Statuses, money, the parcel state machine — imported by all three |
 | `packages/config` | Shared TypeScript and ESLint configuration                        |
 

@@ -59,12 +59,18 @@ export class SettingsService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async current(): Promise<PlatformSnapshot> {
+  /**
+   * Inside a transaction, pass its client: a read on another connection would
+   * wait behind the transaction's own locks.
+   */
+  async current(
+    db: Pick<Prisma.TransactionClient, 'setting'> = this.prisma,
+  ): Promise<PlatformSnapshot> {
     const now = this.clock.now().getTime();
     if (this.cached && now - this.cached.at < SettingsService.CACHE_SECONDS * 1000) {
       return this.cached.value;
     }
-    const rows = await this.prisma.setting.findMany();
+    const rows = await db.setting.findMany();
     const value = readPlatformSettings(Object.fromEntries(rows.map((row) => [row.key, row.value])));
     this.cached = { value, at: now };
     return value;

@@ -175,6 +175,16 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 | api `geo.service`                               | Localité introuvable. · Délégation introuvable. · Cette délégation a déjà une localité « {nom} ». · La localité « Autre » ne peut être ni renommée ni désactivée. |
 | seed, CSV data                                  | Autre · أخرى (the row every délégation has for places not yet listed)                                                                                             |
 
+## Colis (phase 3)
+
+| Key                                                 | Français                                                           |
+| --------------------------------------------------- | ------------------------------------------------------------------ |
+| api `parcels.service` — compte suspendu (D-25)      | Votre compte est suspendu : vous ne pouvez pas créer de colis.     |
+| api `parcels.service` — localité désactivée (D-27)  | Cette localité n’est plus proposée. Choisissez-en une autre.       |
+| api `parcels.service` — localité inconnue           | Localité introuvable.                                              |
+| api `parcels.service` — aucun code libre            | Impossible d’attribuer un code au colis pour le moment. Réessayez. |
+| `CANCELLATION_AFTER_PICKUP_LABEL_FR` (shared, D-28) | Après ramassage                                                    |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

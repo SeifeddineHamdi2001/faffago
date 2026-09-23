@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-20** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-20 are rules |
+| **D-1 … D-28** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-28 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-20**
+**Rules decided during the build — D-4 to D-28**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -49,6 +49,14 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-18 · "Seed et Paramètres" is phase 2](#d-18--seed-et-paramètres-is-phase-2)
 - [D-19 · The Grand Tunis geography](#d-19--the-grand-tunis-geography)
 - [D-20 · Paramètres](#d-20--paramètres)
+- [D-21 · No parcel status changes without its event](#d-21--no-parcel-status-changes-without-its-event)
+- [D-22 · Phase 3 has no HTTP endpoint](#d-22--phase-3-has-no-http-endpoint)
+- [D-23 · The old item of an échange at delivery](#d-23--the-old-item-of-an-échange-at-delivery)
+- [D-24 · `closedAt` is the end of the parcel's life](#d-24--closedat-is-the-end-of-the-parcels-life)
+- [D-25 · What a suspended seller can still do](#d-25--what-a-suspended-seller-can-still-do)
+- [D-26 · Another seller's parcel does not exist](#d-26--another-sellers-parcel-does-not-exist)
+- [D-27 · A deactivated localité takes no new parcel](#d-27--a-deactivated-localité-takes-no-new-parcel)
+- [D-28 · Cancelling after pickup](#d-28--cancelling-after-pickup)
 
 **Money — A-1 to A-5**
 
@@ -547,6 +555,113 @@ Reviewed in `docs/geo-review.md`.
   **v1.3**; Admin 4.16 already says "social media".
 - The seed only **creates** settings, never overwrites them, so a value the
   admin has changed survives every later run.
+
+### D-21 · No parcel status changes without its event
+
+"Every status change goes through the parcel event service" (CLAUDE.md) is
+enforced by the database, like append-only.
+
+- Each `parcel_events` row records the transaction that wrote it
+  (`txid`, default `txid_current()`, never set by the application).
+- A **deferred constraint trigger** on `parcels` runs at commit for every
+  parcel created, and for every parcel whose status or location changed. It
+  requires an event **of the same transaction** whose new status and new
+  location are exactly the state the parcel is left in. Otherwise the whole
+  transaction is refused, whatever the role, `faffago_app` included.
+- Deferred to the commit because the parcel row and its events are written
+  one after the other, and a new parcel must exist before its CREATION event
+  can reference it.
+- The cash status is not covered: it moves with the Caisse and the bons
+  (phase 8).
+
+**Tests.** `pglite-prisma-adapter` 0.6.1 swallows an error raised by COMMIT
+(the transaction is rolled back, but `$transaction` resolves). The test
+adapter (`test/support/pglite-adapter.ts`) runs `SET CONSTRAINTS ALL
+IMMEDIATE` before COMMIT, so the trigger fires while the transaction is still
+open and its error reaches the caller. Production uses the real driver.
+
+**Where.** Migration `20260927000000_parcel_status_needs_event`,
+`test/parcel-state-trigger.spec.ts`.
+
+### D-22 · Phase 3 has no HTTP endpoint
+
+Phase 3 is the parcel core: `ParcelsService.create` and `ParcelEventService`,
+tested directly. `POST /parcels` comes with the Créer un colis screen in
+phase 4; the scans, decisions and jobs that move parcels come with their own
+phases and all go through `ParcelEventService`.
+
+### D-23 · The old item of an échange at delivery
+
+When a Colis d'échange is scanned Livré: `exchangeItemCollected = true` and
+`exchangeItemStatus = RETOUR_AU_DEPOT`, while the livreur still carries the
+item (the A-7 precedent: a return in the courier's hands). No return fee is
+ever charged for it (A-10).
+
+**Where.** `ARTICLE_ECHANGE_A_RECUPERER` in `packages/shared/src/parcel-effects.ts`.
+
+### D-24 · `closedAt` is the end of the parcel's life
+
+`closedAt` is set when the parcel's life ends: **delivered and paid** (cash
+Payé, stamped by the money phase), **return received**, or **cancelled before
+pickup**. A cancellation after pickup does not close the parcel: it still has
+to travel back (D-28).
+
+Statistics do not use `closedAt`. The delivery rate (Vendeur 4.1) counts each
+parcel on the date of its outcome: `deliveredAt` for a delivered parcel, the
+Retour reçu event for a returned one. Vendeur 4.1 is reworded accordingly
+(**v1.8**).
+
+### D-25 · What a suspended seller can still do
+
+Suspension blocks **creating parcels and requesting pickups**, nothing else.
+A suspended seller still edits or cancels a Créé parcel and takes the À
+vérifier decisions, so the 48-hour rule never returns parcels because of a
+suspension. Vendeur 4.6 says so (**v1.8**).
+
+**Where.** `ParcelsService.create` refuses with `COMPTE_SUSPENDU`;
+`ParcelEventService` does not look at the account state.
+
+### D-26 · Another seller's parcel does not exist
+
+A seller acting on a parcel that is not his gets exactly the answer for an
+unknown code: 404 / **Code inconnu**. He never learns that the code exists.
+
+**Where.** `ParcelEventService.apply`, before the state machine runs.
+
+### D-27 · A deactivated localité takes no new parcel
+
+Creating a parcel on a localité the admin has deactivated is refused
+(`LOCALITE_INACTIVE`). Parcels created before keep it.
+
+### D-28 · Cancelling after pickup
+
+**Adds a path to the state machine.** Vendeur 4.6 said a cancellation after
+pickup "follows the return flow and is charged the return fee"; this is how.
+
+- **From Créé**: plain cancellation, Annulé, no fee (unchanged).
+- **From Ramassé, Au dépôt, En livraison, À vérifier and Relancé**: exactly
+  Retourner. Status **Retour au dépôt**, location unchanged (with the livreur
+  if he carries it, A-7), return fee charged `EN_ATTENTE`, 48-hour clock
+  stopped.
+- The event type is `ANNULATION`, with the metadata
+  `{ annulation: "APRES_RAMASSAGE" }` (label _Après ramassage_), so the
+  history shows why.
+- **Refused** once Livré, or already in a return status.
+- The seller's alone, like every decision (D-4).
+- Public tracking reads **Commande annulée** for the rest of the parcel's
+  life: `publicStatusFor` now takes `cancelledAt`, which every ANNULATION
+  event sets. `docs/landing.md` 4.2 is now **v1.4**.
+
+**A consequence to confirm.** A parcel cancelled while the **ramasseur**
+still carries it is Retour au dépôt with the ramasseur. The Entrée dépôt scan
+accepted Ramassé only, so the parcel could never have been scanned in. Entrée
+dépôt now also takes a Retour au dépôt parcel from the ramasseur: location
+Au dépôt, status unchanged, no effect — the way Retour de tournée already
+does for the livreur.
+
+**Where.** The `ANNULER` and `SCAN_ENTREE_DEPOT` branches of
+`packages/shared/src/parcel-state-machine.ts`, `canCancel`,
+`CANCELLATION_AFTER_PICKUP`; tests under "cancelling after pickup".
 
 ---
 

@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { ClockModule } from './common/clock.module';
 import { GeoModule } from './geo/geo.module';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { ParcelsModule } from './parcels/parcels.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
 
@@ -31,6 +32,7 @@ import { SettingsModule } from './settings/settings.module';
     AccountsModule,
     SellersModule,
     GeoModule,
+    ParcelsModule,
   ],
 })
 export class AppModule {}

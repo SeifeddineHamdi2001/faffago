@@ -1,4 +1,4 @@
-# Faffa Go — Interface Vendeur (spécification v1.7)
+# Faffa Go — Interface Vendeur (spécification v1.8)
 
 > **How to read this document.** Screen names, buttons and statuses are written in French, exactly as the seller will see them in the interface. Explanations are in English. Section 8 records the decisions taken during the design discussion.
 
@@ -98,7 +98,7 @@ The first screen after login. It answers three questions: how much am I owed, wh
 - **À recevoir** (hero number): net amount of delivered parcels not yet paid, split into "chez les coursiers" and "au dépôt, prêt à payer".
 - **À traiter**: parcels in À vérifier with the time left before automatic return, bons de versement and bons de retour on their way, returns at the depot. Each links to its screen.
 - **Aujourd'hui**: the seller's parcels by status (créés, ramassés, en livraison, livrés, échecs).
-- **Taux de livraison** over 7 days = livrés ÷ (livrés + retournés) for parcels closed in the period, with a chart showing values and a scale.
+- **Taux de livraison** over 7 days = livrés ÷ (livrés + retournés), counting each parcel on the date of its outcome: the delivery date for a delivered parcel, the date the return was received for a returned one. It does not wait for the payment (v1.8, D-24). Shown with a chart of values and a scale.
 - Quick actions: **Créer un colis**, **Demander un ramassage**.
 
 ### 4.2 Créer un colis
@@ -147,6 +147,8 @@ Labels are printed by the seller and stuck on each package before pickup. The wh
 
 - **Before pickup:** the seller edits or cancels freely.
 - **After pickup:** no direct edit. The seller requests a change (phone, address) with **Demander une modification**; Faffa Go applies it. A cancellation after pickup follows the return flow and is charged the return fee.
+- **Annuler after pickup** (v1.8, D-28): possible while the parcel is Ramassé, Au dépôt, En livraison, À vérifier or Relancé. It works exactly like **Retourner**: the parcel becomes **Retour au dépôt**, stays where it is until it is scanned back (with the courier if he carries it), the return fee is charged and the 48-hour clock stops. The history shows the cancellation. Not possible once Livré or already in a return.
+- A suspended seller can still edit or cancel a Créé parcel and take the À vérifier decisions (v1.8, D-25).
 
 ### 4.7 Mes colis
 
