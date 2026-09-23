@@ -344,6 +344,13 @@ on 2026-09-23 (D-18).
   before this keeps Lac 2 under La Marsa and Cité Olympique under El Omrane
   Supérieur, and gains the corrected rows beside them: reset it. No production
   database exists yet.
+- 2026-09-23 — **API tests capped at half the cores** (`maxWorkers: '50%'` in
+  `apps/api/jest.config.js`). One run through turbo failed in 5 tests: every
+  test file starts its own PGlite and argon2id takes 64 MB per hash, so with
+  7 workers beside the web and shared tests the memory ran out ("RuntimeError:
+  unreachable", "Memory allocation error"). Reproduced by running the suite
+  twice at once; with the cap, 5 turbo runs out of 5 pass. Two suites at once
+  still fail, so a smaller machine or CI runner may need fewer workers.
 - 2026-09-23 — **`GET /geo` is open to every signed-in role** (sellers,
   couriers, staff, and Voir comme le vendeur). It carries no zone and no seed
   key; zones stay a back office matter.

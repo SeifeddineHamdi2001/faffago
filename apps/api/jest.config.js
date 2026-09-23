@@ -12,4 +12,9 @@ module.exports = {
   },
   // Testcontainers needs room to pull and boot PostgreSQL on a cold machine.
   testTimeout: 120000,
+  // Each test file runs its own PGlite (PostgreSQL in WebAssembly) and, for
+  // the e2e files, a whole NestJS app. One worker per core ran out of memory
+  // when turbo ran the web and shared tests beside them: PGlite then aborts
+  // with "RuntimeError: unreachable" in whichever file is unlucky.
+  maxWorkers: '50%',
 };
