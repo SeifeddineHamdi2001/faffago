@@ -7,7 +7,7 @@ Legend: [ ] not started · [~] in progress · [x] done
 
 - [x] Monorepo (pnpm workspaces + Turborepo): apps/api, apps/web, apps/courier, packages/shared, packages/config
 - [x] packages/shared: status enums, money helpers (millimes), state machine, geo/CSV matching, chat lifecycle, zod schemas — 152 tests
-- [x] Full Prisma schema reviewed and approved (40 tables) + first migration, with append-only enforcement
+- [x] Full Prisma schema reviewed and approved (40 tables) + first migration, with append-only enforcement proved from the `faffago_app` role
 - [ ] Auth and role guards (ADMIN, DEPOT, SERVICE_CLIENT, VENDEUR, LIVREUR, RAMASSEUR).
       Vendeur = email, staff = username, coursier = téléphone + choix du rôle (A-20).
       Admin-generated passwords (argon2id), shown once, no self-service reset.
@@ -143,6 +143,11 @@ Legend: [ ] not started · [~] in progress · [x] done
 - 2026-09-23 — **TypeScript `incremental` and `composite` turned off.** A
   `--noEmit` typecheck and an emitting build shared one `.tsbuildinfo`, so the
   build silently produced nothing. Turbo caches at the task level anyway.
+- 2026-09-23 — **Line endings normalised to LF** via `.gitattributes`, and
+  `package-lock.json` / `yarn.lock` git-ignored. A clean clone exposed a stray
+  `pnpm@12` dependency in the root `package.json` that broke
+  `pnpm install --frozen-lockfile`, and a `.prettierrc` plugin that was never
+  installed, so `pnpm format` exited 1 on a fresh machine. Both fixed.
 - 2026-09-23 — **The public timeline is a whitelist**, not a filter. Only the
   events in `PUBLIC_TIMELINE_EVENT_TYPES` are ever exposed, so a new event type
   is private until someone deliberately adds it.
