@@ -88,6 +88,10 @@ Legend: [ ] not started · [~] in progress · [x] done
 ## Phase 10 — Deployment
 
 - [ ] VPS setup, HTTPS, environment variables
+- [ ] Verify the API connects as `faffago_app` with its password, and that an
+      UPDATE on `parcel_events` fails on the production database.
+      The tests prove the grants with `SET ROLE`; PGlite has no connection
+      layer, so the authentication path is only ever exercised here.
 - [ ] Daily off-server backups + tested restore
 - [ ] Monitoring and logs
 - [ ] Full real-day test with real scans on a low-cost Android phone
