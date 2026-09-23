@@ -5,8 +5,10 @@ import {
   AuthErrorCode,
   Permission,
   Role,
+  SESSION_POLICY,
   can,
   sessionPolicyFor,
+  type AuthClient,
 } from '@faffago/shared';
 import { AuditAction, AuditService } from '../audit/audit.service';
 import { CLOCK, type Clock } from '../common/clock';
@@ -56,6 +58,18 @@ function sessionExpired(): Error {
 
 type Tx = Prisma.TransactionClient;
 
+interface RotationResult {
+  tokens: SessionTokens;
+  sessionId: string;
+  client: AuthClient;
+}
+
+/** A refresh made with a given token, kept for the grace window (D-13). */
+interface RecentRotation {
+  result: Promise<RotationResult>;
+  until: number;
+}
+
 /**
  * Sessions (Q11). One `refresh_tokens` row per logged-in device; its id is the
  * `sid` in every access token, and the guard reloads it on every request, so a
@@ -64,6 +78,13 @@ type Tx = Prisma.TransactionClient;
  */
 @Injectable()
 export class SessionsService {
+  /**
+   * Keyed by the hash of the token that was rotated. In memory, like the login
+   * throttle (D-6): one process, and losing it on a restart only means a tab
+   * refreshing in that very second has to log in again.
+   */
+  private readonly recentRotations = new Map<string, RecentRotation>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokens: TokensService,
@@ -92,7 +113,7 @@ export class SessionsService {
   }
 
   /** The session a refresh token belongs to, before anything else is checked. */
-  async findForRefresh(refreshToken: string): Promise<RefreshToken & { user: User }> {
+  private async findForRefresh(refreshToken: string): Promise<RefreshToken & { user: User }> {
     const hash = this.tokens.hashRefreshToken(refreshToken);
     const session = await this.prisma.refreshToken.findUnique({
       where: { tokenHash: hash },
@@ -112,19 +133,73 @@ export class SessionsService {
   }
 
   /**
-   * Rotates the token and slides the expiry. The update is conditional on the
-   * old hash, so two concurrent refreshes cannot both succeed.
+   * Refresh with rotation and a 10-second grace window (D-13).
+   *
+   * The attempt is registered under the presented token before the first
+   * await, so a second tab sending the same token — at the same instant or a
+   * few seconds later — gets the same new token instead of looking like a
+   * replay and revoking the session. After the window, a replay revokes.
+   *
+   * `check` runs before the rotation and again for every tab served from the
+   * window: the courier app version (tech-stack 5).
    */
-  async rotate(
+  async refresh(
+    refreshToken: string,
+    meta: RequestMeta,
+    check: (client: AuthClient) => Promise<void>,
+  ): Promise<SessionTokens> {
+    const hash = this.tokens.hashRefreshToken(refreshToken);
+    const now = this.clock.now().getTime();
+    const recent = this.recentRotations.get(hash);
+
+    if (recent && recent.until > now) {
+      const done = await recent.result;
+      await check(done.client);
+      await this.assertStillOpen(done.sessionId);
+      return done.tokens;
+    }
+
+    const result = (async (): Promise<RotationResult> => {
+      const session = await this.findForRefresh(refreshToken);
+      await check(session.client);
+      const tokens = await this.rotate(session, hash, meta);
+      return { tokens, sessionId: session.id, client: session.client };
+    })();
+
+    this.forgetExpiredRotations();
+    this.recentRotations.set(hash, {
+      result,
+      until: now + SESSION_POLICY.refreshGraceSeconds * 1000,
+    });
+    // A failed attempt is not a rotation: the next one goes to the database.
+    result.catch(() => this.recentRotations.delete(hash));
+
+    return (await result).tokens;
+  }
+
+  /** Grace-window answers are served only while the session is still open. */
+  private async assertStillOpen(sessionId: string): Promise<void> {
+    const session = await this.prisma.refreshToken.findUnique({
+      where: { id: sessionId },
+      include: { user: true },
+    });
+    if (!session) throw sessionExpired();
+    await this.assertUsable(session, session.user);
+  }
+
+  /**
+   * Swaps the token and slides the expiry. Conditional on the old hash, so two
+   * rotations of one token can never both write.
+   */
+  private async rotate(
     session: RefreshToken & { user: User },
-    presentedToken: string,
+    oldHash: string,
     meta: RequestMeta,
   ): Promise<SessionTokens> {
     await this.assertUsable(session, session.user);
 
     const now = this.clock.now();
     const policy = sessionPolicyFor(session.user.role);
-    const oldHash = this.tokens.hashRefreshToken(presentedToken);
     const next = this.tokens.newRefreshToken();
     const expiresAt = new Date(now.getTime() + policy.refreshTtlSeconds * 1000);
 
@@ -142,6 +217,13 @@ export class SessionsService {
     if (count !== 1) throw sessionExpired();
 
     return this.tokensFor(session.user, { ...session, expiresAt }, next.token);
+  }
+
+  private forgetExpiredRotations(): void {
+    const now = this.clock.now().getTime();
+    for (const [hash, entry] of this.recentRotations) {
+      if (entry.until <= now) this.recentRotations.delete(hash);
+    }
   }
 
   /** Turns verified token claims into a principal, from the database. */

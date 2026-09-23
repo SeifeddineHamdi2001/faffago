@@ -3,6 +3,8 @@ import { Prisma, type User } from '@prisma/client';
 import {
   AUTH_MESSAGES,
   AuthErrorCode,
+  COURIER_DEACTIVATION_REFUSED,
+  COURIER_ROLES,
   Role,
   STAFF_ROLES,
   type CreateCourierAccountValues,
@@ -15,6 +17,7 @@ import { RevokeReason, SessionsService, type RequestMeta } from '../auth/session
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { courierOpenWork } from './courier-open-work';
 
 type Tx = Prisma.TransactionClient;
 
@@ -220,6 +223,123 @@ export class AccountsService {
         entityId: target.id,
         before: { isActive: target.isActive },
         after: { isActive },
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+      return updated;
+    });
+    return view(user);
+  }
+
+  /**
+   * Désactiver un coursier (Admin 4.15, D-12), in two steps.
+   *
+   * 1. At once, in its own transaction so it holds even if step 2 refuses:
+   *    acceptsWork = false, so no new parcel, pickup or bon reaches him.
+   * 2. The deactivation, refused with the full list of what is still open.
+   *    Step 1 is what makes that check stable: nothing new can be assigned
+   *    between the check and the deactivation.
+   */
+  async deactivateCourier(
+    actor: UserPrincipal,
+    userId: string,
+    meta: RequestMeta,
+  ): Promise<AccountView> {
+    const target = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findFirst({
+        where: { id: userId, role: { in: [...COURIER_ROLES] } },
+        include: { courier: true },
+      });
+      if (!user?.courier) throw introuvable();
+      if (user.acceptsWork) {
+        await tx.user.update({ where: { id: user.id }, data: { acceptsWork: false } });
+        await this.audit.record(tx, {
+          actor: actorOf(actor),
+          action: AuditAction.ARRET_NOUVEAU_TRAVAIL,
+          entityType: 'user',
+          entityId: user.id,
+          before: { acceptsWork: true },
+          after: { acceptsWork: false },
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        });
+      }
+      return user;
+    });
+    const courierId = target.courier!.id;
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.user.findUniqueOrThrow({ where: { id: target.id } });
+      if (!current.isActive) return current;
+
+      const blockers = await courierOpenWork(tx, courierId);
+      if (blockers.length > 0) {
+        throw apiError(
+          409,
+          AuthErrorCode.COURSIER_ENGAGEMENTS_OUVERTS,
+          COURIER_DEACTIVATION_REFUSED,
+          {
+            blockers,
+          },
+        );
+      }
+
+      const updated = await tx.user.update({
+        where: { id: target.id },
+        data: { isActive: false, courier: { update: { accountState: 'INACTIF' } } },
+      });
+      await this.sessions.revokeAllForUser(tx, target.id, RevokeReason.DESACTIVATION);
+      await this.audit.record(tx, {
+        actor: actorOf(actor),
+        action: AuditAction.DESACTIVATION_COMPTE,
+        entityType: 'user',
+        entityId: target.id,
+        before: { isActive: true, accountState: 'ACTIF' },
+        after: { isActive: false, accountState: 'INACTIF' },
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+      return updated;
+    });
+    return view(user);
+  }
+
+  /** Réactiver: the courier logs in and receives work again. */
+  async activateCourier(
+    actor: UserPrincipal,
+    userId: string,
+    meta: RequestMeta,
+  ): Promise<AccountView> {
+    const user = await this.prisma.$transaction(async (tx) => {
+      const target = await tx.user.findFirst({
+        where: { id: userId, role: { in: [...COURIER_ROLES] } },
+        include: { courier: true },
+      });
+      if (!target?.courier) throw introuvable();
+      const before = {
+        isActive: target.isActive,
+        acceptsWork: target.acceptsWork,
+        accountState: target.courier.accountState,
+      };
+      const after = { isActive: true, acceptsWork: true, accountState: 'ACTIF' as const };
+      if (
+        before.isActive === after.isActive &&
+        before.acceptsWork === after.acceptsWork &&
+        before.accountState === after.accountState
+      ) {
+        return target;
+      }
+      const updated = await tx.user.update({
+        where: { id: target.id },
+        data: { isActive: true, acceptsWork: true, courier: { update: { accountState: 'ACTIF' } } },
+      });
+      await this.audit.record(tx, {
+        actor: actorOf(actor),
+        action: AuditAction.REACTIVATION_COMPTE,
+        entityType: 'user',
+        entityId: target.id,
+        before,
+        after,
         ip: meta.ip,
         userAgent: meta.userAgent,
       });

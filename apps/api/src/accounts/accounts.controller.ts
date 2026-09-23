@@ -54,6 +54,29 @@ export class AccountsController {
     return this.accounts.regeneratePassword(principal as UserPrincipal, id, meta);
   }
 
+  /** Admin 4.15, D-12: stops new work at once, refuses while work is open. */
+  @Post('couriers/:id/deactivate')
+  @RequirePermission(Permission.GERER_VENDEURS_COURSIERS)
+  @HttpCode(200)
+  deactivateCourier(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.accounts.deactivateCourier(principal as UserPrincipal, id, meta);
+  }
+
+  @Post('couriers/:id/activate')
+  @RequirePermission(Permission.GERER_VENDEURS_COURSIERS)
+  @HttpCode(200)
+  activateCourier(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.accounts.activateCourier(principal as UserPrincipal, id, meta);
+  }
+
   @Post('staff/:id/deactivate')
   @RequirePermission(Permission.COMPTES_STAFF)
   @HttpCode(200)

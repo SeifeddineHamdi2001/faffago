@@ -23,9 +23,16 @@ The API side is done. The screens come with the web and courier app scaffolding.
 - [x] Régénérer le mot de passe; last active admin protected; admin:reset CLI (Q9)
 - [x] Login throttling, no permanent lockout (D-6); session lifetimes (Q11)
 - [x] Voir comme le vendeur: read-only, 30 min, audited (D-5)
-- [x] Minimum courier app version enforced by the API
-- [ ] Screens: login pages, "Copier les identifiants" box, impersonation banner
-      (web, phase 3); courier login screen with role choice (phase 5)
+- [x] Minimum courier app version enforced by the API; outdated apps reach the
+      scan upload only (D-14)
+- [x] Screen access for Dépôt and Service client in the matrix (D-11, Admin v1.11)
+- [x] Désactiver un coursier: new work stops at once, refused while work is open
+      (D-12). The caisse, payslip and debt checks are `it.todo` until phase 7
+- [x] Refresh token grace window, 10 s (D-13, server side)
+- [ ] Web screens: the three login pages, account creation with "Copier les
+      identifiants", Régénérer le mot de passe, deactivation screens,
+      impersonation banner; one refresh shared across tabs (D-13, web side)
+- [ ] Courier login screen with role choice — phase 5
 
 ## Phase 2 — Parcel core
 
@@ -227,6 +234,20 @@ The API side is done. The screens come with the web and courier app scaffolding.
   (`??` instead of `||`). The seed and `admin:reset` now use the shared
   generator, which also drops `i` from the alphabet.
 
+- 2026-09-25 — **Answers to the phase 1 questions** recorded as D-11 to D-14
+  in `docs/decisions.md`. D-11 changes Admin 2 (bons de retour: Admin and
+  Dépôt), so `docs/admin.md` is now **v1.11**. The throttle numbers and error
+  texts are approved as they were.
+- 2026-09-25 — **`BONS_VERSEMENT_RETOUR` split** into `BONS_VERSEMENT` (Admin)
+  and `BONS_RETOUR` (Admin, Dépôt).
+- 2026-09-25 — **Réactiver un coursier** restores the login and the work
+  (`acceptsWork` back to true), in one action.
+- 2026-09-25 — **Tooling:** the stray `node_modules/pnpm` (v12) is removed.
+  `pnpm lint`, `pnpm typecheck` and `pnpm test` run through turbo from the
+  root. On this machine corepack's shim lives in `~/bin`, because
+  `corepack enable` cannot write to `D:\Program Files\Node` without admin
+  rights.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -238,26 +259,9 @@ The API side is done. The screens come with the web and courier app scaffolding.
   shows them to customers.
 - Delivery fee, return fee and courier rate are seeded at 0 because no spec
   gives a value. They must be set in Paramètres before the first parcel.
-- **Phase 1, screens not in Admin 2:** Aujourd'hui, Colis search and detail,
-  Exceptions, Retours (view), Journal d'audit, and reading the Vendeurs and
-  Coursiers pages as Dépôt or Service client. Not encoded, so they are refused
-  until someone decides who gets them.
-- **Deactivating a courier:** Admin 4.15 says "once nothing is owed". Is that
-  a rule the system enforces (no cash, debt or unpaid pay on the account) or a
-  practice? The login already refuses a courier whose account is `INACTIF`;
-  the endpoint waits for the answer, probably in phase 7.
-- **Throttle numbers** (TO CONFIRM): 5 free failures per identifier, 30 per
-  IP, then 1 s doubling up to 15 min.
-- **Error texts not worded by the specs** (TO CONFIRM): "Identifiant ou mot de
-  passe incorrect", "Compte désactivé. Contactez Faffa Go.", "Trop de
-  tentatives. Réessayez dans N s.", "Session expirée. Reconnectez-vous.",
-  "Consultation en lecture seule : aucune action possible.", "Mettez à jour
-  l'application pour continuer.", and the last-admin refusal. All in
-  `AUTH_MESSAGES`.
-- **Forced update and the scan queue:** tech-stack 5 says the app empties its
-  queue before blocking for an update, and that the API refuses old versions.
-  Both cannot hold for the sync endpoint. `@AllowOutdatedCourierApp` exists so
-  the phase 5 sync route can accept outdated apps; it needs a yes.
+- **Courier deactivation texts** (TO CONFIRM): the refusal message and the
+  blocker labels ("2 colis en main", "1 bon de retour en route"…) in
+  `packages/shared/src/accounts.ts`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 5 implementation.
 - D-6 splits a row of `docs/landing.md` 4.2: Relancé now maps to two public

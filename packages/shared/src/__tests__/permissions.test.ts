@@ -9,8 +9,8 @@ import {
 import { Role } from '../roles.js';
 
 /**
- * Admin 2, copied row by row. If this table and the spec ever disagree, the
- * spec wins and this test is the thing to fix first.
+ * Admin 2 (v1.11), copied row by row. If this table and the spec ever
+ * disagree, the spec wins and this test is the thing to fix first.
  *
  *   Action                                        Admin  Dépôt  Service client
  */
@@ -27,8 +27,10 @@ const ADMIN_SECTION_2: [PermissionT, 'Oui' | '—', 'Oui' | '—', 'Oui' | '—'
   [Permission.CHATS_STAFF, 'Oui', 'Oui', 'Oui'],
   // Apply seller change requests
   [Permission.DEMANDES_VENDEUR, 'Oui', '—', 'Oui'],
-  // Prepare bons de versement and bons de retour
-  [Permission.BONS_VERSEMENT_RETOUR, 'Oui', '—', '—'],
+  // Prepare bons de versement — money: Admin only
+  [Permission.BONS_VERSEMENT, 'Oui', '—', '—'],
+  // Prepare bons de retour — Dépôt too since v1.11 (D-11)
+  [Permission.BONS_RETOUR, 'Oui', 'Oui', '—'],
   // Courier pay, cancel a courier debt
   [Permission.PAIE_COURSIERS, 'Oui', '—', '—'],
   // Create / suspend sellers and couriers
@@ -39,6 +41,24 @@ const ADMIN_SECTION_2: [PermissionT, 'Oui' | '—', 'Oui' | '—', 'Oui' | '—'
   [Permission.PARAMETRES, 'Oui', '—', '—'],
   [Permission.COMPTES_STAFF, 'Oui', '—', '—'],
   [Permission.RAPPORTS, 'Oui', '—', '—'],
+
+  // ── Screens, D-11 (Admin 2 v1.11) ─────────────────────────
+  // Aujourd'hui: each role sees the figures of its own work
+  [Permission.AUJOURDHUI, 'Oui', 'Oui', 'Oui'],
+  // Colis: read for all staff; acting goes through the rows above
+  [Permission.COLIS_LECTURE, 'Oui', 'Oui', 'Oui'],
+  // Exceptions: read for all staff; each acts with its own permissions
+  [Permission.EXCEPTIONS_LECTURE, 'Oui', 'Oui', 'Oui'],
+  // Retours: read for all staff; preparing bons de retour is BONS_RETOUR
+  [Permission.RETOURS_LECTURE, 'Oui', 'Oui', 'Oui'],
+  // Journal d'audit
+  [Permission.JOURNAL_AUDIT, 'Oui', '—', '—'],
+  // Vendeurs: contact info and parcels only
+  [Permission.VENDEURS_LECTURE, 'Oui', 'Oui', 'Oui'],
+  // CIN / patente documents: admin only (CLAUDE.md, Security)
+  [Permission.VENDEURS_DOCUMENTS, 'Oui', '—', '—'],
+  // Coursiers: name, phone, zone and today's parcels only
+  [Permission.COURSIERS_LECTURE, 'Oui', 'Oui', 'Oui'],
 ];
 
 const ALL_ROLES = Object.values(Role);
@@ -61,6 +81,22 @@ describe('permission matrix — Admin 2', () => {
 });
 
 describe('permission matrix — outside the Admin 2 table', () => {
+  it('keeps money, accounts and settings with the admin (D-11)', () => {
+    for (const permission of [
+      Permission.BONS_VERSEMENT,
+      Permission.PAIE_COURSIERS,
+      Permission.GERER_VENDEURS_COURSIERS,
+      Permission.COMPTES_STAFF,
+      Permission.REGENERER_MOT_DE_PASSE,
+      Permission.PARAMETRES,
+      Permission.FORCER_STATUT,
+      Permission.VENDEURS_DOCUMENTS,
+      Permission.JOURNAL_AUDIT,
+    ]) {
+      expect(ROLES_BY_PERMISSION[permission]).toEqual([Role.ADMIN]);
+    }
+  });
+
   it('lets Dépôt and Admin reprint a label (A-9)', () => {
     expect(ROLES_BY_PERMISSION[Permission.REIMPRIMER_ETIQUETTE]).toEqual([Role.ADMIN, Role.DEPOT]);
   });

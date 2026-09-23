@@ -67,14 +67,15 @@ describe('refresh', () => {
     expect(response.body.code).toBe('SESSION_EXPIREE');
   });
 
-  it('revokes the whole session when an old refresh token is presented again', async () => {
+  it('revokes the whole session when an old refresh token comes back after 10 seconds', async () => {
     const user = await seller();
     const first = await login(t, user);
     const second = await t.request('POST', '/auth/refresh', {
       body: { refreshToken: first.refreshToken },
     });
 
-    // Someone replays the token that was already swapped.
+    // Someone replays the token that was already swapped, past the grace window.
+    t.clock.advance(11);
     const replay = await t.request('POST', '/auth/refresh', {
       body: { refreshToken: first.refreshToken },
     });
@@ -87,6 +88,53 @@ describe('refresh', () => {
     expect(legit.status).toBe(401);
     const me = await t.request('GET', '/auth/me', { token: second.body.accessToken });
     expect(me.status).toBe(401);
+  });
+
+  describe('10-second grace window (D-13)', () => {
+    it('returns the same new token when the just-rotated one comes back', async () => {
+      const user = await seller();
+      const first = await login(t, user);
+      const a = await t.request('POST', '/auth/refresh', {
+        body: { refreshToken: first.refreshToken },
+      });
+      t.clock.advance(9);
+      const b = await t.request('POST', '/auth/refresh', {
+        body: { refreshToken: first.refreshToken },
+      });
+
+      expect(b.status).toBe(200);
+      expect(b.body.refreshToken).toBe(a.body.refreshToken);
+      // The session is intact: the new token still works.
+      const next = await t.request('POST', '/auth/refresh', {
+        body: { refreshToken: a.body.refreshToken },
+      });
+      expect(next.status).toBe(200);
+    });
+
+    it('serves two tabs refreshing at the same instant with one token', async () => {
+      const user = await staff();
+      const first = await login(t, user);
+      const [a, b] = await Promise.all([
+        t.request('POST', '/auth/refresh', { body: { refreshToken: first.refreshToken } }),
+        t.request('POST', '/auth/refresh', { body: { refreshToken: first.refreshToken } }),
+      ]);
+      expect([a.status, b.status]).toEqual([200, 200]);
+      expect(a.body.refreshToken).toBe(b.body.refreshToken);
+      expect((await t.request('GET', '/auth/me', { token: b.body.accessToken })).status).toBe(200);
+    });
+
+    it('does not serve a session that was logged out in the meantime', async () => {
+      const user = await seller();
+      const first = await login(t, user);
+      const a = await t.request('POST', '/auth/refresh', {
+        body: { refreshToken: first.refreshToken },
+      });
+      await t.request('POST', '/auth/logout', { token: a.body.accessToken });
+      const b = await t.request('POST', '/auth/refresh', {
+        body: { refreshToken: first.refreshToken },
+      });
+      expect(b.status).toBe(401);
+    });
   });
 
   it('refuses a made-up refresh token', async () => {
@@ -241,7 +289,17 @@ describe('GET /auth/me', () => {
       readOnly: false,
       impersonation: null,
     });
-    expect(me.body.permissions).toEqual(['SUIVI_A_VERIFIER', 'CHATS_STAFF', 'DEMANDES_VENDEUR']);
+    expect(me.body.permissions).toEqual([
+      'SUIVI_A_VERIFIER',
+      'CHATS_STAFF',
+      'DEMANDES_VENDEUR',
+      'AUJOURDHUI',
+      'COLIS_LECTURE',
+      'EXCEPTIONS_LECTURE',
+      'RETOURS_LECTURE',
+      'VENDEURS_LECTURE',
+      'COURSIERS_LECTURE',
+    ]);
   });
 
   it('gives a seller his shop and account state', async () => {

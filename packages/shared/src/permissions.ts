@@ -1,15 +1,17 @@
 import { Role } from './roles.js';
 
 /**
- * The permission matrix (Admin 2, TO CONFIRM).
+ * The permission matrix (Admin 2 v1.11, D-11).
  *
  * The API guards check a permission, never a role name, so that when the
  * staff split changes it changes here and nowhere else. Anything not listed is
  * refused: an endpoint with no permission declared does not answer at all.
  *
- * The screens that Admin 2 does not cover — Aujourd'hui, Colis search,
- * Exceptions, Retours, Journal d'audit, reading the Vendeurs and Coursiers
- * pages — are deliberately absent until their access is decided.
+ * A *_LECTURE permission opens a screen; acting on it always needs the
+ * permission of the action itself. What a screen shows can still depend on
+ * the role: Aujourd'hui shows each role the figures of its own work, and the
+ * Vendeurs and Coursiers pages hide documents, pay and debts from anyone
+ * without VENDEURS_DOCUMENTS or PAIE_COURSIERS.
  */
 export const Permission = {
   // ── Admin 2, one row each ─────────────────────────────────
@@ -25,8 +27,10 @@ export const Permission = {
   CHATS_STAFF: 'CHATS_STAFF',
   /** Apply seller change requests. */
   DEMANDES_VENDEUR: 'DEMANDES_VENDEUR',
-  /** Prepare bons de versement and bons de retour. */
-  BONS_VERSEMENT_RETOUR: 'BONS_VERSEMENT_RETOUR',
+  /** Prepare bons de versement. Money: the admin alone (Admin rule 1). */
+  BONS_VERSEMENT: 'BONS_VERSEMENT',
+  /** Prepare bons de retour. Admin and Dépôt since Admin 2 v1.11 (D-11). */
+  BONS_RETOUR: 'BONS_RETOUR',
   /** Courier pay, cancel a courier debt. */
   PAIE_COURSIERS: 'PAIE_COURSIERS',
   /** Create / suspend sellers and couriers. */
@@ -37,6 +41,21 @@ export const Permission = {
   PARAMETRES: 'PARAMETRES',
   COMPTES_STAFF: 'COMPTES_STAFF',
   RAPPORTS: 'RAPPORTS',
+
+  // ── Screens (D-11) ────────────────────────────────────────
+  /** Aujourd'hui. Each role sees the figures of its own work. */
+  AUJOURDHUI: 'AUJOURDHUI',
+  /** Colis: search and detail. */
+  COLIS_LECTURE: 'COLIS_LECTURE',
+  EXCEPTIONS_LECTURE: 'EXCEPTIONS_LECTURE',
+  RETOURS_LECTURE: 'RETOURS_LECTURE',
+  JOURNAL_AUDIT: 'JOURNAL_AUDIT',
+  /** Vendeurs: contact info and parcels. Never the documents. */
+  VENDEURS_LECTURE: 'VENDEURS_LECTURE',
+  /** CIN / patente / auto-entrepreneur documents (CLAUDE.md, Security). */
+  VENDEURS_DOCUMENTS: 'VENDEURS_DOCUMENTS',
+  /** Coursiers: name, phone, zone, today's parcels. Pay and debts need PAIE_COURSIERS. */
+  COURSIERS_LECTURE: 'COURSIERS_LECTURE',
 
   // ── Decided outside the Admin 2 table ─────────────────────
   /** Réimprimer l'étiquette, same code (A-9). */
@@ -68,13 +87,23 @@ export const ROLES_BY_PERMISSION: Readonly<Record<Permission, readonly Role[]>> 
   SUIVI_A_VERIFIER: frozen([ADMIN, SERVICE_CLIENT]),
   CHATS_STAFF: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
   DEMANDES_VENDEUR: frozen([ADMIN, SERVICE_CLIENT]),
-  BONS_VERSEMENT_RETOUR: frozen([ADMIN]),
+  BONS_VERSEMENT: frozen([ADMIN]),
+  BONS_RETOUR: frozen([ADMIN, DEPOT]),
   PAIE_COURSIERS: frozen([ADMIN]),
   GERER_VENDEURS_COURSIERS: frozen([ADMIN]),
   FORCER_STATUT: frozen([ADMIN]),
   PARAMETRES: frozen([ADMIN]),
   COMPTES_STAFF: frozen([ADMIN]),
   RAPPORTS: frozen([ADMIN]),
+
+  AUJOURDHUI: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
+  COLIS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
+  EXCEPTIONS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
+  RETOURS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
+  JOURNAL_AUDIT: frozen([ADMIN]),
+  VENDEURS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
+  VENDEURS_DOCUMENTS: frozen([ADMIN]),
+  COURSIERS_LECTURE: frozen([ADMIN, DEPOT, SERVICE_CLIENT]),
 
   REIMPRIMER_ETIQUETTE: frozen([ADMIN, DEPOT]),
   VOIR_COMME_VENDEUR: frozen([ADMIN]),

@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-10** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-10 are rules |
+| **D-1 … D-14** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-14 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-10**
+**Rules decided during the build — D-4 to D-14**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -39,6 +39,10 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-8 · A parcel is attempted at most five times](#d-8--a-parcel-is-attempted-at-most-five-times)
 - [D-9 · "Reporté par le client" is planned, not verified](#d-9--reporté-par-le-client-is-planned-not-verified)
 - [D-10 · Auth is phase 1, not phase 0](#d-10--auth-is-phase-1-not-phase-0)
+- [D-11 · Screen access for Dépôt and Service client](#d-11--screen-access-for-dépôt-and-service-client)
+- [D-12 · Deactivating a courier is refused while work is open](#d-12--deactivating-a-courier-is-refused-while-work-is-open)
+- [D-13 · A 10-second grace window on refresh tokens](#d-13--a-10-second-grace-window-on-refresh-tokens)
+- [D-14 · Outdated courier apps reach the scan upload only](#d-14--outdated-courier-apps-reach-the-scan-upload-only)
 
 **Money — A-1 to A-5**
 
@@ -164,6 +168,13 @@ there is no lockout to bypass, and a courier standing at a customer's door must
 never be locked out until an admin intervenes. A `login_attempt` table can be
 added later if the Exceptions queue needs the history.
 
+**Numbers approved on 2026-09-25**: 5 free failures per identifier, 30 per IP,
+then 1 s doubling up to 15 minutes. The error texts in `AUTH_MESSAGES` were
+approved the same day. "Aucun compte ramasseur pour ce numéro" (Coursier 2)
+is kept, although it tells whether a number has an account.
+
+**Where.** `LOGIN_THROTTLE` and `AUTH_MESSAGES` in `packages/shared/src/auth.ts`.
+
 ### D-7 · The courier PIN never reaches the server
 
 The 4-digit PIN that protects the app when it is reopened (Coursier 4.12) is set
@@ -261,6 +272,81 @@ branch, `DECISION_CHANGER_DATE`, `isValidPostponementDate`, `isDueForTour`),
 `docs/PROGRESS.md` had the login and the role guards under phase 0 alongside the
 monorepo and the schema. They are their own piece of work and are now phase 1;
 everything after has shifted by one, and the old "phase 6b" is phase 8.
+
+### D-11 · Screen access for Dépôt and Service client
+
+**This changes a row of Admin 2**, which is now **v1.11**: preparing bons de
+retour is no longer admin-only, Dépôt prepares them too. Bons de versement
+stay with the admin alone, like everything else touching money.
+
+| Screen          | Admin | Dépôt                              | Service client                         |
+| --------------- | ----- | ---------------------------------- | -------------------------------------- |
+| Aujourd'hui     | Oui   | Oui, figures of its own work       | Oui, figures of its own work           |
+| Colis           | Oui   | Read, reprint the label            | Read, log calls, apply change requests |
+| Exceptions      | Oui   | Read; acts with its own rights     | Read; acts with its own rights         |
+| Retours         | Oui   | Read, prepare bons de retour       | Read                                   |
+| Journal d'audit | Oui   | —                                  | —                                      |
+| Vendeurs        | Oui   | Contact info and parcels           | Contact info and parcels               |
+| Coursiers       | Oui   | Name, phone, zone, today's parcels | Name, phone, zone, today's parcels     |
+
+No role but the admin forces a status. Account creation, passwords,
+suspension, Paramètres, CIN / patente documents, courier pay and debts stay
+with the admin.
+
+**How it is encoded.** A `*_LECTURE` permission opens a screen; acting always
+needs the permission of the action. What a screen shows is narrowed by the
+service: the Vendeurs and Coursiers pages leave out documents, pay and debts
+for anyone without `VENDEURS_DOCUMENTS` or `PAIE_COURSIERS`, and Aujourd'hui
+computes its figures per role.
+
+**Where.** `packages/shared/src/permissions.ts`; the test copies the table.
+
+### D-12 · Deactivating a courier is refused while work is open
+
+Admin 4.15 says the old account is deactivated "once nothing is owed". This is
+enforced, in two steps:
+
+1. **At once**: `acceptsWork = false`. No new parcel, pickup or bon reaches him.
+   This holds even when step 2 refuses, and is audited as
+   `ARRET_NOUVEAU_TRAVAIL`.
+2. **The deactivation** is refused while anything is open, and the refusal
+   lists every blocker with a count: parcels in his hands, delivered parcels
+   whose cash is still `CHEZ_LE_COURSIER`, a bon de versement or bon de retour
+   `EN_ROUTE` with him. From phase 7: a caisse session not `CLOTUREE`, a
+   payslip `A_PAYER`, a debt `EN_COURS`.
+
+Step 1 is also what keeps step 2 honest: nothing new can be assigned between
+the check and the deactivation. **Réactiver** restores the login and the work.
+
+**Where.** `deactivateCourier` in `apps/api/src/accounts/accounts.service.ts`,
+`courier-open-work.ts`, and `CourierBlockerType` in `packages/shared`; the
+three phase 7 checks are `it.todo` tests.
+
+### D-13 · A 10-second grace window on refresh tokens
+
+Refresh tokens rotate, and a token presented again after it was rotated
+revokes the session (it was evidently copied). Two tabs refreshing at once
+would trip that and log the user out, so:
+
+- **Server.** A refresh token presented again within **10 seconds** of its
+  rotation gets the **same** new token back, as long as the session is still
+  open. The attempt is registered before its first database call, so two
+  requests at the very same instant share one rotation. Held in memory, for
+  the reason given in D-6. After 10 seconds, a replay still revokes.
+- **Web.** One refresh at a time across every tab of the browser, shared
+  through a lock (`navigator.locks`) so the other tabs wait for it and read
+  the new token.
+
+**Where.** `SESSION_POLICY.refreshGraceSeconds` and `SessionsService.refresh`.
+
+### D-14 · Outdated courier apps reach the scan upload only
+
+Tech-stack 5 wants the app to empty its scan queue before it blocks for an
+update, and the API to refuse old versions. Both hold: the **scan upload** is
+the one route marked `@AllowOutdatedCourierApp` (phase 5); every other courier
+route, the login and the refresh included, refuses a version below the
+minimum set in Paramètres. A test fails if the marker appears on any other
+route.
 
 ---
 

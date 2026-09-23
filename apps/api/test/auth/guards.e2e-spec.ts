@@ -2,6 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { DiscoveryService, MetadataScanner, Reflector } from '@nestjs/core';
 import { Permission } from '@faffago/shared';
 import {
+  ALLOW_OUTDATED_COURIER_APP,
   AllowImpersonation,
   Authenticated,
   CurrentPrincipal,
@@ -83,6 +84,23 @@ describe('every route declares who may call it', () => {
     }
     expect(routes).toBeGreaterThan(5);
     expect(undeclared).toEqual([]);
+  });
+
+  it('lets an outdated courier app through the scan upload only (D-14)', () => {
+    const discovery = t.app.get(DiscoveryService);
+    const scanner = t.app.get(MetadataScanner);
+
+    const outdatedAllowed: string[] = [];
+    for (const { instance, metatype } of discovery.getControllers()) {
+      if (!instance || !metatype) continue;
+      for (const name of scanner.getAllMethodNames(Object.getPrototypeOf(instance))) {
+        if (Reflect.getMetadata(ALLOW_OUTDATED_COURIER_APP, instance[name])) {
+          outdatedAllowed.push(`${metatype.name}.${name}`);
+        }
+      }
+    }
+    // The scan upload arrives in phase 5; until then, no route at all.
+    expect(outdatedAllowed.filter((route) => route !== 'ScansController.upload')).toEqual([]);
   });
 
   it('refuses an undeclared route even to the admin', async () => {

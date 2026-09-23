@@ -35,6 +35,12 @@ export const SESSION_POLICY = {
   staffIdleTimeoutSeconds: 30 * MINUTE,
   /** D-5: one impersonation token, no refresh. */
   impersonationTtlSeconds: 30 * MINUTE,
+  /**
+   * D-13: a just-rotated refresh token presented again within this window
+   * gets the same new token back instead of revoking the session, so two
+   * tabs refreshing at once do not log the user out.
+   */
+  refreshGraceSeconds: 10,
 } as const;
 
 export interface SessionPolicy {
@@ -61,8 +67,9 @@ export function sessionPolicyFor(role: Role): SessionPolicy {
 }
 
 /**
- * Login throttling (D-6, Q10). TO CONFIRM: the specs fix the shape, per
- * identifier and per IP, exponential, never permanent, but not the numbers.
+ * Login throttling (D-6, Q10). The specs fix the shape — per identifier and
+ * per IP, exponential, never permanent — and these numbers were approved on
+ * 2026-09-25.
  */
 export const LOGIN_THROTTLE = {
   freeFailuresPerIdentifier: 5,
@@ -223,6 +230,7 @@ export const AuthErrorCode = {
   DERNIER_ADMIN: 'DERNIER_ADMIN',
   IDENTIFIANT_DEJA_UTILISE: 'IDENTIFIANT_DEJA_UTILISE',
   TELEPHONE_DEJA_UTILISE: 'TELEPHONE_DEJA_UTILISE',
+  COURSIER_ENGAGEMENTS_OUVERTS: 'COURSIER_ENGAGEMENTS_OUVERTS',
 } as const;
 export type AuthErrorCode = (typeof AuthErrorCode)[keyof typeof AuthErrorCode];
 
@@ -231,8 +239,8 @@ function waitText(seconds: number): string {
 }
 
 /**
- * Only aucunCompteCoursier is worded by the specs (Coursier 2). The others are
- * TO CONFIRM.
+ * aucunCompteCoursier is worded by Coursier 2 and kept even though it tells
+ * whether a number has an account. The others were approved on 2026-09-25.
  */
 export const AUTH_MESSAGES = {
   identifiantsIncorrects: 'Identifiant ou mot de passe incorrect',

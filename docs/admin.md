@@ -1,4 +1,4 @@
-# Faffa Go — Interface Admin (spécification v1.10)
+# Faffa Go — Interface Admin (spécification v1.11)
 
 > **How to read this document.** Screen names, buttons and statuses are in French, as the team will see them. Explanations are in English. This document completes the seller specification (Interface Vendeur v1.5); both follow the same statuses and rules. Items marked **TO CONFIRM** were adopted as defaults and still need a final yes (see section 8).
 
@@ -22,19 +22,34 @@ Three staff roles. At launch one person can hold all of them; the split exists s
 
 _**TO CONFIRM** Roles adopted as proposed during the discussion._
 
-| Action                                       | Admin   | Dépôt   | Service client |
-| -------------------------------------------- | ------- | ------- | -------------- |
-| Scan (entrée, sortie, retours, archivage)    | **Oui** | **Oui** | —              |
-| Plan pickups and tours                       | **Oui** | **Oui** | —              |
-| Courier cash reconciliation (Caisse)         | **Oui** | **Oui** | —              |
-| À vérifier follow-up, log calls              | **Oui** | —       | **Oui**        |
-| Read and join parcel chats                   | **Oui** | **Oui** | **Oui**        |
-| Apply seller change requests                 | **Oui** | —       | **Oui**        |
-| Prepare bons de versement and bons de retour | **Oui** | —       | —              |
-| Courier pay, cancel a courier debt           | **Oui** | —       | —              |
-| Create / suspend sellers and couriers        | **Oui** | —       | —              |
-| Override a parcel status                     | **Oui** | —       | —              |
-| Paramètres, staff users, reports             | **Oui** | —       | —              |
+| Action                                    | Admin   | Dépôt   | Service client |
+| ----------------------------------------- | ------- | ------- | -------------- |
+| Scan (entrée, sortie, retours, archivage) | **Oui** | **Oui** | —              |
+| Plan pickups and tours                    | **Oui** | **Oui** | —              |
+| Courier cash reconciliation (Caisse)      | **Oui** | **Oui** | —              |
+| À vérifier follow-up, log calls           | **Oui** | —       | **Oui**        |
+| Read and join parcel chats                | **Oui** | **Oui** | **Oui**        |
+| Apply seller change requests              | **Oui** | —       | **Oui**        |
+| Prepare bons de versement                 | **Oui** | —       | —              |
+| Prepare bons de retour                    | **Oui** | **Oui** | —              |
+| Courier pay, cancel a courier debt        | **Oui** | —       | —              |
+| Create / suspend sellers and couriers     | **Oui** | —       | —              |
+| Override a parcel status                  | **Oui** | —       | —              |
+| Paramètres, staff users, reports          | **Oui** | —       | —              |
+
+Screen access (v1.11, decision D-11). Reading a screen never grants its actions: each role acts only with the rights above.
+
+| Screen          | Admin   | Dépôt                              | Service client                         |
+| --------------- | ------- | ---------------------------------- | -------------------------------------- |
+| Aujourd'hui     | **Oui** | Figures of its own work            | Figures of its own work                |
+| Colis           | **Oui** | Read, Réimprimer l'étiquette       | Read, log calls, apply change requests |
+| Exceptions      | **Oui** | Read                               | Read                                   |
+| Retours         | **Oui** | Read, prepare bons de retour       | Read                                   |
+| Journal d'audit | **Oui** | —                                  | —                                      |
+| Vendeurs        | **Oui** | Contact info and parcels only      | Contact info and parcels only          |
+| Coursiers       | **Oui** | Name, phone, zone, today's parcels | Name, phone, zone, today's parcels     |
+
+CIN / patente documents, courier pay and debts, account creation, passwords, suspension and Paramètres stay with the admin.
 
 ## 3. Navigation
 
@@ -211,7 +226,7 @@ _Every report can be exported to CSV / Excel._
 - Zones are assigned by the admin, per role, as titular or backup. A courier only receives the work matching his role.
 - **Changer de rôle**: when a livreur becomes a ramasseur (or the reverse), the admin creates a **new account** with the new role, and the person logs in to it.
 - The **old account stays open**, so the person can still see what he is owed (e.g. livreur pay not yet paid). It receives no new work: no parcels, pickups or bons can be assigned to it. Cash, bons and failed parcels still on it must be handed over as usual.
-- The admin can deactivate the old account later, once nothing is owed; it is never deleted, so its history stays.
+- The admin can deactivate the old account later, once nothing is owed; it is never deleted, so its history stays. **Désactiver** stops new work at once, then is refused while anything is still open — parcels in his hands, cash not handed over, a bon en route, and from phase 7 an open caisse session, an unpaid fiche de paie or a debt en cours — and lists what blocks it (D-12).
 - Both accounts can use the same phone number. On the login screen, the person chooses **Livreur** or **Ramasseur**, then enters his phone number and password; each account can have its own password.
 - Actions: activate / deactivate, **Régénérer le mot de passe** (shown once, sessions revoked), change zones or pay plan, mark absent for a day.
 - Courier page: today's run, cash carried now, Caisse history with écarts, current debt, pay history, delivery rate.

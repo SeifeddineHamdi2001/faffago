@@ -115,9 +115,9 @@ export class AuthService {
     appVersion: string | undefined,
     meta: RequestMeta,
   ): Promise<SessionTokens> {
-    const session = await this.sessions.findForRefresh(refreshToken);
-    if (session.client === AuthClient.COURIER_APP) await this.assertCourierAppVersion(appVersion);
-    return this.sessions.rotate(session, refreshToken, meta);
+    return this.sessions.refresh(refreshToken, meta, async (client) => {
+      if (client === AuthClient.COURIER_APP) await this.assertCourierAppVersion(appVersion);
+    });
   }
 
   async logout(principal: Principal): Promise<void> {
