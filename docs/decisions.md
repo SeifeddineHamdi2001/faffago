@@ -424,9 +424,22 @@ Corrections made to the file as delivered (941 rows), approved 2026-09-23:
 - The alias **Ain Zaghouan** stays on both Ain Zaghouan Nord and Sud: the
   search shows both, and a CSV row that says only "Ain Zaghouan" is a row
   error the seller settles in the dropdown.
-- The **8 rows marked "délégation à confirmer"** — the 7 of the original file
-  plus El Mourouj 1 — stay as they are until the corrections arrive; they are
-  listed as open in `docs/PROGRESS.md`.
+- The **8 rows marked "délégation à confirmer"** were corrected on
+  2026-09-23:
+
+  | Localité                | Délégation     | Postal code | Change                   |
+  | ----------------------- | -------------- | ----------- | ------------------------ |
+  | Les Jardins d'El Menzah | Ariana Ville   | 2092, 2083  | confirmed                |
+  | Centre Urbain Nord      | Cité El Khadra | 1082        | confirmed                |
+  | L'Aouina                | La Goulette    | 2045        | confirmed                |
+  | Ain Zaghouan Nord       | La Marsa       | 2046        | confirmed                |
+  | Ain Zaghouan Sud        | La Marsa       | 2046        | confirmed                |
+  | Lac 2                   | La Goulette    | 1053        | moved from La Marsa      |
+  | Cité Olympique          | Cité El Khadra | 1003        | moved from El Omrane Sup |
+  | El Mourouj 1            | El Mourouj     | 2074        | confirmed                |
+
+  The second postal code of Les Jardins d'El Menzah is an alias, like every
+  extra code. The file now has no row left to confirm.
 
 **The model.**
 

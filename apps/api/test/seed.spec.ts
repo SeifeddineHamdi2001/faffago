@@ -101,6 +101,30 @@ describe('the localités (D-17)', () => {
     );
   });
 
+  it('files the 8 localités confirmed on 2026-09-23 where they belong', async () => {
+    expect((await localite('TUN-GOULETTE', 'Lac 2')).postalCode).toBe('1053');
+    expect((await localite('TUN-ELKHADRA', 'Cité Olympique')).postalCode).toBe('1003');
+    expect((await localite('TUN-ELKHADRA', 'Centre Urbain Nord')).postalCode).toBe('1082');
+    expect((await localite('TUN-GOULETTE', "L'Aouina")).postalCode).toBe('2045');
+    expect((await localite('TUN-MARSA', 'Ain Zaghouan Nord')).postalCode).toBe('2046');
+    expect((await localite('TUN-MARSA', 'Ain Zaghouan Sud')).postalCode).toBe('2046');
+    expect((await localite('BEN-MOUROUJ', 'El Mourouj 1')).postalCode).toBe('2074');
+    const jardins = await localite('ARI-VILLE', "Les Jardins d'El Menzah");
+    expect(jardins.postalCode).toBe('2092');
+    expect(jardins.aliases).toContain('2083');
+
+    const marsa = await delegation('TUN-MARSA');
+    const omraneSup = await delegation('TUN-OMRANESUP');
+    expect(
+      await prisma.localite.findFirst({ where: { delegationId: marsa.id, nameFr: 'Lac 2' } }),
+    ).toBeNull();
+    expect(
+      await prisma.localite.findFirst({
+        where: { delegationId: omraneSup.id, nameFr: 'Cité Olympique' },
+      }),
+    ).toBeNull();
+  });
+
   it('puts Den Den under La Manouba, as La Poste does', async () => {
     expect((await localite('MAN-VILLE', 'Den Den')).aliases).toEqual(['Denden']);
   });
@@ -177,7 +201,7 @@ describe('running it again', () => {
   it('keeps what the admin has changed since', async () => {
     const gammart = await localite('TUN-MARSA', 'Gammart');
     await prisma.localite.update({ where: { id: gammart.id }, data: { nameFr: 'Gammarth' } });
-    const lac2 = await localite('TUN-MARSA', 'Lac 2');
+    const lac2 = await localite('TUN-GOULETTE', 'Lac 2');
     await prisma.localite.update({ where: { id: lac2.id }, data: { isActive: false } });
     await prisma.setting.update({
       where: { key: 'delivery_fee_millimes' },

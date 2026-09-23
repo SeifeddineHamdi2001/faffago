@@ -210,7 +210,7 @@ describe('PATCH /localites/:id', () => {
   });
 
   it('deactivates a localité: it leaves the tree, and comes back when reactivated', async () => {
-    const id = await localiteId('TUN-MARSA', 'Lac 2');
+    const id = await localiteId('TUN-MARSA', 'Cité Des Mimosas');
     const off = await t.request('PATCH', `/localites/${id}`, {
       token: adminToken,
       body: { isActive: false },

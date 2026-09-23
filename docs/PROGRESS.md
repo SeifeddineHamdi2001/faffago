@@ -72,13 +72,9 @@ on 2026-09-23 (D-18).
       failure reasons read-only) beside Utilisateurs; PATCH through the BFF
 - [x] Starting values for the delivery fee, return fee, courier rate and contact
       links, TikTok included (D-20)
-- [ ] Open, awaiting corrections: the **8** localités marked "délégation à
-      confirmer" in the CSV, kept as they are for now: ARI-VILLE Les Jardins
-      d'El Menzah · TUN-ELKHADRA Centre Urbain Nord · TUN-GOULETTE L'Aouina ·
-      TUN-MARSA Ain Zaghouan Nord · TUN-MARSA Ain Zaghouan Sud · TUN-MARSA Lac 2 ·
-      TUN-OMRANESUP Cité Olympique · BEN-MOUROUJ El Mourouj 1 (not in La
-      Poste's list at all). A correction reaches an existing database through
-      Paramètres › Localités (the seed never overwrites a localité it created).
+- [x] The 8 localités marked "délégation à confirmer" corrected (D-17): Lac 2
+      moves to La Goulette, Cité Olympique to Cité El Khadra, the other six
+      are confirmed where they were; all eight now carry a postal code
 
 ## Phase 3 — Parcel core
 
@@ -343,6 +339,11 @@ on 2026-09-23 (D-18).
   confirmer" with the other 7 (D-17).
 - 2026-09-23 — **Phase 2 merged into `main`** after lint, typecheck, test and
   build passed through turbo, and a browser test on a reset database.
+- 2026-09-23 — **The 8 localités to confirm are corrected** (D-17). The seed
+  creates localités only, keyed on délégation + name, so a database seeded
+  before this keeps Lac 2 under La Marsa and Cité Olympique under El Omrane
+  Supérieur, and gains the corrected rows beside them: reset it. No production
+  database exists yet.
 - 2026-09-23 — **`GET /geo` is open to every signed-in role** (sellers,
   couriers, staff, and Voir comme le vendeur). It carries no zone and no seed
   key; zones stay a back office matter.
