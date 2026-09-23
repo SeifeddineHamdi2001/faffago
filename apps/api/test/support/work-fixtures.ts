@@ -37,29 +37,49 @@ export async function createParcel(
     location?: ParcelLocation;
     cashStatus?: ParcelCashStatus | null;
     currentLivreurId?: string | null;
+    /** Defaults to the first localité there is. */
+    where?: { delegationId: string; localiteId: string };
+    address?: string;
   },
 ): Promise<string> {
-  const parcel = await prisma.parcel.create({
-    data: {
-      code: generateParcelCode(randomBytes),
-      sellerId: input.sellerId,
-      recipientName: 'Client',
-      recipientPhone: '29876543',
-      ...(await place(prisma)),
-      address: 'Rue de Test',
-      productDescription: 'Article',
-      codAmountMillimes: 85000n,
-      deliveryFeeMillimes: 7000n,
-      returnFeeMillimes: 5000n,
-      changeClientFeeMillimes: 1000n,
-      createdByUserId: input.createdByUserId,
-      status: input.status ?? 'CREE',
-      location: input.location ?? 'CHEZ_LE_VENDEUR',
-      cashStatus: input.cashStatus ?? null,
-      currentLivreurId: input.currentLivreurId ?? null,
-    },
+  const where = input.where ?? (await place(prisma));
+  const status = input.status ?? 'CREE';
+  const location = input.location ?? 'CHEZ_LE_VENDEUR';
+  // A parcel placed straight into a later state still needs an event of its
+  // own transaction ending in that state, or the database refuses it (D-21).
+  return prisma.$transaction(async (tx) => {
+    const parcel = await tx.parcel.create({
+      data: {
+        code: generateParcelCode(randomBytes),
+        sellerId: input.sellerId,
+        recipientName: 'Client',
+        recipientPhone: '29876543',
+        ...where,
+        address: input.address ?? 'Rue de Test',
+        productDescription: 'Article',
+        codAmountMillimes: 85000n,
+        deliveryFeeMillimes: 7000n,
+        returnFeeMillimes: 5000n,
+        changeClientFeeMillimes: 1000n,
+        createdByUserId: input.createdByUserId,
+        status,
+        location,
+        cashStatus: input.cashStatus ?? null,
+        currentLivreurId: input.currentLivreurId ?? null,
+      },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: parcel.id,
+        type: 'FORCAGE_STATUT',
+        newStatus: status,
+        newLocation: location,
+        actorUserId: input.createdByUserId,
+        reasonText: 'Fixture de test',
+      },
+    });
+    return parcel.id;
   });
-  return parcel.id;
 }
 
 /** A pickup of the ramasseur, with the parcel he has scanned and still carries. */

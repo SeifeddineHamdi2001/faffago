@@ -198,7 +198,25 @@ export interface ParcelTransitionEvent {
   previousLocation: ParcelLocation;
   newLocation: ParcelLocation;
   effects: ParcelEffect[];
+  /** Stored on the event, so the history says why when the type alone does not. */
+  metadata?: Record<string, string>;
 }
+
+/**
+ * Written on the ANNULATION event of a cancellation after pickup (D-28), which
+ * sends the parcel back like Retourner rather than closing it.
+ */
+export const CANCELLATION_AFTER_PICKUP = 'APRES_RAMASSAGE';
+export const CANCELLATION_AFTER_PICKUP_LABEL_FR = 'Après ramassage';
+
+/** Where the seller can still cancel after pickup (D-28). */
+const CANCELLABLE_AFTER_PICKUP: readonly ParcelStatus[] = [
+  ParcelStatus.RAMASSE,
+  ParcelStatus.AU_DEPOT,
+  ParcelStatus.EN_LIVRAISON,
+  ParcelStatus.A_VERIFIER,
+  ParcelStatus.RELANCE,
+];
 
 export type ParcelTransition =
   | { ok: true; next: ParcelSnapshot; events: ParcelTransitionEvent[] }
@@ -288,14 +306,37 @@ export function applyParcelAction(
     }
 
     case ParcelAction.ANNULER: {
-      if (parcel.status !== ParcelStatus.CREE) return refuseByStatus(parcel);
+      if (parcel.status === ParcelStatus.CREE) {
+        return {
+          ok: true,
+          next: { ...parcel, status: ParcelStatus.ANNULE },
+          events: [
+            event(ParcelEventType.ANNULATION, parcel, ParcelStatus.ANNULE, parcel.location, [
+              ParcelEffect.CLOTURER_CHAT,
+            ]),
+          ],
+        };
+      }
+      if (!CANCELLABLE_AFTER_PICKUP.includes(parcel.status)) return refuseByStatus(parcel);
+
+      // After pickup a cancellation is a return the seller asks for (Vendeur
+      // 4.6): exactly Retourner, return fee included, and the parcel stays
+      // where it is until it is scanned back (A-7). Only the event type and its
+      // metadata tell the two apart in the history (D-28).
       return {
         ok: true,
-        next: { ...parcel, status: ParcelStatus.ANNULE },
+        next: { ...parcel, status: ParcelStatus.RETOUR_AU_DEPOT },
         events: [
-          event(ParcelEventType.ANNULATION, parcel, ParcelStatus.ANNULE, parcel.location, [
-            ParcelEffect.CLOTURER_CHAT,
-          ]),
+          {
+            ...event(
+              ParcelEventType.ANNULATION,
+              parcel,
+              ParcelStatus.RETOUR_AU_DEPOT,
+              parcel.location,
+              [ParcelEffect.ARRETER_DELAI_VERIFICATION, ParcelEffect.CREER_FRAIS_RETOUR],
+            ),
+            metadata: { annulation: CANCELLATION_AFTER_PICKUP },
+          },
         ],
       };
     }
@@ -322,6 +363,21 @@ export function applyParcelAction(
     }
 
     case ParcelAction.SCAN_ENTREE_DEPOT: {
+      // A parcel cancelled while the ramasseur carried it is already a return
+      // (D-28). Entrée dépôt takes it in without touching the status, the way
+      // Retour de tournée does for a livreur's parcel.
+      if (
+        parcel.status === ParcelStatus.RETOUR_AU_DEPOT &&
+        parcel.location === ParcelLocation.AVEC_LE_RAMASSEUR
+      ) {
+        return {
+          ok: true,
+          next: { ...parcel, location: ParcelLocation.AU_DEPOT },
+          events: [
+            event(ParcelEventType.ENTREE_DEPOT, parcel, parcel.status, ParcelLocation.AU_DEPOT),
+          ],
+        };
+      }
       if (parcel.status !== ParcelStatus.RAMASSE) return refuseByStatus(parcel);
       return {
         ok: true,
@@ -842,6 +898,11 @@ export function isDueForTour(parcel: ParcelSnapshot, today: Date): boolean {
 /** True when the parcel is waiting on a date the customer asked for. */
 export function isPostponedByCustomer(parcel: ParcelSnapshot): boolean {
   return parcel.status === ParcelStatus.RELANCE && parcel.relaunchOrigin === RelaunchOrigin.CLIENT;
+}
+
+/** Annuler: free before pickup, a charged return after it (Vendeur 4.6, D-28). */
+export function canCancel(parcel: ParcelSnapshot): boolean {
+  return parcel.status === ParcelStatus.CREE || CANCELLABLE_AFTER_PICKUP.includes(parcel.status);
 }
 
 /** A parcel can be edited freely only before it is picked up (Vendeur 4.6). */

@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { PrismaPGlite } from 'pglite-prisma-adapter';
 import { DEMO_ACCOUNTS, seedDemo } from '../prisma/seed-demo';
+import { pgliteAdapter } from './support/pglite-adapter';
 import { applyMigrations } from './migrations';
 
 /**
@@ -18,7 +18,7 @@ let prisma: PrismaClient;
 beforeAll(async () => {
   db = await PGlite.create();
   await applyMigrations(db);
-  const adapter = new PrismaPGlite(db) as unknown as Prisma.PrismaClientOptions['adapter'];
+  const adapter = pgliteAdapter(db);
   prisma = new PrismaClient({ adapter });
   await prisma.user.create({
     data: {
@@ -77,7 +77,7 @@ describe('seedDemo', () => {
   it('needs the first admin from the normal seed', async () => {
     const empty = await PGlite.create();
     await applyMigrations(empty);
-    const adapter = new PrismaPGlite(empty) as unknown as Prisma.PrismaClientOptions['adapter'];
+    const adapter = pgliteAdapter(empty);
     const client = new PrismaClient({ adapter });
     await expect(seedDemo(client, { nodeEnv: 'development' })).rejects.toThrow(/db:seed/);
     await client.$disconnect();

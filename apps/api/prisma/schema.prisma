@@ -781,6 +781,10 @@ model ParcelEvent {
   deviceTime       DateTime?
   serverTime       DateTime        @default(now())
   metadata         Json?
+  /// The transaction that wrote the event. A deferred trigger refuses, at
+  /// commit, a parcel created or moved without an event of its own
+  /// transaction ending in that state (D-21). Never set by the application.
+  txid             BigInt          @default(dbgenerated("txid_current()"))
 
   parcel Parcel @relation(fields: [parcelId], references: [id])
 

@@ -56,8 +56,8 @@ beforeAll(async () => {
         "changeClientFeeMillimes","createdByUserId","updatedAt")
       values ('${PARCEL_ID}','FG-8K2QX7AB','${SELLER_ID}','Client','29876543','${DELEGATION_ID}','${LOCALITE_ID}',
               'Rue X','2 bracelets',85000,7000,5000,1000,'${USER_ID}',now());
-    insert into parcel_events (id,"parcelId",type,"newStatus")
-      values ('${EVENT_ID}','${PARCEL_ID}','CREATION','CREE');
+    insert into parcel_events (id,"parcelId",type,"newStatus","newLocation")
+      values ('${EVENT_ID}','${PARCEL_ID}','CREATION','CREE','CHEZ_LE_VENDEUR');
     insert into audit_log (id,action,"entityType","entityId")
       values (gen_random_uuid(),'FORCAGE_STATUT','parcel','${PARCEL_ID}');
   `);

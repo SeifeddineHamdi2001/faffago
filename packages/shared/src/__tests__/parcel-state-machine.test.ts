@@ -3,6 +3,8 @@ import { Role, SYSTEM_ACTOR } from '../roles.js';
 import {
   applyCashTransition,
   applyParcelAction,
+  CANCELLATION_AFTER_PICKUP,
+  canCancel,
   canChangeClient,
   canEditFreely,
   canRelaunch,
@@ -613,13 +615,164 @@ describe('editing and cancelling', () => {
     expect(cancelled.next.status).toBe(ParcelStatus.ANNULE);
   });
 
+  it('cancels before pickup with no fee and no reason attached', () => {
+    const cancelled = expectOk(applyParcelAction(parcel(), command(ParcelAction.ANNULER)));
+    expect(cancelled.events).toHaveLength(1);
+    expect(cancelled.events[0]?.type).toBe(ParcelEventType.ANNULATION);
+    expect(cancelled.events[0]?.effects).not.toContain(ParcelEffect.CREER_FRAIS_RETOUR);
+    expect(cancelled.events[0]?.metadata).toBeUndefined();
+  });
+
   it('refuses a free edit after pickup (Vendeur 4.6)', () => {
     const picked = parcel({
       status: ParcelStatus.RAMASSE,
       location: ParcelLocation.AVEC_LE_RAMASSEUR,
     });
     expect(applyParcelAction(picked, command(ParcelAction.MODIFIER)).ok).toBe(false);
-    expect(applyParcelAction(picked, command(ParcelAction.ANNULER)).ok).toBe(false);
+  });
+});
+
+describe('cancelling after pickup (Vendeur 4.6, D-28)', () => {
+  const cancellable: Array<[ParcelStatus, ParcelLocation]> = [
+    [ParcelStatus.RAMASSE, ParcelLocation.AVEC_LE_RAMASSEUR],
+    [ParcelStatus.AU_DEPOT, ParcelLocation.AU_DEPOT],
+    [ParcelStatus.EN_LIVRAISON, ParcelLocation.AVEC_LE_LIVREUR],
+    [ParcelStatus.A_VERIFIER, ParcelLocation.AVEC_LE_LIVREUR],
+    [ParcelStatus.A_VERIFIER, ParcelLocation.AU_DEPOT],
+    [ParcelStatus.RELANCE, ParcelLocation.AU_DEPOT],
+  ];
+
+  it.each(cancellable)('works like Retourner from %s (%s)', (status, location) => {
+    const before = parcel({ status, location, currentLivreurId: LIVREUR_ID, attemptCount: 1 });
+    const result = expectOk(applyParcelAction(before, command(ParcelAction.ANNULER)));
+
+    // Status flips, the parcel stays where it is until it is scanned (A-7).
+    expect(result.next.status).toBe(ParcelStatus.RETOUR_AU_DEPOT);
+    expect(result.next.location).toBe(location);
+    expect(result.next.attemptCount).toBe(1);
+
+    expect(result.events).toHaveLength(1);
+    const [event] = result.events;
+    expect(event?.type).toBe(ParcelEventType.ANNULATION);
+    expect(event?.previousStatus).toBe(status);
+    expect(event?.newStatus).toBe(ParcelStatus.RETOUR_AU_DEPOT);
+    expect(event?.effects).toEqual([
+      ParcelEffect.ARRETER_DELAI_VERIFICATION,
+      ParcelEffect.CREER_FRAIS_RETOUR,
+    ]);
+    expect(event?.metadata).toEqual({ annulation: CANCELLATION_AFTER_PICKUP });
+  });
+
+  it('writes the same effects as Retourner, so it is charged the same way', () => {
+    const verifying = parcel({
+      status: ParcelStatus.A_VERIFIER,
+      location: ParcelLocation.AU_DEPOT,
+    });
+    const cancelled = expectOk(applyParcelAction(verifying, command(ParcelAction.ANNULER)));
+    const returned = expectOk(
+      applyParcelAction(verifying, command(ParcelAction.DECISION_RETOURNER)),
+    );
+    expect(cancelled.next).toEqual(returned.next);
+    expect(cancelled.events[0]?.effects).toEqual(returned.events[0]?.effects);
+  });
+
+  it('is refused once delivered', () => {
+    const delivered = parcel({
+      status: ParcelStatus.LIVRE,
+      location: ParcelLocation.CHEZ_LE_CLIENT,
+      cashStatus: ParcelCashStatus.CHEZ_LE_COURSIER,
+    });
+    const result = applyParcelAction(delivered, command(ParcelAction.ANNULER));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.refusal).toBe(ScanRefusal.COLIS_DEJA_LIVRE);
+  });
+
+  it.each([
+    [ParcelStatus.RETOUR_AU_DEPOT, ParcelLocation.AU_DEPOT],
+    [ParcelStatus.RETOUR_EN_ROUTE, ParcelLocation.AVEC_LE_RAMASSEUR],
+    [ParcelStatus.RETOUR_RECU, ParcelLocation.RENDU_AU_VENDEUR],
+    [ParcelStatus.ANNULE, ParcelLocation.CHEZ_LE_VENDEUR],
+  ])('is refused from %s', (status, location) => {
+    expect(applyParcelAction(parcel({ status, location }), command(ParcelAction.ANNULER)).ok).toBe(
+      false,
+    );
+  });
+
+  it('is the seller’s alone', () => {
+    const atDepot = parcel({ status: ParcelStatus.AU_DEPOT, location: ParcelLocation.AU_DEPOT });
+    for (const actor of [
+      Role.ADMIN,
+      Role.DEPOT,
+      Role.SERVICE_CLIENT,
+      Role.LIVREUR,
+      Role.RAMASSEUR,
+      SYSTEM_ACTOR,
+    ]) {
+      const result = applyParcelAction(atDepot, command(ParcelAction.ANNULER, { actor }));
+      expect(result.ok).toBe(false);
+      if (!result.ok) expect(result.refusal).toBe(ScanRefusal.ROLE_NON_AUTORISE);
+    }
+  });
+
+  it('a parcel the livreur still carries comes back with Retour de tournée', () => {
+    const out = parcel({
+      status: ParcelStatus.EN_LIVRAISON,
+      location: ParcelLocation.AVEC_LE_LIVREUR,
+      currentLivreurId: LIVREUR_ID,
+    });
+    const cancelled = expectOk(applyParcelAction(out, command(ParcelAction.ANNULER))).next;
+
+    // He can no longer deliver it.
+    expect(applyParcelAction(cancelled, command(ParcelAction.SCAN_LIVRE)).ok).toBe(false);
+
+    const back = expectOk(
+      applyParcelAction(cancelled, command(ParcelAction.SCAN_RETOUR_DE_TOURNEE)),
+    );
+    expect(back.next.status).toBe(ParcelStatus.RETOUR_AU_DEPOT);
+    expect(back.next.location).toBe(ParcelLocation.AU_DEPOT);
+  });
+
+  it('a parcel the ramasseur still carries is taken in with Entrée dépôt, status unchanged', () => {
+    const picked = parcel({
+      status: ParcelStatus.RAMASSE,
+      location: ParcelLocation.AVEC_LE_RAMASSEUR,
+    });
+    const cancelled = expectOk(applyParcelAction(picked, command(ParcelAction.ANNULER))).next;
+
+    const inDepot = expectOk(applyParcelAction(cancelled, command(ParcelAction.SCAN_ENTREE_DEPOT)));
+    expect(inDepot.next.status).toBe(ParcelStatus.RETOUR_AU_DEPOT);
+    expect(inDepot.next.location).toBe(ParcelLocation.AU_DEPOT);
+    expect(inDepot.events[0]?.type).toBe(ParcelEventType.ENTREE_DEPOT);
+    expect(inDepot.events[0]?.effects).toEqual([]);
+
+    // From there it follows the ordinary return journey.
+    expect(applyParcelAction(inDepot.next, command(ParcelAction.SCAN_PREPARATION_RETOURS)).ok).toBe(
+      true,
+    );
+  });
+
+  it('Entrée dépôt still refuses a return that is already at the depot', () => {
+    const atDepot = parcel({
+      status: ParcelStatus.RETOUR_AU_DEPOT,
+      location: ParcelLocation.AU_DEPOT,
+    });
+    expect(applyParcelAction(atDepot, command(ParcelAction.SCAN_ENTREE_DEPOT)).ok).toBe(false);
+  });
+
+  it('canCancel follows the same rule', () => {
+    expect(canCancel(parcel())).toBe(true);
+    for (const [status, location] of cancellable) {
+      expect(canCancel(parcel({ status, location }))).toBe(true);
+    }
+    for (const status of [
+      ParcelStatus.LIVRE,
+      ParcelStatus.RETOUR_AU_DEPOT,
+      ParcelStatus.RETOUR_EN_ROUTE,
+      ParcelStatus.RETOUR_RECU,
+      ParcelStatus.ANNULE,
+    ]) {
+      expect(canCancel(parcel({ status }))).toBe(false);
+    }
   });
 });
 

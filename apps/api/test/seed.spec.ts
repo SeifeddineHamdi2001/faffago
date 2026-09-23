@@ -1,8 +1,8 @@
 import { PGlite } from '@electric-sql/pglite';
-import { PrismaClient, type Prisma } from '@prisma/client';
-import { PrismaPGlite } from 'pglite-prisma-adapter';
+import { PrismaClient } from '@prisma/client';
 import { DEFAULT_CONTACT_LINKS } from '@faffago/shared';
 import { INITIAL_ZONES, parseLocalitesCsv, seed } from '../prisma/seed';
+import { pgliteAdapter } from './support/pglite-adapter';
 import { applyMigrations } from './migrations';
 
 /**
@@ -14,7 +14,7 @@ import { applyMigrations } from './migrations';
 async function freshDatabase(): Promise<{ db: PGlite; prisma: PrismaClient }> {
   const db = await PGlite.create();
   await applyMigrations(db);
-  const adapter = new PrismaPGlite(db) as unknown as Prisma.PrismaClientOptions['adapter'];
+  const adapter = pgliteAdapter(db);
   return { db, prisma: new PrismaClient({ adapter }) };
 }
 

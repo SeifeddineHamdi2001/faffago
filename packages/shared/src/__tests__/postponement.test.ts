@@ -310,23 +310,31 @@ describe('what the seller can do about it', () => {
 describe('what the customer sees', () => {
   it('reads "Livraison reportée", without the seller-will-call line', () => {
     expect(
-      publicStatusFor({ status: ParcelStatus.RELANCE, relaunchOrigin: RelaunchOrigin.CLIENT }),
+      publicStatusFor({
+        status: ParcelStatus.RELANCE,
+        relaunchOrigin: RelaunchOrigin.CLIENT,
+        cancelledAt: null,
+      }),
     ).toBe(PublicStatus.LIVRAISON_REPORTEE_CLIENT);
   });
 
   it('still reads the seller-will-call line when the seller relaunched', () => {
     expect(
-      publicStatusFor({ status: ParcelStatus.RELANCE, relaunchOrigin: RelaunchOrigin.VENDEUR }),
+      publicStatusFor({
+        status: ParcelStatus.RELANCE,
+        relaunchOrigin: RelaunchOrigin.VENDEUR,
+        cancelledAt: null,
+      }),
     ).toBe(PublicStatus.LIVRAISON_REPORTEE);
   });
 
   it('is unchanged for every other status', () => {
-    expect(publicStatusFor({ status: ParcelStatus.A_VERIFIER, relaunchOrigin: null })).toBe(
-      PublicStatus.LIVRAISON_REPORTEE,
-    );
-    expect(publicStatusFor({ status: ParcelStatus.LIVRE, relaunchOrigin: null })).toBe(
-      PublicStatus.LIVRE,
-    );
+    expect(
+      publicStatusFor({ status: ParcelStatus.A_VERIFIER, relaunchOrigin: null, cancelledAt: null }),
+    ).toBe(PublicStatus.LIVRAISON_REPORTEE);
+    expect(
+      publicStatusFor({ status: ParcelStatus.LIVRE, relaunchOrigin: null, cancelledAt: null }),
+    ).toBe(PublicStatus.LIVRE);
   });
 
   it('never exposes the failure event itself', () => {
@@ -357,12 +365,20 @@ describe('isPostponedByCustomer', () => {
   it('is true only for a customer postponement', () => {
     expect(
       isPostponedByCustomer(
-        parcel({ status: ParcelStatus.RELANCE, relaunchOrigin: RelaunchOrigin.CLIENT }),
+        parcel({
+          status: ParcelStatus.RELANCE,
+          relaunchOrigin: RelaunchOrigin.CLIENT,
+          cancelledAt: null,
+        }),
       ),
     ).toBe(true);
     expect(
       isPostponedByCustomer(
-        parcel({ status: ParcelStatus.RELANCE, relaunchOrigin: RelaunchOrigin.VENDEUR }),
+        parcel({
+          status: ParcelStatus.RELANCE,
+          relaunchOrigin: RelaunchOrigin.VENDEUR,
+          cancelledAt: null,
+        }),
       ),
     ).toBe(false);
     expect(isPostponedByCustomer(parcel({ status: ParcelStatus.A_VERIFIER }))).toBe(false);

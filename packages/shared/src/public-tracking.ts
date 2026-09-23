@@ -93,11 +93,17 @@ export function isPublicTimelineEvent(type: ParcelEventType): boolean {
  * Relancé normally reads "le vendeur va vous contacter", which is wrong when it
  * is the customer who asked for another day: he is expecting the parcel, not a
  * call. That case gets its own label and the date he chose (D-9).
+ *
+ * A seller who cancels after pickup sends the parcel back as a return, but the
+ * customer's order is simply cancelled: the page says so for the rest of the
+ * parcel's life (D-28). `cancelledAt` is set by every ANNULATION event.
  */
 export function publicStatusFor(parcel: {
   status: ParcelStatus;
   relaunchOrigin: RelaunchOrigin | null;
+  cancelledAt: Date | null;
 }): PublicStatus {
+  if (parcel.cancelledAt) return PublicStatus.COMMANDE_ANNULEE;
   if (parcel.status === ParcelStatus.RELANCE && parcel.relaunchOrigin === RelaunchOrigin.CLIENT) {
     return PublicStatus.LIVRAISON_REPORTEE_CLIENT;
   }

@@ -65,22 +65,27 @@ function insertLocalite(id: string, delegationId: string, nameFr: string, postal
   );
 }
 
+/** A parcel and its CREATION event, committed together (D-21). */
 function insertParcel(localiteId: string, delegationId: string) {
   parcelCounter += 1;
-  return db.query(
-    `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
-       "localiteId",address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
-       "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt")
-     values (gen_random_uuid(),$1,$2,'Client','29876543',$3,$4,'Rue X','Article',
-       85000,5500,2000,1000,$5,now())`,
-    [
-      `FG-TEST${String(parcelCounter).padStart(4, '0')}`,
-      SELLER_ID,
-      delegationId,
-      localiteId,
-      USER_ID,
-    ],
-  );
+  const code = `FG-TEST${String(parcelCounter).padStart(4, '0')}`;
+  return db.transaction(async (tx) => {
+    const parcel = await tx.query<{ id: string }>(
+      `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
+         "localiteId",address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
+         "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt")
+       values (gen_random_uuid(),$1,$2,'Client','29876543',$3,$4,'Rue X','Article',
+         85000,5500,2000,1000,$5,now())
+       returning id`,
+      [code, SELLER_ID, delegationId, localiteId, USER_ID],
+    );
+    await tx.query(
+      `insert into parcel_events (id,"parcelId",type,"newStatus","newLocation")
+       values (gen_random_uuid(),$1,'CREATION','CREE','CHEZ_LE_VENDEUR')`,
+      [parcel.rows[0]!.id],
+    );
+    return parcel;
+  });
 }
 
 describe('a parcel and its localité', () => {

@@ -1,5 +1,3 @@
-import { randomBytes } from 'node:crypto';
-import { generateParcelCode } from '@faffago/shared';
 import { seed } from '../../prisma/seed';
 import {
   COURIER_APP_HEADERS,
@@ -9,6 +7,7 @@ import {
   type Fixture,
   type TestApp,
 } from '../support/test-app';
+import { createParcel } from '../support/work-fixtures';
 
 /**
  * The geography API (D-17): the gouvernorat → délégation → localité tree every
@@ -286,22 +285,15 @@ describe('GET /localites/autre/parcels (D-17)', () => {
     const marsa = await delegationId('TUN-MARSA');
     const autre = await localiteId('TUN-MARSA', 'Autre');
     const gammarth = await localiteId('TUN-MARSA', 'Gammarth');
-    const create = (localite: string, address: string) =>
-      t.prisma.parcel.create({
-        data: {
-          code: generateParcelCode(randomBytes),
-          sellerId: seller.sellerId!,
-          recipientName: 'Client',
-          recipientPhone: '29876543',
-          delegationId: marsa,
-          localiteId: localite,
-          address,
-          productDescription: 'Article',
-          codAmountMillimes: 85000n,
-          deliveryFeeMillimes: 5500n,
-          returnFeeMillimes: 2000n,
-          changeClientFeeMillimes: 1000n,
-          createdByUserId: seller.id,
+    const create = async (localite: string, address: string) =>
+      t.prisma.parcel.findUniqueOrThrow({
+        where: {
+          id: await createParcel(t.prisma, {
+            sellerId: seller.sellerId!,
+            createdByUserId: seller.id,
+            where: { delegationId: marsa, localiteId: localite },
+            address,
+          }),
         },
       });
     const underAutre = await create(autre, 'Cité Nouvelle, près de la mosquée');

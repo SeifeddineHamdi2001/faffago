@@ -53,17 +53,21 @@ beforeAll(async () => {
     `insert into localites (id,"delegationId","nameFr","updatedAt") values ($1,$2,'Khaznadar',now())`,
     [LOCALITE_ID, DELEGATION_ID],
   );
-  await db.query(
-    `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
-       "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
-       "changeClientFeeMillimes","createdByUserId","updatedAt")
-     values ($1,'FG-8K2QX7AB',$2,'Client','29876543',$3,$5,'Rue X','2 bracelets',85000,7000,5000,1000,$4,now())`,
-    [PARCEL_ID, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
-  );
-  await db.query(
-    `insert into parcel_events (id,"parcelId",type,"newStatus") values ($1,$2,'CREATION','CREE')`,
-    [EVENT_ID, PARCEL_ID],
-  );
+  // A parcel and its CREATION event commit together (D-21).
+  await db.transaction(async (tx) => {
+    await tx.query(
+      `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId","localiteId",address,
+         "productDescription","codAmountMillimes","deliveryFeeMillimes","returnFeeMillimes",
+         "changeClientFeeMillimes","createdByUserId","updatedAt")
+       values ($1,'FG-8K2QX7AB',$2,'Client','29876543',$3,$5,'Rue X','2 bracelets',85000,7000,5000,1000,$4,now())`,
+      [PARCEL_ID, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
+    );
+    await tx.query(
+      `insert into parcel_events (id,"parcelId",type,"newStatus","newLocation")
+       values ($1,$2,'CREATION','CREE','CHEZ_LE_VENDEUR')`,
+      [EVENT_ID, PARCEL_ID],
+    );
+  });
 });
 
 afterAll(async () => {
@@ -356,13 +360,21 @@ describe('customer postponement (D-9)', () => {
   const RELAUNCH_COLUMNS = '"relaunchDate","relaunchOrigin","relaunchSlot"';
 
   function insertParcel(id: string, code: string, extraColumns = '', extraValues = '') {
-    return db.query(
-      `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
-         "localiteId",address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
-         "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt"${extraColumns})
-       values ($1,$2,$3,'Client','29876543',$4,$6,'Rue X','p',0,0,0,0,$5,now()${extraValues})`,
-      [id, code, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
-    );
+    return db.transaction(async (tx) => {
+      await tx.query(
+        `insert into parcels (id,code,"sellerId","recipientName","recipientPhone","delegationId",
+           "localiteId",address,"productDescription","codAmountMillimes","deliveryFeeMillimes",
+           "returnFeeMillimes","changeClientFeeMillimes","createdByUserId","updatedAt"${extraColumns})
+         values ($1,$2,$3,'Client','29876543',$4,$6,'Rue X','p',0,0,0,0,$5,now()${extraValues})`,
+        [id, code, SELLER_ID, DELEGATION_ID, USER_ID, LOCALITE_ID],
+      );
+      await tx.query(
+        `insert into parcel_events (id,"parcelId",type,"newStatus","newLocation")
+         values (gen_random_uuid(),$1,'CREATION','CREE','CHEZ_LE_VENDEUR')`,
+        [id],
+      );
+      return true;
+    });
   }
 
   it('accepts a date together with its origin', async () => {

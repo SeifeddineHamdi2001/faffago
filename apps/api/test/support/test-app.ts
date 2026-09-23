@@ -1,15 +1,15 @@
 import { PGlite } from '@electric-sql/pglite';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { PrismaClient, type Prisma, type Role } from '@prisma/client';
+import { PrismaClient, type Role } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { PrismaPGlite } from 'pglite-prisma-adapter';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
 import { LoginThrottleService } from '../../src/auth/login-throttle.service';
 import { CLOCK, type Clock } from '../../src/common/clock';
 import { PrismaService } from '../../src/common/prisma/prisma.service';
 import { SettingsService } from '../../src/settings/settings.service';
+import { pgliteAdapter } from './pglite-adapter';
 import { applyMigrations } from '../migrations';
 
 /**
@@ -64,9 +64,7 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
 
   const db = await PGlite.create();
   await applyMigrations(db);
-  // The adapter is typed against @prisma/driver-adapter-utils 6.10 and the
-  // client against 6.19; the protocol is the same, only the type copies differ.
-  const adapter = new PrismaPGlite(db) as unknown as Prisma.PrismaClientOptions['adapter'];
+  const adapter = pgliteAdapter(db);
   const prisma = new PrismaClient({ adapter });
   const clock = new TestClock();
 
