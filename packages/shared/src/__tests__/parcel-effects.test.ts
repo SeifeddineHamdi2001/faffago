@@ -224,7 +224,9 @@ describe('decisions and automatic returns', () => {
 
   it('Relancer stops the clock and charges nothing', () => {
     const { columns, charges } = parcelWriteFor(
-      run(verifying, ParcelAction.DECISION_RELANCER),
+      run(verifying, ParcelAction.DECISION_RELANCER, {
+        postponedTo: new Date('2026-09-25T00:00:00.000Z'),
+      }),
       ctx(),
     );
     expect(columns.verifyDeadlineAt).toBeNull();

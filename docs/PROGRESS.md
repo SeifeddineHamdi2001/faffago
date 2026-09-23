@@ -78,7 +78,9 @@ on 2026-09-23 (D-18).
 
 ## Phase 3 — Parcel core
 
-Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
+Done. Merged into `main` on 2026-09-24 after lint, typecheck and test passed
+through turbo; no browser test, since the phase has no screen. API and shared
+only, no HTTP endpoint (D-22).
 
 - [x] `ParcelsService.create`: fees frozen from `feesForNewParcel` at creation,
       délégation taken from the localité, CREATION event in the same
@@ -88,13 +90,14 @@ Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
       the shared state machine, writes the parcel, one event per step (who,
       when, GPS, device, previous → new, reason, metadata) and the charges it
       owes, in one transaction or the caller's. Actor from the principal
-      only; another seller's parcel is "Code inconnu" (D-26) — 21 tests
+      only; another seller's parcel is "Code inconnu" (D-26) — 22 tests
 - [x] `parcelWriteFor` (shared): columns and charges per transition; charges
       copied from the parcel's frozen fees, courier rate frozen at delivery,
       48-hour deadline, timestamps, échange item (D-23), `closedAt` (D-24) —
       18 tests
 - [x] Cancellation after pickup in the state machine (D-28) and "Commande
       annulée" on public tracking — 25 tests
+- [x] Relancer without a date refused by the state machine (D-29) — 4 tests
 - [x] No status change without its event, enforced by a deferred trigger
       (D-21) — 10 schema tests
 - [x] Append-only audit log (trigger + revoked privileges + tests)
@@ -102,7 +105,10 @@ Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
       the same instant — above all two Livré scans — tested on a real
       PostgreSQL server (Testcontainers). The service takes a
       `SELECT … FOR UPDATE` lock; PGlite has a single connection and cannot
-      prove it. No money is counted until this test passes.
+      prove it. The same run proves that, with the production Prisma setup
+      (real driver, no test adapter), an error raised at COMMIT by the D-21
+      trigger reaches the caller as a failure, not a success. No money is
+      counted until both pass.
 
 ## Phase 4 — Seller space
 
@@ -156,6 +162,8 @@ Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
 - [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
 - [ ] Tarifs and Zones couvertes read from Paramètres
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
+- [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ
+      retour and Retour reçu when `cancelledAt` is set (D-31)
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
 - [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
 
@@ -399,8 +407,12 @@ Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
   (`SettingsService.current(tx)`). On PGlite's single connection a read from
   outside waited behind the open transaction until it timed out.
 - 2026-09-24 — **The 48-hour clock starts at the server time** the failure is
-  recorded, not the device time: a scan synced late reaches the seller late,
-  and he cannot decide before he knows.
+  recorded, not the device time (D-30, approved).
+- 2026-09-24 — **Answers recorded as D-29 to D-31**: Relancer carries its
+  date (the state machine refuses it without one), the 48-hour clock, and a
+  cancelled order's public timeline (phase 9). The Entrée dépôt consequence of
+  D-28 is approved.
+- 2026-09-24 — **Phase 3 merged into `main`.**
 - 2026-09-24 — **README** phase numbers corrected (web from phase 1, courier
   app phase 6).
 
@@ -418,11 +430,5 @@ Built on branch `phase-3`. API and shared only, no HTTP endpoint (D-22).
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 6 implementation.
-- **Entrée dépôt for a parcel cancelled while the ramasseur carries it**
-  (D-28): accepted as a location-only move, like Retour de tournée. To
-  confirm.
-- **Relancer without a date**: the state machine accepts it, but the database
-  requires the date and the origin together (D-9, `parcels_relaunch_is_complete`),
-  so it would fail with a server error. To settle with the Relancer endpoint
-  (phase 7): the machine should refuse it with a message worded for the
-  seller (the current `DATE_REPORT_REQUISE` speaks of the customer).
+- **Relancer without a date** (D-29): the message is neutral for now; the
+  wording the seller reads comes with the phase 7 screen.

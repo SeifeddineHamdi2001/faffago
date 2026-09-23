@@ -363,6 +363,26 @@ describe('the charges each transition owes (A-1, D-2)', () => {
   });
 });
 
+// ── Relancer ────────────────────────────────────────────────
+
+describe('Relancer (D-9, D-29)', () => {
+  it('without a date is a clean refusal, not a database error, and writes nothing', async () => {
+    const id = await newParcel();
+    await outForDelivery(id);
+    await fail(id);
+    const before = await snapshotOf(id);
+
+    const result = await act(id, seller, { action: ParcelAction.DECISION_RELANCER });
+
+    expect(result).toEqual({
+      ok: false,
+      refusal: 'DATE_RELANCE_REQUISE',
+      message: 'Date de relance obligatoire',
+    });
+    expect(await snapshotOf(id)).toEqual(before);
+  });
+});
+
 // ── Cancelling ──────────────────────────────────────────────
 
 describe('Annuler (Vendeur 4.6, D-28)', () => {

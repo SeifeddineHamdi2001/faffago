@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-28** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-28 are rules |
+| **D-1 … D-31** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-31 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-28**
+**Rules decided during the build — D-4 to D-31**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -57,6 +57,9 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-26 · Another seller's parcel does not exist](#d-26--another-sellers-parcel-does-not-exist)
 - [D-27 · A deactivated localité takes no new parcel](#d-27--a-deactivated-localité-takes-no-new-parcel)
 - [D-28 · Cancelling after pickup](#d-28--cancelling-after-pickup)
+- [D-29 · Relancer carries its date](#d-29--relancer-carries-its-date)
+- [D-30 · The 48-hour clock starts at the server](#d-30--the-48-hour-clock-starts-at-the-server)
+- [D-31 · A cancelled order's public timeline ends at Commande annulée](#d-31--a-cancelled-orders-public-timeline-ends-at-commande-annulée)
 
 **Money — A-1 to A-5**
 
@@ -652,7 +655,7 @@ pickup "follows the return flow and is charged the return fee"; this is how.
   life: `publicStatusFor` now takes `cancelledAt`, which every ANNULATION
   event sets. `docs/landing.md` 4.2 is now **v1.4**.
 
-**A consequence to confirm.** A parcel cancelled while the **ramasseur**
+**Approved with it (2026-09-24).** A parcel cancelled while the **ramasseur**
 still carries it is Retour au dépôt with the ramasseur. The Entrée dépôt scan
 accepted Ramassé only, so the parcel could never have been scanned in. Entrée
 dépôt now also takes a Retour au dépôt parcel from the ramasseur: location
@@ -662,6 +665,40 @@ does for the livreur.
 **Where.** The `ANNULER` and `SCAN_ENTREE_DEPOT` branches of
 `packages/shared/src/parcel-state-machine.ts`, `canCancel`,
 `CANCELLATION_AFTER_PICKUP`; tests under "cancelling after pickup".
+
+### D-29 · Relancer carries its date
+
+The seller's **Relancer** without a date is refused by the state machine with
+the reason `DATE_RELANCE_REQUISE`. D-9 already said the seller picks a date,
+and the database stores a relance with its date and origin or not at all
+(`parcels_relaunch_is_complete`), so without this a dateless Relancer ended
+in a database error. The date is checked in the same tomorrow-to-7-days
+window as before.
+
+The message is neutral for now (_Date de relance obligatoire_); the wording
+the seller reads comes with the À vérifier screen (phase 7).
+
+**Where.** The `DECISION_RELANCER` branch of `parcel-state-machine.ts`.
+
+### D-30 · The 48-hour clock starts at the server
+
+The À vérifier deadline runs from the **server time at which the failure is
+recorded**, not the device time of the scan. A scan made offline and synced
+later reaches the seller later, and he cannot decide about a failure before
+he knows of it.
+
+**Where.** `DEMARRER_DELAI_VERIFICATION` in `parcel-effects.ts`, fed with the
+server clock by `ParcelEventService`.
+
+### D-31 · A cancelled order's public timeline ends at Commande annulée
+
+**For phase 9.** When the seller cancels after pickup (D-28), the parcel
+still travels back, but the customer's page ends at **Commande annulée**:
+the return-trip events (Départ retour, Retour reçu) are hidden for a
+cancelled order. Every other return still shows them.
+
+**Where.** To build with the public tracking endpoint: filter
+`PUBLIC_TIMELINE_EVENT_TYPES` by `cancelledAt`.
 
 ---
 

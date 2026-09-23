@@ -131,6 +131,8 @@ export const ScanRefusal = {
   COURSIER_NON_PRECISE: 'COURSIER_NON_PRECISE',
   DATE_REPORT_REQUISE: 'DATE_REPORT_REQUISE',
   DATE_REPORT_INVALIDE: 'DATE_REPORT_INVALIDE',
+  /** The seller's Relancer carries its date (D-9, D-29). */
+  DATE_RELANCE_REQUISE: 'DATE_RELANCE_REQUISE',
 } as const;
 export type ScanRefusal = (typeof ScanRefusal)[keyof typeof ScanRefusal];
 
@@ -149,6 +151,8 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   COURSIER_NON_PRECISE: 'Choisissez un coursier avant de scanner',
   DATE_REPORT_REQUISE: 'Choisissez la date de report demandée par le client',
   DATE_REPORT_INVALIDE: 'La date doit être comprise entre demain et 7 jours',
+  // Neutral on purpose: the seller's wording comes with the phase 7 screen (D-29).
+  DATE_RELANCE_REQUISE: 'Date de relance obligatoire',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -624,11 +628,12 @@ export function applyParcelAction(
         return refuse(ScanRefusal.TENTATIVES_EPUISEES);
       }
       // The seller picks a date and a slot (Vendeur 4.9), validated in the same
-      // window as a customer postponement so the two cannot diverge.
-      if (command.postponedTo) {
-        if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
-          return refuse(ScanRefusal.DATE_REPORT_INVALIDE);
-        }
+      // window as a customer postponement so the two cannot diverge. The date
+      // is required: the database stores a relance with its date or not at all
+      // (D-9, D-29).
+      if (!command.postponedTo) return refuse(ScanRefusal.DATE_RELANCE_REQUISE);
+      if (!command.today || !isValidPostponementDate(command.postponedTo, command.today)) {
+        return refuse(ScanRefusal.DATE_REPORT_INVALIDE);
       }
       // Relancer is free and gives one new attempt. It can be chosen while the
       // courier still has the parcel, so the location does not move.
@@ -637,7 +642,7 @@ export function applyParcelAction(
         next: {
           ...parcel,
           status: ParcelStatus.RELANCE,
-          relaunchDate: command.postponedTo ?? null,
+          relaunchDate: command.postponedTo,
           relaunchSlot: command.relaunchSlot ?? null,
           relaunchOrigin: RelaunchOrigin.VENDEUR,
         },

@@ -23,6 +23,9 @@ import { FailureReason, ParcelCashStatus, ParcelLocation, ParcelStatus } from '.
 const LIVREUR_ID = 'livreur-1';
 const MAX_ATTEMPTS = 3;
 const MAX_CLIENT_CHANGES = 1;
+const TODAY = new Date(Date.UTC(2026, 8, 23));
+/** The seller's Relancer always carries its date (D-9, D-29). */
+const RELAUNCH_DATE = new Date(Date.UTC(2026, 8, 25));
 
 function parcel(overrides: Partial<ParcelSnapshot> = {}): ParcelSnapshot {
   return {
@@ -60,6 +63,8 @@ function command(
     action,
     actor: defaultActors[action] ?? Role.VENDEUR,
     actorCourierId: LIVREUR_ID,
+    today: TODAY,
+    ...(action === ParcelAction.DECISION_RELANCER ? { postponedTo: RELAUNCH_DATE } : {}),
     maxAttempts: MAX_ATTEMPTS,
     maxClientChanges: MAX_CLIENT_CHANGES,
     ...overrides,
@@ -403,6 +408,36 @@ describe('seller decisions on À vérifier', () => {
       // The seller picks a date too, so the relance is planned like any other.
       ParcelEffect.PLANIFIER_RELANCE,
     ]);
+  });
+
+  it('Relancer records the date the seller picked', () => {
+    const result = expectOk(applyParcelAction(atDepot, command(ParcelAction.DECISION_RELANCER)));
+    expect(result.next.relaunchDate).toEqual(RELAUNCH_DATE);
+    expect(result.next.relaunchOrigin).toBe('VENDEUR');
+  });
+
+  it('Relancer without a date is refused, and nothing moves (D-9, D-29)', () => {
+    for (const postponedTo of [null, undefined]) {
+      const result = applyParcelAction(
+        atDepot,
+        command(ParcelAction.DECISION_RELANCER, { postponedTo }),
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.refusal).toBe(ScanRefusal.DATE_RELANCE_REQUISE);
+        // Neutral until the phase 7 screen words it for the seller.
+        expect(result.message).toBe('Date de relance obligatoire');
+      }
+    }
+  });
+
+  it('Relancer outside tomorrow to seven days is refused', () => {
+    const result = applyParcelAction(
+      atDepot,
+      command(ParcelAction.DECISION_RELANCER, { postponedTo: TODAY }),
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.refusal).toBe(ScanRefusal.DATE_REPORT_INVALIDE);
   });
 
   it('Relancer can be chosen while the courier still has the parcel', () => {
