@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { generatePassword } from '@faffago/shared';
 
 /**
  * The escape hatch of Q9b, run on the VPS:
@@ -17,21 +18,6 @@ import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
 
-function generatePassword(): string {
-  // No characters that can be confused when the password is read aloud.
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const limit = 256 - (256 % alphabet.length);
-  let out = '';
-  while (out.length < 14) {
-    for (const byte of randomBytes(24)) {
-      if (byte >= limit) continue;
-      out += alphabet[byte % alphabet.length];
-      if (out.length === 14) break;
-    }
-  }
-  return out;
-}
-
 async function main(): Promise<void> {
   const username = process.argv[2]?.trim().toLowerCase();
   if (!username) {
@@ -47,7 +33,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const password = generatePassword();
+  // Same generator as the back office: no characters confusable aloud (A-20).
+  const password = generatePassword(randomBytes);
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
 
   await prisma.$transaction([
@@ -55,10 +42,12 @@ async function main(): Promise<void> {
       where: { id: user.id },
       data: { passwordHash, passwordUpdatedAt: new Date(), isActive: true },
     }),
-    // Every device that was logged in as this admin is signed out.
+    // Every device that was logged in as this admin is signed out. A "Voir
+    // comme le vendeur" open on one of them stops working with its session;
+    // the API's expiry job writes its end to the audit log.
     prisma.refreshToken.updateMany({
       where: { userId: user.id, revokedAt: null },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: new Date(), revokedReason: 'REGENERATION_MOT_DE_PASSE' },
     }),
     prisma.auditLog.create({
       data: {

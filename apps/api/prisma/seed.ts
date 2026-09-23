@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { PrismaClient, Role } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { DEFAULT_SETTINGS, SettingKey } from '@faffago/shared';
+import { DEFAULT_SETTINGS, SettingKey, generatePassword } from '@faffago/shared';
 
 /**
  * Seed: the geography of Grand Tunis, the platform settings and one admin.
@@ -111,22 +111,6 @@ const GRAND_TUNIS: Array<{
   },
 ];
 
-/**
- * 12 characters from an alphabet without the pairs a person misreads when the
- * admin dictates the password over the phone (A-20).
- */
-function generatePassword(): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const bytes = randomBytes(24);
-  let out = '';
-  for (const byte of bytes) {
-    if (out.length === 12) break;
-    if (byte >= 256 - (256 % alphabet.length)) continue;
-    out += alphabet[byte % alphabet.length];
-  }
-  return out.length === 12 ? out : out + generatePassword().slice(0, 12 - out.length);
-}
-
 async function seedGeography(): Promise<void> {
   for (const gouvernorat of GRAND_TUNIS) {
     const row = await prisma.gouvernorat.upsert({
@@ -200,7 +184,8 @@ async function seedFirstAdmin(): Promise<void> {
     return;
   }
 
-  const password = process.env.FAFFAGO_ADMIN_PASSWORD ?? generatePassword();
+  // `||`, not `??`: .env.example ships the variable empty, meaning "generate one".
+  const password = process.env.FAFFAGO_ADMIN_PASSWORD || generatePassword(randomBytes);
   await prisma.user.create({
     data: {
       role: Role.ADMIN,

@@ -12,14 +12,20 @@ Legend: [ ] not started · [~] in progress · [x] done
 
 ## Phase 1 — Auth and permissions
 
-- [ ] Permission matrix from Admin 2, encoded in packages/shared and tested
-- [ ] Login: vendeur = email, staff = username, coursier = téléphone + role choice (A-20)
-- [ ] Admin-generated passwords (argon2id), shown once, no self-service reset (A-20, Q7)
-- [ ] Role guards on every endpoint, deny by default; seller scoped to his own data
-- [ ] Régénérer le mot de passe; last active admin protected; admin:reset CLI (Q9)
-- [ ] Login throttling, no permanent lockout (D-3); session lifetimes (Q11)
-- [ ] Voir comme le vendeur: read-only, 30 min, audited (D-2)
-- [ ] Minimum courier app version enforced by the API
+The API side is done. The screens come with the web and courier app scaffolding.
+
+- [x] Permission matrix from Admin 2, encoded in packages/shared and tested
+      (`permissions.ts`: the test copies the spec table row by row)
+- [x] Login: vendeur = email, staff = username, coursier = téléphone + role choice (A-20)
+- [x] Admin-generated passwords (argon2id), shown once, no self-service reset (A-20, Q7).
+      Staff and courier creation; seller creation comes in phase 3 with the documents
+- [x] Role guards on every endpoint, deny by default; seller scoped to his own data
+- [x] Régénérer le mot de passe; last active admin protected; admin:reset CLI (Q9)
+- [x] Login throttling, no permanent lockout (D-6); session lifetimes (Q11)
+- [x] Voir comme le vendeur: read-only, 30 min, audited (D-5)
+- [x] Minimum courier app version enforced by the API
+- [ ] Screens: login pages, "Copier les identifiants" box, impersonation banner
+      (web, phase 3); courier login screen with role choice (phase 5)
 
 ## Phase 2 — Parcel core
 
@@ -171,6 +177,56 @@ Legend: [ ] not started · [~] in progress · [x] done
   events in `PUBLIC_TIMELINE_EVENT_TYPES` are ever exposed, so a new event type
   is private until someone deliberately adds it.
 
+- 2026-09-25 — **Permissions are checked, never role names.** Guards read
+  `ROLES_BY_PERMISSION` in `packages/shared`; a route must declare `@Public`,
+  `@Authenticated` or `@RequirePermission`, otherwise it refuses everyone, the
+  admin included. A test walks every route of the app to catch an undeclared one.
+- 2026-09-25 — **A session is a `refresh_tokens` row, re-read on every request.**
+  The access token (15 min) carries the session id; the guard reloads the
+  session, the account and the role each time. Revoking a session (Régénérer,
+  deactivation, logout, idle timeout) takes effect at the next request, not
+  when the access token expires. A token whose role no longer matches the
+  database is refused.
+- 2026-09-25 — **Refresh tokens rotate and slide** (7 days web, 90 days courier,
+  pushed forward on each use). Opaque random strings stored as an HMAC. An
+  already-rotated token presented again revokes the whole session, since it
+  was evidently copied. Two tabs refreshing at the same instant can trigger
+  this; the web app must serialise its refreshes (phase 3).
+- 2026-09-25 — **Staff idle logout is enforced on the server**, from the
+  session's `lastUsedAt` (written at most once a minute). Sellers and couriers
+  have none (Q11).
+- 2026-09-25 — **Session lifetimes and throttle numbers live in
+  `packages/shared` (`SESSION_POLICY`, `LOGIN_THROTTLE`)**, not in `.env`:
+  they are business rules. `JWT_*_TTL` and the unused `COURIER_MIN_APP_VERSION`
+  were removed from `.env.example`; the minimum app version is read from
+  Paramètres (`courier_min_app_version`). The API refuses to start if either
+  JWT secret is missing, a placeholder, or shorter than 32 characters.
+- 2026-09-25 — **Voir comme le vendeur has its own table**,
+  `impersonation_sessions`, so its end is audited however it ends: the exit
+  button (`SORTIE`), the admin's session being revoked (`SESSION_REVOQUEE`),
+  or 30 minutes passing (`EXPIRATION`, written by a job every minute). A CHECK
+  constraint caps it at 30 minutes. Only GET routes marked
+  `@AllowImpersonation` accept the token; every write is refused.
+- 2026-09-25 — **Q8 is enforced in the database** as well: a partial unique
+  index on `users.phone` across the three staff roles.
+- 2026-09-25 — **A login reveals nothing before the password is right.** An
+  unknown email or username and a wrong password get the same answer and take
+  the same time (a dummy argon2 check). A deactivated account is only
+  reported after a correct password. The courier message "Aucun compte
+  ramasseur pour ce numéro" does reveal whether a number has an account; it
+  is used because Coursier 2 words it that way.
+- 2026-09-25 — **API tests run the whole app on PGlite through Prisma**, with
+  `pglite-prisma-adapter` 0.6.1 (a dev dependency) and a clock injected
+  everywhere, so a 90-day session or a 30-minute idle timeout is tested in
+  milliseconds. Still no Docker.
+- 2026-09-25 — **The API's ESLint knows about decorator metadata.** Without it,
+  `consistent-type-imports --fix` would turn injected services into
+  `import type` and break Nest's dependency injection at startup.
+- 2026-09-25 — **Seed fix:** `FAFFAGO_ADMIN_PASSWORD=""`, as shipped in
+  `.env.example`, used to create the first admin with an empty password
+  (`??` instead of `||`). The seed and `admin:reset` now use the shared
+  generator, which also drops `i` from the alphabet.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -182,9 +238,26 @@ Legend: [ ] not started · [~] in progress · [x] done
   shows them to customers.
 - Delivery fee, return fee and courier rate are seeded at 0 because no spec
   gives a value. They must be set in Paramètres before the first parcel.
-- Q9–Q13 are answered and recorded in `docs/admin.md`, but only the CLI escape
-  hatch (`admin:reset`) and the database constraints are built. The throttling,
-  the session lifetimes and the last-admin guard belong to the auth task.
+- **Phase 1, screens not in Admin 2:** Aujourd'hui, Colis search and detail,
+  Exceptions, Retours (view), Journal d'audit, and reading the Vendeurs and
+  Coursiers pages as Dépôt or Service client. Not encoded, so they are refused
+  until someone decides who gets them.
+- **Deactivating a courier:** Admin 4.15 says "once nothing is owed". Is that
+  a rule the system enforces (no cash, debt or unpaid pay on the account) or a
+  practice? The login already refuses a courier whose account is `INACTIF`;
+  the endpoint waits for the answer, probably in phase 7.
+- **Throttle numbers** (TO CONFIRM): 5 free failures per identifier, 30 per
+  IP, then 1 s doubling up to 15 min.
+- **Error texts not worded by the specs** (TO CONFIRM): "Identifiant ou mot de
+  passe incorrect", "Compte désactivé. Contactez Faffa Go.", "Trop de
+  tentatives. Réessayez dans N s.", "Session expirée. Reconnectez-vous.",
+  "Consultation en lecture seule : aucune action possible.", "Mettez à jour
+  l'application pour continuer.", and the last-admin refusal. All in
+  `AUTH_MESSAGES`.
+- **Forced update and the scan queue:** tech-stack 5 says the app empties its
+  queue before blocking for an update, and that the API refuses old versions.
+  Both cannot hold for the sync endpoint. `@AllowOutdatedCourierApp` exists so
+  the phase 5 sync route can accept outdated apps; it needs a yes.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
   Nothing enforces that yet — it is a rule for the phase 5 implementation.
 - D-6 splits a row of `docs/landing.md` 4.2: Relancé now maps to two public

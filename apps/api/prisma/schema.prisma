@@ -36,6 +36,12 @@ enum Role {
   RAMASSEUR
 }
 
+/// Where a session lives; decides its lifetime (Q11).
+enum AuthClient {
+  WEB
+  COURIER_APP
+}
+
 enum Langue {
   FR
   AR
@@ -324,19 +330,56 @@ model User {
   @@map("users")
 }
 
+/// One row per logged-in device: the session. Its id is the `sid` carried by
+/// every access token, so revoking the row signs the device out at its next
+/// request, not when the access token happens to expire.
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  tokenHash String    @unique
-  deviceId  String?
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
+  id                String     @id @default(uuid()) @db.Uuid
+  userId            String     @db.Uuid
+  client            AuthClient
+  /// HMAC of the current refresh token. Rotated on every refresh.
+  tokenHash         String     @unique
+  /// The token it replaced. Presented again, it means the token was copied,
+  /// and the whole session is revoked.
+  previousTokenHash String?    @unique
+  deviceId          String?
+  ip                String?
+  userAgent         String?
+  /// Sliding: pushed forward on every refresh (Q11).
+  expiresAt         DateTime
+  /// Drives the 30-minute staff idle logout (Q11).
+  lastUsedAt        DateTime   @default(now())
+  revokedAt         DateTime?
+  revokedReason     String?
+  createdAt         DateTime   @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonationSessions ImpersonationSession[]
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+/// "Voir comme le vendeur" (D-5): read-only, 30 minutes, no refresh. A row per
+/// use, so the end can be audited even when the admin never presses exit.
+model ImpersonationSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  adminUserId    String    @db.Uuid
+  /// The admin's own session. Revoking it ends the impersonation too.
+  adminSessionId String    @db.Uuid
+  sellerId       String    @db.Uuid
+  startedAt      DateTime  @default(now())
+  expiresAt      DateTime
+  endedAt        DateTime?
+  /// SORTIE (exit button), EXPIRATION, or SESSION_REVOQUEE.
+  endReason      String?
+
+  adminSession RefreshToken @relation(fields: [adminSessionId], references: [id], onDelete: Cascade)
+  seller       Seller       @relation(fields: [sellerId], references: [id])
+
+  @@index([adminUserId, startedAt])
+  @@index([endedAt, expiresAt])
+  @@map("impersonation_sessions")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -358,7 +401,7 @@ model Seller {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
-  user            User                  @relation(fields: [userId], references: [id])
+  user            User                   @relation(fields: [userId], references: [id])
   documents       SellerDocument[]
   pickupAddresses PickupAddress[]
   parcels         Parcel[]
@@ -368,6 +411,7 @@ model Seller {
   bonsRetour      BonRetour[]
   changeRequests  SellerChangeRequest[]
   certificates    RetenueCertificate[]
+  impersonations  ImpersonationSession[]
 
   @@index([accountState])
   @@map("sellers")

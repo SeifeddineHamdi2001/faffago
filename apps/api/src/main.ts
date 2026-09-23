@@ -2,18 +2,15 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BigIntSerializerInterceptor } from './common/interceptors/bigint-serializer.interceptor';
+import { configureApp } from './app.setup';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // Money crosses the wire as a string, everywhere, without exception.
-  app.useGlobalInterceptors(new BigIntSerializerInterceptor());
-  app.setGlobalPrefix('api');
-
   // Input validation is zod, not class-validator: the browser previews a CSV
-  // with the very same schemas the server then re-checks (tech-stack 2). The
-  // ZodValidationPipe arrives with the first endpoints.
+  // with the very same schemas the server then re-checks (tech-stack 2). Each
+  // handler validates its body with ZodValidationPipe.
+  configureApp(app);
 
   const port = Number.parseInt(process.env.API_PORT ?? '3001', 10);
   await app.listen(port);

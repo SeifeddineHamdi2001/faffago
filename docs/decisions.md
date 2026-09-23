@@ -146,6 +146,10 @@ Built as part of the auth work (phase 1).
 | Visible  | Banner in the seller space: _"Vous consultez le compte de [shop name]"_ with an exit button |
 | Recorded | Start **and** end written to `audit_log`: admin, seller, time                               |
 
+**Where.** `apps/api/src/auth/impersonation.service.ts`, the
+`impersonation_sessions` table, and `PermissionsGuard`, which lets the token
+through GET routes marked `@AllowImpersonation` only.
+
 **Why.** The admin needs to see exactly what a seller sees in order to answer
 him (Admin 4.14). He does not need to act as him, and an unbounded impersonation
 token would be the most dangerous credential the platform issues.
@@ -541,8 +545,11 @@ the courier's language rather than as text.
 
 **Where.** `admin-reset.ts`; the CHECK constraints
 `users_login_identifier_matches_role`, `users_email_is_lowercase`,
-`users_username_format` and the two lowercase unique indexes. The throttling,
-the session lifetimes and the last-admin guard are built in phase 1.
+`users_username_format` and the two lowercase unique indexes;
+`users_staff_phone_key` (Q8). Session lifetimes and throttle numbers in
+`SESSION_POLICY` and `LOGIN_THROTTLE` (`packages/shared/src/auth.ts`); the
+sessions in `apps/api/src/auth/sessions.service.ts`; the throttling in
+`login-throttle.service.ts`; the last-admin guard in `accounts.service.ts`.
 
 ### Q14 to Q16 · Chat
 
