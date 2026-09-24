@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ScanStation } from '@/components/scan-station';
@@ -60,6 +60,8 @@ const accepted = {
   },
   courier: null,
   plannedFor: null,
+  cancellableUntil: '2026-09-25T08:01:00.000Z',
+  serverTime: '2026-09-25T08:00:00.000Z',
 };
 
 beforeEach(() => {
@@ -285,6 +287,31 @@ describe('Annuler le dernier scan (A-11, D-54)', () => {
     expect(buttons).toHaveLength(1);
     await userEvent.click(buttons[0]!);
     expect(bff).toHaveBeenLastCalledWith('POST', 'scans/depot/s3/cancel');
+  });
+
+  it('hides the button once the window of the server has passed (D-54)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      bff.mockResolvedValueOnce({ ok: true, data: accepted });
+      render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+      await typeCode('FG-8K2QX7AB');
+      expect(
+        await screen.findByRole('button', { name: 'Annuler le dernier scan' }),
+      ).toBeInTheDocument();
+
+      await act(() => vi.advanceTimersByTimeAsync(61_000));
+      expect(screen.queryByRole('button', { name: 'Annuler le dernier scan' })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never offers it without a window from the server', async () => {
+    bff.mockResolvedValueOnce({ ok: true, data: { ...accepted, cancellableUntil: null } });
+    render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+    await typeCode('FG-8K2QX7AB');
+    await screen.findByRole('status', { name: 'Résultat du scan' });
+    expect(screen.queryByRole('button', { name: 'Annuler le dernier scan' })).toBeNull();
   });
 
   it('shows why a scan can no longer be cancelled', async () => {

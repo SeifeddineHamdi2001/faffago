@@ -62,6 +62,14 @@ export interface DepotScanResult {
   courier: CourierRef | null;
   /** Sortie coursier to someone else than the livreur planned: who was (D-53). */
   plannedFor: CourierRef | null;
+  /**
+   * Until when "Annuler le dernier scan" is possible, on the server clock
+   * (D-54); null for a refused or already cancelled scan. The server still
+   * enforces it.
+   */
+  cancellableUntil: string | null;
+  /** The server clock when answering, so the page counts down without trusting its own. */
+  serverTime: string;
 }
 
 /** What the station shows after "Annuler le dernier scan" (D-54). */
@@ -446,6 +454,8 @@ export class DepotScansService {
           parcel: null,
           courier: null,
           plannedFor: null,
+          cancellableUntil: null,
+          serverTime: this.clock.now().toISOString(),
         },
       };
     }
@@ -479,7 +489,6 @@ export class DepotScansService {
       before,
       courier,
       plannedForCourierId: typeof plannedFor === 'string' ? plannedFor : null,
-      flags: { manualEntry: row.manualEntry, clockSkewFlagged: row.clockSkewFlagged },
     });
     return { created: false, result: { ...result, replayed: true } };
   }
@@ -494,11 +503,11 @@ export class DepotScansService {
       before: ParcelBefore | null;
       courier: CourierRef | null;
       plannedForCourierId?: string | null;
-      flags?: { manualEntry: boolean; clockSkewFlagged: boolean };
     },
   ): Promise<DepotScanResult> {
-    const row = facts.flags ?? (await db.scan.findUniqueOrThrow({ where: { id: facts.scanId } }));
+    const row = await db.scan.findUniqueOrThrow({ where: { id: facts.scanId } });
     const accepted = facts.refusal === null;
+    const { settings } = await this.settings.current(db);
 
     let parcelView: DepotScanResult['parcel'] = null;
     if (facts.parcel) {
@@ -543,6 +552,13 @@ export class DepotScansService {
       parcel: parcelView,
       courier: facts.courier,
       plannedFor,
+      cancellableUntil:
+        accepted && !row.cancelledAt
+          ? new Date(
+              row.receivedAt.getTime() + settings.scanCancelWindowSeconds * 1000,
+            ).toISOString()
+          : null,
+      serverTime: this.clock.now().toISOString(),
     };
   }
 }

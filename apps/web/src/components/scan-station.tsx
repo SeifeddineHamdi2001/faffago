@@ -26,6 +26,8 @@ interface Shown {
   accepted: boolean;
   /** Cancelled with "Annuler le dernier scan" (D-54), or the result of that cancellation. */
   cancelled: boolean;
+  /** When the cancel window closes, on this page's clock; null when it cannot be cancelled. */
+  cancelDeadline: number | null;
   message: string;
   code: string | null;
   shopName: string | null;
@@ -109,6 +111,7 @@ export function ScanStation({
   }, [current]);
 
   function show(line: Shown) {
+    setClock(Date.now());
     setCurrent(line);
     setHistory((h) => [line, ...h].slice(0, HISTORY_SIZE));
     input.current?.focus();
@@ -122,6 +125,7 @@ export function ScanStation({
         scanId: null,
         accepted: false,
         cancelled: false,
+        cancelDeadline: null,
         message: SCAN_REFUSAL_MESSAGES_FR[ScanRefusal.COURSIER_NON_PRECISE],
         code: rawCode,
         shopName: null,
@@ -145,6 +149,7 @@ export function ScanStation({
         scanId: null,
         accepted: false,
         cancelled: false,
+        cancelDeadline: null,
         message: response.error.message,
         code: rawCode,
         shopName: null,
@@ -160,6 +165,11 @@ export function ScanStation({
       scanId: result.scanId,
       accepted: result.accepted,
       cancelled: false,
+      // The server's two times give what is left of the window, so a browser
+      // clock that is off does not matter; the server enforces it anyway.
+      cancelDeadline: result.cancellableUntil
+        ? Date.now() + (Date.parse(result.cancellableUntil) - Date.parse(result.serverTime))
+        : null,
       message: result.message,
       code: result.parcel?.code ?? rawCode,
       shopName: result.parcel?.shopName ?? null,
@@ -184,6 +194,7 @@ export function ScanStation({
       scanId: null,
       accepted: response.ok,
       cancelled: response.ok,
+      cancelDeadline: null,
       message: response.ok ? response.data.message : response.error.message,
       code: line.code,
       shopName: null,
@@ -198,8 +209,22 @@ export function ScanStation({
     input.current?.focus();
   }
 
-  // The newest accepted scan not cancelled: the only one the button offers.
-  const cancellable = history.find((line) => line.accepted && line.scanId && !line.cancelled);
+  // The newest accepted scan not cancelled, while its window is open: the
+  // only one the button offers (D-54).
+  const [clock, setClock] = useState(() => Date.now());
+  const newest = history.find((line) => line.accepted && line.scanId && !line.cancelled);
+  const cancellable =
+    newest && newest.cancelDeadline !== null && newest.cancelDeadline > clock ? newest : undefined;
+  useEffect(() => {
+    if (!newest?.cancelDeadline) return;
+    const left = newest.cancelDeadline - Date.now();
+    if (left <= 0) {
+      setClock(Date.now());
+      return;
+    }
+    const timer = setTimeout(() => setClock(Date.now()), left + 50);
+    return () => clearTimeout(timer);
+  }, [newest]);
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {

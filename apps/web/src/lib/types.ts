@@ -374,4 +374,7 @@ export interface DepotScanResult {
   } | null;
   courier: ZoneCourierRef | null;
   plannedFor: ZoneCourierRef | null;
+  /** Until when Annuler le dernier scan is possible, server clock (D-54). */
+  cancellableUntil: string | null;
+  serverTime: string;
 }

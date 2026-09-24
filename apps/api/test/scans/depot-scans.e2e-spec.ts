@@ -139,6 +139,9 @@ describe('Entrée dépôt', () => {
         shopName: 'Boutique Test',
         delegationNameFr: 'La Marsa',
       },
+      // The window of Paramètres, 60 s, from the server's reception (D-54).
+      cancellableUntil: '2026-09-25T08:01:00.000Z',
+      serverTime: '2026-09-25T08:00:00.000Z',
     });
     expect(await reload(p.id)).toMatchObject({ status: 'AU_DEPOT', location: 'AU_DEPOT' });
 
@@ -191,6 +194,7 @@ describe('Entrée dépôt', () => {
       refusal: 'CODE_INCONNU',
       message: 'Code inconnu',
       parcel: null,
+      cancellableUntil: null,
     });
     expect(await scanRow(clientScanId)).toMatchObject({
       accepted: false,

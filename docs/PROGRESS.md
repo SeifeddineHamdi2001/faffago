@@ -292,7 +292,9 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
 - [ ] Applying seller change requests (D-57) — step 7
 - [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
 - [ ] Exceptions, first rows (D-50) — step 9
-- [ ] Demo parcels in Ramassé, Playwright, merge — step 10
+- [ ] Demo data, Playwright, merge — step 10. The demo seed (development
+      only, D-16, D-50) adds about 10 demo parcels in Ramassé across several
+      zones, and demo livreurs active and assigned to those zones
 
 ## Phase 6 — Courier app
 
@@ -361,6 +363,10 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       than the development machine (API tests are already capped at half the
       cores; lower it further, or run in band, on a small VPS or CI runner)
 - [ ] Full real-day test with real scans on a low-cost Android phone
+- [ ] The depot's scan station (phase 5), before launch: with a real USB
+      barcode scanner — confirm `GUN_MAX_MEAN_KEY_INTERVAL_MS` (35 ms) tells
+      it apart from typing — and with the camera on a phone over HTTPS
+      (browsers only open the camera on a secure page)
 
 ## Decisions made during the build
 
@@ -829,10 +835,12 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     not the clock, so two scans in the same second are still ordered. A
     refused scan is never "the last scan"; once the last one is cancelled,
     the one before becomes the last, within its own window.
-  - **The window is checked by the server only.** Dépôt cannot read
-    Paramètres, so the button stays on the newest accepted scan and the
-    server answers "Délai d'annulation dépassé : seul l'admin peut corriger"
-    after 60 s.
+  - **The button disappears when the window closes** (changed at review):
+    each accepted scan's result carries `cancellableUntil` and `serverTime`,
+    both on the server clock; the page counts down their difference, so a
+    browser clock that is off does not matter. The server still enforces the
+    window and answers "Délai d'annulation dépassé : seul l'admin peut
+    corriger" after it.
   - **Nobody else cancels through this route, the admin included**: his
     correction is Forcer un statut (step 8, D-56).
   - **A-11's caisse rule** does not apply to depot scans, which move no
