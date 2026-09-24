@@ -63,30 +63,11 @@ export type CreateParcelInput = z.input<typeof createParcelSchema>;
 export type CreateParcelValues = z.output<typeof createParcelSchema>;
 
 /**
- * One CSV row (Vendeur 4.3).
- *
- * The localité is given by its name or an alias; the délégation (code or name)
- * and the gouvernorat are only needed to settle a name found in several
- * places. `resolveLocalite` decides, and a row it cannot settle is an error the
- * seller fixes in the preview (D-17, refining Q5).
+ * The columns of the CSV template (Vendeur 4.3). The localité is given by its
+ * name or an alias; the délégation (code or name) and the gouvernorat are
+ * only needed to settle a name found in several places. The rules of each
+ * row live in `csv-import.ts`, which reuses `createParcelSchema`.
  */
-export const csvParcelRowSchema = z.object({
-  nom_destinataire: z.string().trim().min(2),
-  telephone: tunisianPhone,
-  telephone_2: z.string().trim().optional(),
-  gouvernorat: z.string().trim().optional(),
-  delegation: z.string().trim().optional(),
-  localite: z.string().trim().optional(),
-  adresse: z.string().trim().min(5),
-  repere: z.string().trim().optional(),
-  description_produit: z.string().trim().min(2),
-  nombre_de_pieces: z.coerce.number().int().min(1).max(999).default(1),
-  montant_cod: codAmount,
-  colis_echange: z.string().trim().optional(),
-  ouverture_autorisee: z.string().trim().optional(),
-  note_coursier: z.string().trim().optional(),
-});
-
 export const CSV_TEMPLATE_COLUMNS = [
   'nom_destinataire',
   'telephone',

@@ -159,7 +159,15 @@ committed in steps, each reported before the next.
       Migration `20260930000000_change_request_waiting` — 8 API e2e,
       1 shared, 4 web tests. Applying a request (at the depot for a
       localité) is phase 5
-- [ ] Import CSV (client preview + server validation, D-37)
+- [x] Import CSV (client preview + server validation, D-37) — step 3, API
+      and web. The browser reads the file and previews each row as Valide,
+      À vérifier (a localité to pick in its dropdown) or Erreur, with the
+      reason; Télécharger le modèle and the délégation list with codes.
+      `POST /parcels/imports` evaluates every row again with the same shared
+      functions and creates them all in one transaction, or none;
+      `GET /parcels/imports/:id` gives the codes back for the labels.
+      Migration `20261001000000_parcel_imports` — 27 shared, 12 API e2e,
+      7 web tests
 - [ ] Labels PDF (Code128 + QR; thermal and A4, D-36)
 - [ ] Mes colis + Détail du colis (D-38, D-40)
 - [ ] Ramassage requests + pickup address at first request (D-35)
@@ -515,6 +523,32 @@ committed in steps, each reported before the next.
   added, approved) and the reprint warning on any printed field. D-41
   stands: the COD is editable while Créé, only the fees are frozen.
 
+- 2026-09-24 — **Phase 4, step 3 (Import CSV).** Choices made while building:
+  - **A CSV reader of our own** in `packages/shared` (RFC 4180: quotes,
+    doubled quotes, line breaks in cells) instead of `papaparse`, planned
+    earlier: shared is ESM and the API's Jest runs CommonJS, and the reader
+    is small and fully tested.
+  - **No separate validation endpoint.** The browser previews with the
+    shared functions; the import itself re-checks every row on the server
+    and is **all or nothing**: if one row fails there (a localité closed
+    since the page loaded), nothing is created and the refused rows come
+    back with their reasons. A retried import (same id, drawn per file)
+    returns the first one.
+  - The file may be UTF-8 or **Windows-1252** (a French Excel's plain
+    "CSV"), separated by `;`, `,` or tab. An unknown or duplicated column
+    refuses the file (a typo would otherwise drop a whole column silently);
+    optional columns may be left out.
+  - A cell over 500 characters is an Erreur, never cut short. A line split
+    by an unquoted `85,000` in a comma-separated file is an Erreur that says
+    so.
+  - The template holds the columns only, `;`-separated with a byte-order
+    mark, so a French Excel opens it with its accents; no example row that
+    could be imported by mistake.
+  - The API accepts JSON bodies up to 5 MB (500 rows); the default was
+    100 kB.
+  - "Imprimer toutes les étiquettes" after an import comes with the labels
+    (step 4); the result screen lists each line with its code.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -537,3 +571,6 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
+- **Suggestion (not in the specs): a downloadable list of localités** beside
+  the délégation list, for sellers filling the `localite` column. Q5 offers
+  the délégation list only.

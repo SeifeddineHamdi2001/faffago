@@ -2,6 +2,8 @@ import type {
   ChangeRequestField,
   ChangeRequestStatus,
   CourierBlocker,
+  CsvRowProblem,
+  CsvRowVerdict,
   ParcelStatus,
   Permission,
   Role,
@@ -147,4 +149,20 @@ export interface ParcelEdit {
   parcel: SellerParcel;
   changedFields: string[];
   reprintLabel: boolean;
+}
+
+/** POST and GET /parcels/imports: the parcels of one file, in file order. */
+export interface ParcelImport {
+  id: string;
+  fileName: string;
+  parcelCount: number;
+  createdAt: string;
+  parcels: { line: number; code: string; recipientName: string; codAmountMillimes: string }[];
+}
+
+/** A row the server refused on import (422 LIGNES_REFUSEES). */
+export interface RefusedImportRow {
+  line: number;
+  verdict: CsvRowVerdict;
+  problems: CsvRowProblem[];
 }

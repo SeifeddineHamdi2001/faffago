@@ -243,6 +243,28 @@ export class ParcelEventService {
     });
   }
 
+  /** The CREATION events of an Import CSV, in one statement: one per parcel, same actor. */
+  async recordCreations(
+    tx: Prisma.TransactionClient,
+    parcels: readonly { id: string }[],
+    actor: UserPrincipal,
+  ): Promise<void> {
+    const serverTime = this.clock.now();
+    await tx.parcelEvent.createMany({
+      data: parcels.map((parcel) => ({
+        parcelId: parcel.id,
+        type: ParcelEventType.CREATION,
+        previousStatus: null,
+        newStatus: ParcelStatus.CREE,
+        previousLocation: null,
+        newLocation: ParcelLocation.CHEZ_LE_VENDEUR,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+        serverTime,
+      })),
+    });
+  }
+
   /** Why, when the type alone does not say: a cancellation after pickup, a planned date (D-9). */
   private metadataOf(
     step: ParcelTransitionEvent,

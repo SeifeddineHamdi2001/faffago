@@ -11,6 +11,9 @@ export function configureApp(app: INestApplication): void {
   app.useGlobalInterceptors(new BigIntSerializerInterceptor());
   app.setGlobalPrefix('api');
 
+  // An Import CSV carries up to 500 rows (D-37): more than the default 100 kB.
+  (app as NestExpressApplication).useBodyParser('json', { limit: '5mb' });
+
   // The API sits behind the reverse proxy on the same machine (tech-stack 6).
   // Trusting only loopback makes req.ip the real client address, which the
   // login throttling keys on, without letting a client forge X-Forwarded-For.

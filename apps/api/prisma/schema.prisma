@@ -428,6 +428,7 @@ model Seller {
   changeRequests  SellerChangeRequest[]
   certificates    RetenueCertificate[]
   impersonations  ImpersonationSession[]
+  imports         ParcelImport[]
 
   @@index([accountState])
   @@map("sellers")
@@ -728,6 +729,9 @@ model Parcel {
   /// Drawn by the seller's form when it opens: a retried creation finds the
   /// parcel instead of making a second one.
   clientRequestId String?   @unique @db.Uuid
+  /// Import CSV: the file and the line the parcel came from (Vendeur 4.3).
+  importId        String?   @db.Uuid
+  importLine      Int?
   createdAt       DateTime  @default(now())
   pickedUpAt      DateTime?
   deliveredAt     DateTime?
@@ -736,6 +740,7 @@ model Parcel {
   updatedAt       DateTime  @updatedAt
 
   seller           Seller                @relation(fields: [sellerId], references: [id])
+  import           ParcelImport?         @relation(fields: [importId], references: [id])
   delegation       Delegation            @relation(fields: [delegationId], references: [id])
   localite         Localite              @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
   plannedLivreur   Courier?              @relation("ParcelPlannedLivreur", fields: [plannedLivreurId], references: [id])
@@ -753,6 +758,7 @@ model Parcel {
   changeRequests   SellerChangeRequest[]
   clientChanges    ParcelClientChange[]
 
+  @@unique([importId, importLine])
   @@index([sellerId, status])
   @@index([status, location])
   @@index([currentLivreurId, status])
@@ -763,6 +769,23 @@ model Parcel {
   @@index([recipientPhone])
   @@index([createdAt])
   @@map("parcels")
+}
+
+/// Import CSV (Vendeur 4.3, D-37): one file, its parcels created together.
+/// The id is drawn by the seller's screen, so a retried import creates nothing twice.
+model ParcelImport {
+  id              String   @id @db.Uuid
+  sellerId        String   @db.Uuid
+  createdByUserId String   @db.Uuid
+  fileName        String
+  parcelCount     Int
+  createdAt       DateTime @default(now())
+
+  seller  Seller   @relation(fields: [sellerId], references: [id])
+  parcels Parcel[]
+
+  @@index([sellerId, createdAt])
+  @@map("parcel_imports")
 }
 
 /// Changer de client overwrites the customer on the parcel, so the previous
