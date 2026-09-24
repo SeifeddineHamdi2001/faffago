@@ -327,7 +327,7 @@ describe('a database seeded by the first version (phase 0)', () => {
         seller: {
           create: {
             shopName: 'Boutique',
-            productCategory: 'Mode',
+            productCategory: 'MODE_VETEMENTS',
             contactFullName: 'V B',
             contactPhone: '20000001',
             statut: 'PATENTE',

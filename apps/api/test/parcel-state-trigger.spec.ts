@@ -83,7 +83,7 @@ beforeAll(async () => {
       values ('${USER_ID}','ADMIN','saif','20123456','h','Saif','B',now());
     insert into sellers (id,"userId","shopName","productCategory","contactFullName",
         "contactPhone",statut,"createdByUserId","updatedAt")
-      values ('${SELLER_ID}','${USER_ID}','Boutique','Mode','Saif B','20123456','PATENTE','${USER_ID}',now());
+      values ('${SELLER_ID}','${USER_ID}','Boutique','MODE_VETEMENTS','Saif B','20123456','PATENTE','${USER_ID}',now());
     insert into gouvernorats (id,code,"nameFr","nameAr")
       values ('33333333-3333-3333-3333-333333333333','TUN','Tunis','تونس');
     insert into delegations (id,"gouvernoratId",code,"nameFr","nameAr")

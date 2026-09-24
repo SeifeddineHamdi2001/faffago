@@ -21,3 +21,4 @@ export * from './schemas.js';
 export * from './permissions.js';
 export * from './auth.js';
 export * from './accounts.js';
+export * from './sellers.js';

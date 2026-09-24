@@ -1,4 +1,4 @@
-import type { CourierBlocker, Permission, Role } from '@faffago/shared';
+import type { CourierBlocker, Permission, Role, SellerDocumentType } from '@faffago/shared';
 
 /** GET /auth/me. */
 export interface Me {
@@ -48,6 +48,32 @@ export interface SellerRow {
   email?: string | null;
   statut?: string;
   accountState?: string;
+  productCategory?: string;
+  storeLink?: string | null;
+  contactFirstName?: string;
+  contactLastName?: string;
+  createdAt?: string;
+}
+
+/** A CIN, patente or card, as listed; the file itself is fetched on its own (D-32). */
+export interface SellerDocumentRow {
+  id: string;
+  type: SellerDocumentType;
+  mimeType: string;
+  sizeBytes: number;
+  uploadedAt: string;
+  replacedAt: string | null;
+}
+
+/** GET /sellers/:id. Dépôt and Service client get the four contact fields only. */
+export interface SellerDetail extends SellerRow {
+  documents?: SellerDocumentRow[];
+}
+
+/** POST /sellers: the account, and its password shown once. */
+export interface CreatedSeller {
+  seller: SellerRow & { email: string };
+  password: string;
 }
 
 /** GET /accounts/staff. */

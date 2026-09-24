@@ -31,7 +31,7 @@ beforeAll(async () => {
   await db.query(
     `insert into sellers (id,"userId","shopName","productCategory","contactFullName",
        "contactPhone",statut,"createdByUserId","updatedAt")
-     values ($1,$2,'Boutique','Mode','Saif B','20123456','PATENTE',$2,now())`,
+     values ($1,$2,'Boutique','MODE_VETEMENTS','Saif B','20123456','PATENTE',$2,now())`,
     [SELLER_ID, USER_ID],
   );
   await db.query(

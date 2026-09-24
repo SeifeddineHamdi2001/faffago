@@ -107,7 +107,7 @@ export async function seedDemo(
             ? {
                 create: {
                   shopName: 'Boutique Démo',
-                  productCategory: 'Démo',
+                  productCategory: 'AUTRE',
                   contactFullName: 'Vendeur Démo',
                   contactPhone: account.phone,
                   statut: 'CIN_UNIQUEMENT',

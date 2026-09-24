@@ -72,7 +72,7 @@ describe('impersonation_sessions (D-5)', () => {
       await db.query<{ id: string }>(
         `insert into sellers (id, "userId", "shopName", "productCategory", "contactFullName",
            "contactPhone", statut, "createdByUserId", "updatedAt")
-         values (gen_random_uuid(), $1, 'B', 'Mode', 'C', '52000011', 'PATENTE', $2, now())
+         values (gen_random_uuid(), $1, 'B', 'MODE_VETEMENTS', 'C', '52000011', 'PATENTE', $2, now())
          returning id`,
         [sellerUser, adminId],
       )

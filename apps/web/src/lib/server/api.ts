@@ -43,6 +43,24 @@ export async function callApi<T = unknown>(
 }
 
 /**
+ * The raw answer, for what callApi cannot carry: a multipart upload going in
+ * (the seller documents) or a file coming out.
+ */
+export function fetchApi(
+  path: string,
+  init: { method: string; token?: string; body?: BodyInit; headers?: Record<string, string> },
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (init.token) headers.set('authorization', `Bearer ${init.token}`);
+  return fetch(`${API_BASE_URL}/api${path}`, {
+    method: init.method,
+    headers,
+    body: init.body,
+    cache: 'no-store',
+  });
+}
+
+/**
  * The browser's address and user agent, for the API's login throttling and
  * its audit entries. The API trusts X-Forwarded-For from loopback only, and
  * the reverse proxy sets it from the real connection (D-6).

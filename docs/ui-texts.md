@@ -186,6 +186,29 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 | `CANCELLATION_AFTER_PICKUP_LABEL_FR` (shared, D-28)    | Après ramassage                                                              |
 | `SCAN_REFUSAL_MESSAGES_FR.DATE_RELANCE_REQUISE` (D-29) | Date de relance obligatoire (neutral; the seller's wording comes in phase 7) |
 
+## Vendeurs — comptes et documents (phase 4, D-32 à D-34)
+
+| Key                                               | Français                                                                                                                                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SELLER_DOCUMENT_TYPE_LABELS_FR`                  | CIN (recto) · CIN (verso) · Patente · Carte auto-entrepreneur                                                                                                                                                           |
+| web `create-seller-form` — champs                 | Nom de la boutique · Catégorie de produits · Choisir… · Lien de la boutique (facultatif) · Personne de contact · Prénom · Nom · Téléphone · Email (identifiant de connexion) · Statut · Documents                       |
+| web `create-seller-form` — note CIN uniquement    | Retenue à la source sur chaque paiement, après les frais Faffa Go.                                                                                                                                                      |
+| web `create-seller-form` — aide documents         | Photo JPEG ou PNG, ou PDF. 10 Mo maximum. Visibles par l’admin uniquement.                                                                                                                                              |
+| web `create-seller-form` — erreurs                | Document obligatoire · Fichier trop volumineux : 10 Mo maximum.                                                                                                                                                         |
+| web `seller-detail-screen` — fiche                | Personne de contact · Créé le · Documents · Visibles par l’admin uniquement. · Voir · Remplacer                                                                                                                         |
+| web `seller-detail-screen` — versions             | Versions remplacées ({n}) · envoyé le {date}, remplacé le {date}                                                                                                                                                        |
+| web `seller-detail-screen` — actions              | Modifier · Changer le statut · Suspendre · Réactiver                                                                                                                                                                    |
+| web `seller-detail-screen` — Modifier le vendeur  | Modifier le vendeur · Prénom du contact · Nom du contact · Enregistrer                                                                                                                                                  |
+| web `seller-detail-screen` — Changer le statut    | Statut actuel : {statut}. Le changement s’applique aux bons de versement préparés après lui ; un bon déjà préparé ne change pas. · Nouveau statut                                                                       |
+| web `seller-detail-screen` — Remplacer            | Remplacer : {document} · L’ancienne version reste consultable. · Nouveau fichier                                                                                                                                        |
+| web `seller-detail-screen` — Suspendre le vendeur | Le vendeur pourra se connecter et suivre ses colis, ses paiements et ses retours, mais ne pourra plus créer de colis ni demander de ramassage.                                                                          |
+| web `seller-detail-screen` — Réactiver le vendeur | Le vendeur pourra de nouveau créer des colis et demander des ramassages.                                                                                                                                                |
+| `createSellerSchema` / `updateSellerSchema`       | Nom de la boutique obligatoire · Catégorie obligatoire · Lien invalide. Exemple : https://www.facebook.com/maboutique · Le lien doit commencer par https:// · Email invalide · Statut obligatoire · Aucune modification |
+| `addSellerDocumentSchema`                         | Type de document obligatoire                                                                                                                                                                                            |
+| `SELLER_MESSAGES`                                 | Vendeur introuvable · Document introuvable · Document obligatoire : {documents} · Document non demandé pour ce statut : {documents} · Fichier obligatoire.                                                              |
+| `SELLER_MESSAGES` — fichiers                      | Format refusé. Envoyez une photo JPEG ou PNG, ou un PDF. · Fichier trop volumineux : 10 Mo maximum. · Fichier illisible. Reprenez la photo ou envoyez un autre fichier.                                                 |
+| `SELLER_MESSAGES` — états                         | Le vendeur a déjà ce statut. · Ce compte est déjà suspendu. · Ce compte est déjà actif.                                                                                                                                 |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |
@@ -197,7 +220,7 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 
 ## Terminal (équipe technique uniquement)
 
-`admin:reset`, `db:seed` and `db:seed:demo` print short French messages
+`admin:reset`, `db:seed`, `db:seed:demo` and `documents:verify` print short French messages
 ("Mot de passe régénéré. Il ne sera plus affiché.", "Comptes de
 démonstration…", "Aucun admin : lancez d'abord…"). They are never shown to a
 seller, a courier or the team in the app, and are listed only for completeness.

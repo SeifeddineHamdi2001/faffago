@@ -304,4 +304,103 @@ describe('/api/bff/[...path]', () => {
     );
     expect(response.status).toBe(200);
   });
+
+  it('passes a document upload through as multipart, bytes and boundary intact (D-32)', async () => {
+    api(201, { seller: { id: 's1' }, password: 'x' });
+    const boundary = '----faffago-test-boundary';
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 1, 2, 3]);
+    const crlf = '\r\n';
+    const multipart = Buffer.concat([
+      Buffer.from(
+        [
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="shopName"',
+          '',
+          'Bijoux Yasmine',
+          `--${boundary}`,
+          'Content-Disposition: form-data; name="CIN_RECTO"; filename="r.jpg"',
+          'Content-Type: image/jpeg',
+          '',
+          '',
+        ].join(crlf),
+      ),
+      jpeg,
+      Buffer.from(`${crlf}--${boundary}--${crlf}`),
+    ]);
+    const response = await bffPost(
+      new NextRequest(`${SITE}/api/bff/sellers`, {
+        method: 'POST',
+        headers: {
+          host: 'faffago.tn',
+          origin: SITE,
+          cookie: 'fg_access=ADMIN',
+          'content-type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: new Uint8Array(multipart),
+      }),
+      params({ path: ['sellers'] }),
+    );
+
+    expect(response.status).toBe(201);
+    const init = apiFetch.mock.calls[0]![1] as RequestInit;
+    const sent = new Headers(init.headers);
+    expect(sent.get('content-type')).toBe(`multipart/form-data; boundary=${boundary}`);
+    expect(sent.get('authorization')).toBe('Bearer ADMIN');
+    expect(Buffer.from(init.body as ArrayBuffer).equals(multipart)).toBe(true);
+  });
+
+  it('refuses a cross-origin upload before reading it', async () => {
+    const response = await bffPost(
+      request('/api/bff/sellers', { cookies: { fg_access: 'ADMIN' }, origin: 'https://evil.tn' }),
+      params({ path: ['sellers'] }),
+    );
+    expect(response.status).toBe(403);
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('relays a document as a file, with its type, name and no-store, nothing else', async () => {
+    apiFetch.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+        status: 200,
+        headers: {
+          'content-type': 'application/pdf',
+          'content-disposition': 'inline; filename="patente.pdf"',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+          'x-powered-by': 'Express',
+          'set-cookie': 'leak=1',
+        },
+      }),
+    );
+    const response = await bffGet(
+      request('/api/bff/sellers/s1/documents/d1', {
+        method: 'GET',
+        cookies: { fg_access: 'ADMIN' },
+      }),
+      params({ path: ['sellers', 's1', 'documents', 'd1'] }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/pdf');
+    expect(response.headers.get('content-disposition')).toBe('inline; filename="patente.pdf"');
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('x-powered-by')).toBeNull();
+    expect(response.headers.get('set-cookie')).toBeNull();
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+    );
+  });
+
+  it('relays a refused document read as JSON', async () => {
+    api(403, { code: 'NON_AUTORISE', message: 'Accès refusé' });
+    const response = await bffGet(
+      request('/api/bff/sellers/s1/documents/d1', {
+        method: 'GET',
+        cookies: { fg_access: 'DEPOT' },
+      }),
+      params({ path: ['sellers', 's1', 'documents', 'd1'] }),
+    );
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ code: 'NON_AUTORISE' });
+  });
 });

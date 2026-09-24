@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-31** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-31 are rules |
+| **D-1 … D-41** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-41 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-31**
+**Rules decided during the build — D-4 to D-41**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -60,6 +60,16 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-29 · Relancer carries its date](#d-29--relancer-carries-its-date)
 - [D-30 · The 48-hour clock starts at the server](#d-30--the-48-hour-clock-starts-at-the-server)
 - [D-31 · A cancelled order's public timeline ends at Commande annulée](#d-31--a-cancelled-orders-public-timeline-ends-at-commande-annulée)
+- [D-32 · Seller documents: encrypted, private, kept](#d-32--seller-documents-encrypted-private-kept)
+- [D-33 · Creating a seller](#d-33--creating-a-seller)
+- [D-34 · A statut change applies to the next bon](#d-34--a-statut-change-applies-to-the-next-bon)
+- [D-35 · Ramassage requests](#d-35--ramassage-requests)
+- [D-36 · What the label's barcode and QR hold](#d-36--what-the-labels-barcode-and-qr-hold)
+- [D-37 · CSV import](#d-37--csv-import)
+- [D-38 · The seller's timeline](#d-38--the-sellers-timeline)
+- [D-39 · What phase 4 contains](#d-39--what-phase-4-contains)
+- [D-40 · The net shown on Détail du colis](#d-40--the-net-shown-on-détail-du-colis)
+- [D-41 · Changing the COD before pickup](#d-41--changing-the-cod-before-pickup)
 
 **Money — A-1 to A-5**
 
@@ -699,6 +709,106 @@ cancelled order. Every other return still shows them.
 
 **Where.** To build with the public tracking endpoint: filter
 `PUBLIC_TIMELINE_EVENT_TYPES` by `cancelledAt`.
+
+### D-32 · Seller documents: encrypted, private, kept
+
+Decided 2026-09-24, for the CIN, patente and auto-entrepreneur card
+(Vendeur 2.2, Admin 4.14).
+
+| Rule              | Detail                                                                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where             | The server's own disk, outside the repository and anything the reverse proxy serves, readable by the API's system user only                                                     |
+| Encryption        | **AES-256-GCM in the application**, before the file touches the disk. Each file records the **id of the key** that encrypted it, for rotation                                   |
+| The key           | `STORAGE_ENCRYPTION_KEY` in `.env`, kept by the owner in **two offline places**. Losing it loses every document                                                                 |
+| Formats           | **JPEG, PNG, PDF**, checked from the file's bytes, not its name. **10 MB** maximum                                                                                              |
+| Images            | **Re-encoded** on upload, which strips EXIF (a phone photo carries GPS coordinates). PDFs are stored as sent                                                                    |
+| Who sees them     | **The admin only.** The seller never sees his own documents                                                                                                                     |
+| Audit             | Every upload **and every view** is written to `audit_log`                                                                                                                       |
+| Replacing         | A new document **never overwrites** the old one: the old version is kept, marked replaced                                                                                       |
+| Deletion          | **None, automatic or otherwise.** How long documents are kept after a seller leaves is **open**, to decide with the accountant                                                  |
+| Off-server backup | Destination **open**, decided in phase 11 after a legal check on hosting personal data outside Tunisia (loi organique 2004-63). The same question applies to the whole database |
+
+Files are named by a random UUID and written once. The authenticated data of
+each encryption is the file's storage key, so two files cannot be swapped on
+disk without the decryption failing.
+
+**Where.** `apps/api/src/storage/`, `seller_documents`, and
+`SELLER_DOCUMENT_POLICY` in `packages/shared/src/sellers.ts`.
+
+### D-33 · Creating a seller
+
+- **CIN front and back are required at creation.** A seller with statut
+  Patente or Auto-entrepreneur also needs that document in the same request.
+  No account exists without them.
+- **Switching to Patente or Auto-entrepreneur** requires uploading that
+  document in the same action.
+- **Product category is a fixed list**: Mode et vêtements, Chaussures, Bijoux
+  et accessoires, Beauté et cosmétique, Électronique, Maison et déco, Enfants
+  et bébés, Sport, Alimentation, Autre.
+
+**Where.** `ProductCategory` and `requiredDocumentsFor` in
+`packages/shared/src/sellers.ts`.
+
+### D-34 · A statut change applies to the next bon
+
+Changing a seller's statut is audited (before and after) and applies to the
+bons de versement **prepared after the change**. Each bon snapshots the statut
+it was computed with (phase 8); an existing bon is never recalculated.
+
+### D-35 · Ramassage requests
+
+- **Time window**: a closed list, **Matin** or **Après-midi**.
+- **Cancelling**: the seller can cancel while the request is **Demandé** or
+  **Planifié**, at no cost (A-13).
+- **One open request per pickup address** at a time.
+- **Editing an address** a pickup already uses changes future requests only:
+  the old address is kept, deactivated, and a new one takes its place.
+
+### D-36 · What the label's barcode and QR hold
+
+- **Code128** carries the parcel code alone, for barcode guns.
+- **QR** carries the public tracking URL, `/suivi/FG-…`, built from a setting
+  for the site's domain. Every scanner extracts the code from that URL, and
+  accepts the bare code as well. Both are tested.
+
+### D-37 · CSV import
+
+- Verdicts: a **localité** problem the seller can settle in the preview's
+  dropdown is **À vérifier**; any other problem is **Erreur**. Only rows
+  **Valide** at import time are imported (Vendeur 4.3).
+- At most **500 rows** per file.
+- **Échange** and **Ouverture autorisée** accept `oui`, `non`, `1`, `0`, in any
+  case; empty means `non`.
+
+### D-38 · The seller's timeline
+
+On Détail du colis the seller sees **"Faffa Go"** for every staff action, a
+courier by **first name only**, and "where" as the **location label** (au
+dépôt, avec le livreur…). **Never GPS coordinates.**
+
+### D-39 · What phase 4 contains
+
+Beyond the list in PROGRESS.md:
+
+- **Modifier and Annuler** (Vendeur 4.6) are in phase 4, Annuler after pickup
+  included (D-28).
+- **Demander une modification**: the seller files it in phase 4; Service
+  client applies it in phase 5.
+- **Tableau de bord**: the Aujourd'hui counts and the quick actions only.
+  À recevoir and the delivery rate come with the money (phase 8).
+
+### D-40 · The net shown on Détail du colis
+
+Net = COD − the delivery fee **frozen on the parcel**, labelled as an
+**estimate before retenue**. For a returned parcel the money block shows
+**− return fee** instead. The bon de versement remains the only real figure.
+
+### D-41 · Changing the COD before pickup
+
+While the parcel is **Créé** the seller may change the COD like any other
+field. The fees stay as frozen (they do not depend on the COD). The change is
+a `MODIFICATION_VENDEUR` event. The label printed before carries the old
+amount, so the screen warns the seller to **reprint the label** after saving.
 
 ---
 

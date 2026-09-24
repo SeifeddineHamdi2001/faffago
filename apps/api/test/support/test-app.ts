@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -41,6 +44,8 @@ export interface ApiResponse {
 export interface RequestOptions {
   token?: string;
   body?: unknown;
+  /** Multipart upload; fetch sets the boundary itself. */
+  form?: FormData;
   headers?: Record<string, string>;
 }
 
@@ -50,6 +55,8 @@ export interface TestApp {
   clock: TestClock;
   throttle: LoginThrottleService;
   settings: SettingsService;
+  /** This app's private document directory, emptied on close. */
+  storageDir: string;
   request(method: string, path: string, options?: RequestOptions): Promise<ApiResponse>;
   close(): Promise<void>;
 }
@@ -57,10 +64,14 @@ export interface TestApp {
 export const TEST_SECRETS = {
   JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdef0123456789abcdef',
   JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdef0123456789abcdef',
+  STORAGE_DRIVER: 'local',
+  STORAGE_ENCRYPTION_KEY_ID: 'test1',
+  STORAGE_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 };
 
 export async function createTestApp(extraControllers: Type[] = []): Promise<TestApp> {
-  Object.assign(process.env, TEST_SECRETS);
+  const storageDir = mkdtempSync(join(tmpdir(), 'faffago-documents-'));
+  Object.assign(process.env, TEST_SECRETS, { STORAGE_LOCAL_PATH: storageDir });
 
   const db = await PGlite.create();
   await applyMigrations(db);
@@ -94,14 +105,21 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
     const response = await fetch(`${base}/api${path}`, {
       method,
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
     });
+    const contentType = response.headers.get('content-type') ?? '';
+    if (!contentType.includes('json') && !contentType.startsWith('text/') && contentType) {
+      // A file: handed back as bytes.
+      return {
+        status: response.status,
+        body: Buffer.from(await response.arrayBuffer()),
+        headers: response.headers,
+      };
+    }
     const text = await response.text();
     return {
       status: response.status,
-      body: response.headers.get('content-type')?.includes('json')
-        ? JSON.parse(text)
-        : text || null,
+      body: contentType.includes('json') ? JSON.parse(text) : text || null,
       headers: response.headers,
     };
   }
@@ -112,11 +130,13 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
     clock,
     throttle: app.get(LoginThrottleService),
     settings: app.get(SettingsService),
+    storageDir,
     request,
     async close() {
       await app.close();
       await prisma.$disconnect();
       await db.close();
+      rmSync(storageDir, { recursive: true, force: true });
     },
   };
 }
@@ -184,7 +204,7 @@ export async function createUser(
       data: {
         userId: user.id,
         shopName: input.shopName ?? 'Boutique Test',
-        productCategory: 'Mode',
+        productCategory: 'MODE_VETEMENTS',
         contactFullName: 'Prénom Nom',
         contactPhone: phone,
         statut: 'PATENTE',

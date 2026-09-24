@@ -19,6 +19,11 @@ import { RevokeReason, SessionsService, type RequestMeta } from '../auth/session
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import {
+  identifiantDejaUtilise,
+  telephoneDejaUtilise,
+  withUniqueAccountErrors,
+} from './account-errors';
 import { courierOpenWork } from './courier-open-work';
 
 type Tx = Prisma.TransactionClient;
@@ -57,10 +62,6 @@ function actorOf(principal: UserPrincipal): AuditActor {
   return { userId: principal.userId, role: principal.role };
 }
 
-const identifiantDejaUtilise = () =>
-  apiError(409, AuthErrorCode.IDENTIFIANT_DEJA_UTILISE, AUTH_MESSAGES.identifiantDejaUtilise);
-const telephoneDejaUtilise = () =>
-  apiError(409, AuthErrorCode.TELEPHONE_DEJA_UTILISE, AUTH_MESSAGES.telephoneDejaUtilise);
 const introuvable = () => apiError(404, 'INTROUVABLE', 'Compte introuvable');
 
 /**
@@ -138,7 +139,7 @@ export class AccountsService {
     const password = this.passwords.generate();
     const passwordHash = await this.passwords.hash(password);
 
-    const user = await this.withUniqueErrors(() =>
+    const user = await withUniqueAccountErrors(() =>
       this.prisma.$transaction(async (tx) => {
         if (await tx.user.findFirst({ where: { username: input.username } })) {
           throw identifiantDejaUtilise();
@@ -175,7 +176,7 @@ export class AccountsService {
     const password = this.passwords.generate();
     const passwordHash = await this.passwords.hash(password);
 
-    const user = await this.withUniqueErrors(() =>
+    const user = await withUniqueAccountErrors(() =>
       this.prisma.$transaction(async (tx) => {
         // One livreur and one ramasseur account may share a phone, never two
         // of the same role (Admin 4.15).
@@ -435,18 +436,5 @@ export class AccountsService {
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
-  }
-
-  /** A concurrent creation that slipped past the checks still gets a clear answer. */
-  private async withUniqueErrors<T>(run: () => Promise<T>): Promise<T> {
-    try {
-      return await run();
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        const target = JSON.stringify(error.meta ?? {});
-        throw target.includes('phone') ? telephoneDejaUtilise() : identifiantDejaUtilise();
-      }
-      throw error;
-    }
   }
 }

@@ -10,6 +10,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
+import { StorageModule } from './storage/storage.module';
 
 /**
  * Domain modules are added one at a time, as each phase of docs/PROGRESS.md is
@@ -27,6 +28,7 @@ import { SettingsModule } from './settings/settings.module';
     ClockModule,
     PrismaModule,
     AuditModule,
+    StorageModule,
     SettingsModule,
     AuthModule,
     AccountsModule,

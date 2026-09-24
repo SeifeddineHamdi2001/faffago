@@ -54,6 +54,20 @@ enum SellerStatut {
   CIN_UNIQUEMENT
 }
 
+/// Fixed list (D-33). Labels in packages/shared (PRODUCT_CATEGORY_LABELS_FR).
+enum ProductCategory {
+  MODE_VETEMENTS
+  CHAUSSURES
+  BIJOUX_ACCESSOIRES
+  BEAUTE_COSMETIQUE
+  ELECTRONIQUE
+  MAISON_DECO
+  ENFANTS_BEBES
+  SPORT
+  ALIMENTATION
+  AUTRE
+}
+
 enum SellerAccountState {
   ACTIF
   SUSPENDU
@@ -390,7 +404,7 @@ model Seller {
   id              String             @id @default(uuid()) @db.Uuid
   userId          String             @unique @db.Uuid
   shopName        String
-  productCategory String
+  productCategory ProductCategory
   storeLink       String?
   /// The CIN holder. The only person a courier hands cash or returns to.
   contactFullName String
@@ -418,17 +432,32 @@ model Seller {
 }
 
 /// Private storage only, admin-only access, never a public URL (CLAUDE.md).
+/// The file is encrypted with AES-256-GCM before it reaches the disk (D-32).
+/// Never deleted: a replaced document keeps its row and its file, and a
+/// trigger allows no change but marking it replaced, once.
 model SellerDocument {
   id               String             @id @default(uuid()) @db.Uuid
   sellerId         String             @db.Uuid
   type             SellerDocumentType
   storageKey       String             @unique
+  /// After re-encoding: the type the admin downloads.
   mimeType         String
+  /// Of the document, before encryption.
   sizeBytes        Int
+  /// Of the encrypted file on disk, so a restore can be checked without the key.
+  sha256           String             @db.Char(64)
+  /// Which key encrypted it, so the key can be rotated (D-32).
+  encryptionKeyId  String
+  encryptionIv     Bytes
+  encryptionTag    Bytes
   uploadedByUserId String             @db.Uuid
   uploadedAt       DateTime           @default(now())
+  replacedAt       DateTime?
+  replacedById     String?            @unique @db.Uuid
 
-  seller Seller @relation(fields: [sellerId], references: [id])
+  seller     Seller          @relation(fields: [sellerId], references: [id])
+  replacedBy SellerDocument? @relation("SellerDocumentReplacement", fields: [replacedById], references: [id])
+  replaces   SellerDocument? @relation("SellerDocumentReplacement")
 
   @@index([sellerId])
   @@map("seller_documents")

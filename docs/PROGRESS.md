@@ -112,12 +112,31 @@ only, no HTTP endpoint (D-22).
 
 ## Phase 4 — Seller space
 
-- [ ] Seller accounts created by admin (statut, documents in private storage)
-- [ ] Créer un colis + validation
-- [ ] Import CSV (client preview + server validation)
-- [ ] Labels PDF (Code128 + QR; thermal and A4)
-- [ ] Mes colis + Détail du colis
-- [ ] Ramassage requests + pickup address at first request
+Plan approved 2026-09-24; answers recorded as D-32 to D-41. Built and
+committed in steps, each reported before the next.
+
+- [x] Seller accounts created by admin (statut, documents in private storage,
+      encrypted, D-32, D-33, D-34) — step 1, API and web:
+      `POST /sellers` (multipart, CIN front and back plus the statut's
+      document, one transaction), `GET /sellers/:id` narrowed per role,
+      `PATCH /sellers/:id`, `POST /sellers/:id/statut` (with its document),
+      `/suspend`, `/reactivate`, `POST /sellers/:id/documents` (replace, old
+      version kept), `GET /sellers/:id/documents/:documentId` (admin only,
+      no-store, every view audited). Storage: AES-256-GCM with a key id per
+      file, images re-encoded (EXIF and GPS gone, orientation applied),
+      write-once files named by UUID, `documents:verify` for restores.
+      Migration `20260928000000_seller_documents`: product category enum,
+      document rows never deleted and changed only to be marked replaced,
+      once (trigger + revoked DELETE). Web: Créer un vendeur, the seller
+      page, the BFF carrying uploads and files — 38 API e2e, 33 storage, 10
+      schema, 13 shared, 13 web tests
+- [ ] Créer un colis + validation; Modifier / Annuler (D-39, D-41);
+      Demander une modification, seller side (D-39)
+- [ ] Import CSV (client preview + server validation, D-37)
+- [ ] Labels PDF (Code128 + QR; thermal and A4, D-36)
+- [ ] Mes colis + Détail du colis (D-38, D-40)
+- [ ] Ramassage requests + pickup address at first request (D-35)
+- [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
 - [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
       the seller logs in → creates a parcel. Covers the phase 1 screens too
       (logins, Copier les identifiants, Voir comme le vendeur)
@@ -421,6 +440,26 @@ only, no HTTP endpoint (D-22).
   `pnpm-workspace.yaml` formatted, and `pnpm format` now covers yaml too.
   CLAUDE.md, How to work, 7: push `main` to `origin` after every merge.
 
+- 2026-09-24 — **Phase 4, step 1 (seller accounts).** Choices made while
+  building, within D-32 to D-34:
+  - The contact's first and last name live on the seller's `User`, like
+    every account; `contactFullName` is written from them.
+  - `sha256` is taken on the **encrypted** file, so `documents:verify`
+    checks a restore without the key; `--decrypt` also proves the key.
+  - The GCM associated data is the storage key, so two files swapped on disk
+    fail to open rather than showing the wrong CIN.
+  - The document row's id is its storage key. A replacement is recorded by
+    marking the old row first, then inserting the new one; the reference
+    between them is checked at commit (deferred foreign key).
+  - `sharp` (native image library) re-encodes JPEG and PNG. PDFs are stored
+    as sent.
+  - Old free-text product categories become Autre in the migration (only the
+    demo seller and test fixtures had one). The demo seller has no
+    documents: it is development-only (D-16).
+  - **The API now refuses to start without `STORAGE_ENCRYPTION_KEY`.** A
+    development `.env` needs `STORAGE_ENCRYPTION_KEY_ID` and a key from
+    `openssl rand -base64 32` (see `.env.example`).
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -437,3 +476,13 @@ only, no HTTP endpoint (D-22).
   Nothing enforces that yet — it is a rule for the phase 6 implementation.
 - **Relancer without a date** (D-29): the message is neutral for now; the
   wording the seller reads comes with the phase 7 screen.
+- **Off-server backup destination** (D-32): open until phase 11, pending a
+  legal check on hosting personal data outside Tunisia (loi organique
+  2004-63). This applies to **the whole database**, not only the seller
+  documents: it holds every customer's name, phone and address.
+- **Seller document retention** after a seller leaves (D-32): open, to decide
+  with the accountant. Nothing is ever deleted automatically.
+- **Changing the contact person** (Vendeur 2.3): the contact is the person
+  whose CIN was submitted. Modifier lets the admin correct the contact's
+  name without uploading a new CIN (for a typo). Should a new contact person
+  require new CIN documents in the same action, like a statut change?

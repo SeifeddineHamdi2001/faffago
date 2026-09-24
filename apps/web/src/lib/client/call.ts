@@ -46,10 +46,12 @@ export async function bff<T>(
     throw error;
   }
 
+  // A FormData (document upload) goes as multipart; the browser sets the boundary.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
   const response = await fetch(`/api/bff/${path}`, {
     method,
-    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    headers: body === undefined || isForm ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : isForm ? body : JSON.stringify(body),
   });
   if (response.status === 401) toLogin();
 

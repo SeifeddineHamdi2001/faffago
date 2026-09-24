@@ -48,6 +48,17 @@ export const requireMe = cache(async (area: Area): Promise<Me> => {
 });
 
 /** A read for a server component, with the same token and the same redirects. */
+/** Like serverGet, but a 404 is null, for a page that shows "not found" itself. */
+export async function serverGetOrNull<T>(area: Area, path: string): Promise<T | null> {
+  const token = await tokenFor(area);
+  if (!token) redirect(`/${area}/connexion`);
+  const result = await callApi<T>(path, { token });
+  if (result.status === 401) redirect(loginPath(area));
+  if (result.status === 404 || result.status === 400) return null;
+  if (result.status !== 200) throw new Error(`GET ${path} → ${result.status}`);
+  return result.body;
+}
+
 export async function serverGet<T>(area: Area, path: string): Promise<T> {
   const token = await tokenFor(area);
   if (!token) redirect(`/${area}/connexion`);

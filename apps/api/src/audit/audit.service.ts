@@ -17,6 +17,15 @@ export const AuditAction = {
   /** Paramètres › Localités (D-17). */
   CREATION_LOCALITE: 'CREATION_LOCALITE',
   MODIFICATION_LOCALITE: 'MODIFICATION_LOCALITE',
+  /** Vendeurs (Admin 4.14): shop and contact corrections. */
+  MODIFICATION_VENDEUR: 'MODIFICATION_VENDEUR',
+  /** Applies to the bons prepared after it (D-34). */
+  CHANGEMENT_STATUT_VENDEUR: 'CHANGEMENT_STATUT_VENDEUR',
+  SUSPENSION_VENDEUR: 'SUSPENSION_VENDEUR',
+  REACTIVATION_VENDEUR: 'REACTIVATION_VENDEUR',
+  /** Every upload and every view of a CIN or patente (D-32). */
+  AJOUT_DOCUMENT_VENDEUR: 'AJOUT_DOCUMENT_VENDEUR',
+  CONSULTATION_DOCUMENT_VENDEUR: 'CONSULTATION_DOCUMENT_VENDEUR',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 
