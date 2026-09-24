@@ -442,6 +442,14 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | `FORCAGE_MESSAGES_FR`                         | Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, ou le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, se corrigent. · Le colis est déjà dans cet état. · Choisissez le livreur qui a le colis. |
 | `forcerStatutSchema`, `adminScanCancelSchema` | Indiquez la raison de la correction                                                                                                                                                                                                       |
 
+## Exceptions (`/admin/exceptions`, Admin 4.7, D-50)
+
+| Key                        | Français                                                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `admin-nav`            | Exceptions                                                                                                                                                                      |
+| `EXCEPTION_KIND_LABELS_FR` | Colis au dépôt depuis plus de 48 h sans tournée · Ramassage planifié non effectué · Demande de modification du vendeur en attente · Saisie manuelle du code                     |
+| web `exceptions-screen`    | {libellé} ({n}) · Rien à signaler. · Au dépôt depuis le {date} · prévu le {JJ/MM/AAAA} · Assigner · Replanifier · Appliquer / refuser · Voir la demande · Code inconnu · refusé |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

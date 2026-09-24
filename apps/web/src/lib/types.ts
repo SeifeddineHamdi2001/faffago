@@ -575,3 +575,32 @@ export interface ChangeRequestRow {
   applyRefusal: string | null;
   applyRefusalMessage: string | null;
 }
+
+/** GET /exceptions (Admin 4.7, D-50). */
+export interface ExceptionsQueue {
+  depotWaiting: {
+    code: string;
+    status: string;
+    shopName: string;
+    delegationNameFr: string;
+    zoneName: string | null;
+    since: string;
+  }[];
+  pickupsLate: {
+    id: string;
+    shopName: string;
+    plannedDate: string;
+    plannedSlot: string | null;
+    ramasseur: ZoneCourierRef | null;
+  }[];
+  changeRequests: ChangeRequestRow[];
+  manualEntries: {
+    scanId: string;
+    at: string;
+    action: string;
+    accepted: boolean;
+    rawCode: string;
+    parcelCode: string | null;
+    actor: { name: string; role: string };
+  }[];
+}

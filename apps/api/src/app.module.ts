@@ -8,6 +8,7 @@ import { ColisModule } from './colis/colis.module';
 import { ClockModule } from './common/clock.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DemandesModule } from './demandes/demandes.module';
+import { ExceptionsModule } from './exceptions/exceptions.module';
 import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -53,6 +54,7 @@ import { ZonesModule } from './zones/zones.module';
     TourneesModule,
     ColisModule,
     DemandesModule,
+    ExceptionsModule,
     DashboardModule,
   ],
 })

@@ -357,7 +357,15 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       parcel's last. Web: Forcer un statut on the parcel's Colis page with
       only the moves allowed, Annuler ce scan on the log — 8 shared, 13 API
       e2e, 8 web tests
-- [ ] Exceptions, first rows (D-50) — step 9
+- [x] Exceptions, first rows (D-50) — step 9, API and web.
+      `GET /exceptions` (every staff role): parcels waiting at the depot for
+      a tour more than 48 h since they arrived (a Relancé parcel from the
+      start of its day); pickups planned for a day already past; seller
+      change requests waiting (D-57); codes typed by hand in the last 7 days
+      (A-22). Web: Exceptions in the menu, one block per row with its count,
+      each row leading to Tournées, the pickup, or the parcel's Colis page;
+      a link to act only for the roles that may. No migration — 4 shared,
+      6 API e2e, 6 web tests
 - [ ] Demo data, Playwright, merge — step 10. The demo seed (development
       only, D-16, D-50) adds about 10 demo parcels in Ramassé across several
       zones, and demo livreurs active and assigned to those zones
@@ -1015,6 +1023,23 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     or "Scan annulé", never the reason.
   - Phase 6 adds the courier's scans and phase 8 the moves touching money.
 
+- 2026-09-24 — **Phase 5, step 9 (Exceptions).** Choices made while
+  building:
+  - **Manual entries: the last 7 days**, newest first
+    (`MANUAL_ENTRY_EXCEPTION_DAYS`). The spec names no "seen" action, so
+    none was added; see Open questions.
+  - **"At the depot since"** is the parcel's latest arrival at the depot
+    (its latest event placing it there); a Relancé parcel counts from the
+    start of its planned day, since it was meant to wait until then.
+    `DEPOT_WAIT_EXCEPTION_HOURS` = 48 (Admin 4.7).
+  - **Each row leads to where it is dealt with** rather than acting on the
+    queue itself: Assigner → Tournées, Replanifier → the pickup, Appliquer /
+    refuser → the parcel's Colis page. The link to act shows only to the
+    roles that may; the depot, which reads change requests but does not
+    apply them, gets "Voir la demande".
+  - **Pickups late**: planned for a Tunis day before today and still
+    Planifié.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -1041,6 +1066,9 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
   server time, so a scan synced the next morning reads as made then, while
   the Tableau de bord files it under the day the phone made it (D-48, A-12).
   Show the phone's time on the timeline too? To decide before phase 6.
+- **Exceptions › Saisie manuelle** (A-22): the queue shows the last 7 days.
+  Should the admin mark a manual entry as seen, so it leaves the queue?
+  That would need a column (who saw it, when). Not built: not in the specs.
 - **Suggestion (not in the specs): a downloadable list of localités** beside
   the délégation list, for sellers filling the `localite` column. Q5 offers
   the délégation list only.
