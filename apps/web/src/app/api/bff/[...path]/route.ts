@@ -86,3 +86,11 @@ export function POST(request: NextRequest, context: Context) {
 export function PATCH(request: NextRequest, context: Context) {
   return forward(request, context, 'PATCH');
 }
+
+export function PUT(request: NextRequest, context: Context) {
+  return forward(request, context, 'PUT');
+}
+
+export function DELETE(request: NextRequest, context: Context) {
+  return forward(request, context, 'DELETE');
+}

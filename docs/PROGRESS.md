@@ -240,13 +240,36 @@ reported and approved before the next.
 
 ## Phase 5 — Back office operations
 
-- [ ] Web scan station (camera + USB gun), 5 modes, scan deduplication
-- [ ] Zones (livreur + ramasseur, titular + backup) and absence switch
-- [ ] Screens for zones, délégations and localités, with courier zone
-      assignment (D-18); the list of parcels filed under Autre
-- [ ] Tournées (parcels grouped by zone, manual moves)
-- [ ] Ramassages planning + À emporter
-- [ ] Colis search + admin status override (with reason, audited)
+In progress on branch `phase-5`. Plan approved 2026-09-24; answers recorded as
+D-50 to D-58. Built in steps, each reported and approved before the next.
+
+- [x] Zones (livreur + ramasseur, titular + backup) and absence switch;
+      screens for zones, délégations and localités, with courier zone
+      assignment (D-18); the list of parcels filed under Autre — step 1,
+      API and web (D-51, D-52).
+      `GET /geo/admin`, `PATCH /gouvernorats/:id` and `PATCH /delegations/:id`
+      (names in French and Arabic, a délégation's zone or none; no adding, no
+      deactivating); `/zones` list, create, rename, deactivate (refused while
+      délégations are attached) and `PUT /zones/:id/assignments` (the four
+      couriers replaced together; role, account and D-12 checked for a courier
+      newly placed, one already in his slot kept); `/couriers/:id/absences`
+      list, mark and remove (Admin and Dépôt, audited, today or later), a
+      ramasseur's pickups planned that day moved to whoever covers their zone.
+      Who covers a zone on a day is worked out when read
+      (`coveringCourier`, `ZoneCoverageService`). The seed is now create-only
+      for gouvernorats and délégations. The Coursiers list gains each zone's
+      role and "absent today". Web: Paramètres › Zones and › Géographie (a
+      délégation's localités, the Autre list), the Absences dialog on
+      Coursiers. No migration — 16 shared, 32 API e2e (and the seed tests), 26 web tests
+- [ ] Web scan station (camera + USB gun), 3 modes (D-50), scan deduplication — step 2
+- [ ] Annuler le dernier scan (D-54) — step 3
+- [ ] Tournées (parcels grouped by zone, manual moves, D-55) — step 4
+- [ ] Ramassages planning + À emporter (D-58) — step 5
+- [ ] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6
+- [ ] Applying seller change requests (D-57) — step 7
+- [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
+- [ ] Exceptions, first rows (D-50) — step 9
+- [ ] Demo parcels in Ramassé, Playwright, merge — step 10
 
 ## Phase 6 — Courier app
 
@@ -707,16 +730,44 @@ reported and approved before the next.
 - 2026-09-24 — **Phase 4 merged into `main`** (fast-forward, as phase 3),
   after lint, typecheck, test and the 14 browser tests passed.
 
+- 2026-09-24 — **Phase 5 plan approved**, answers recorded as **D-50 to
+  D-58** in `docs/decisions.md`: the scan station ships with three modes,
+  the ramassage scan stays in phase 6, a first Exceptions screen in phase 5,
+  Aujourd'hui later.
+
+- 2026-09-24 — **Phase 5, step 1 (zones, géographie, absences).** Choices
+  made while building:
+  - **Couriers are named by their account id** in every zone and absence
+    route, as the rest of the back office does; the API maps them to the
+    courier row.
+  - **A courier already in his slot stays** when the admin saves a zone,
+    even after he stopped taking new work (D-12): only a courier newly placed
+    must be able to work. Tournées and pickups skip him anyway, since
+    "who covers the zone" treats him as unavailable.
+  - **An absence is for today or a later day.** A past day is refused, when
+    marking and when removing: it can no longer change any plan.
+  - **Pickups moved by an absence stay moved** if the absence is removed; the
+    team re-plans if it wants. A pickup whose zone has nobody else able to
+    work keeps its ramasseur and is listed "à replanifier" in the result.
+  - **A deactivated zone keeps its assignments** and cannot be edited until
+    it is reactivated; nothing reads them meanwhile.
+  - **Délégation → zone** is changed from Paramètres › Géographie (a list per
+    délégation); Paramètres › Zones shows the délégations read-only.
+  - The BFF allowlist gains `zones`, `geo`, `gouvernorats`, `delegations`,
+    `localites` and `couriers`, and forwards PUT and DELETE.
+  - Housekeeping (D-50): the back office home comment no longer says
+    Aujourd'hui is phase 5; `apps/courier` now says phase 6.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
   half-up at the millime" (A-3), still to be signed off by the accountant.
 - Back office scanning: browser camera enough, or add a Dépôt mode to the
   courier app?
-- Seed: the Arabic names of the gouvernorats and délégations are the standard
-  official spellings but have not been read by a native speaker; the public site
-  shows them to customers. Localités have no Arabic name yet except Autre and
-  Maakel Ezzaïm; the admin fills them in Paramètres › Localités (phase 5 screen).
+- ~~Seed: the Arabic names of the gouvernorats and délégations have not been
+  read by a native speaker.~~ **Closed 2026-09-24 (D-51)**: the admin reads
+  and corrects them, and fills the localités' Arabic names, in Paramètres ›
+  Géographie; the seed no longer overwrites them.
 - **UI texts**: approved for now; the full review before launch works from
   `docs/ui-texts.md`.
 - Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.

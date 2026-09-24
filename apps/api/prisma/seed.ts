@@ -10,8 +10,9 @@ import { defaultSettingValues, generatePassword } from '@faffago/shared';
  * platform settings and one admin.
  *
  * Idempotent — running it twice changes nothing — so it is safe to run after
- * every migration. It never undoes the admin's work: localités, zones and
- * settings are only ever created, never overwritten (D-17, D-19, D-20).
+ * every migration. It never undoes the admin's work: gouvernorats, délégations,
+ * localités, zones and settings are only ever created, never overwritten
+ * (D-17, D-19, D-20, D-51).
  */
 
 /**
@@ -19,9 +20,9 @@ import { defaultSettingValues, generatePassword } from '@faffago/shared';
  * docs/geo-review.md (D-19). The codes are ours, not INS codes, and never
  * change.
  *
- * Names are upserted by code, so a correction here replaces the old spelling in
- * place. When the admin screen for délégations arrives (phase 5), this becomes
- * create-only, like the rest (D-19).
+ * Created by code and never overwritten, like the rest (D-51): the admin
+ * corrects names, French and Arabic, in Paramètres › Géographie, and a later
+ * seed run keeps them.
  *
  * The Arabic names have not yet been read by a native speaker; the public site
  * shows them to customers.
@@ -233,17 +234,14 @@ export interface SeedResult {
 
 async function seedGeography(prisma: PrismaClient, log: (m: string) => void): Promise<void> {
   for (const gouvernorat of GRAND_TUNIS) {
-    const row = await prisma.gouvernorat.upsert({
-      where: { code: gouvernorat.code },
-      update: { nameFr: gouvernorat.nameFr, nameAr: gouvernorat.nameAr },
-      create: { code: gouvernorat.code, nameFr: gouvernorat.nameFr, nameAr: gouvernorat.nameAr },
-    });
+    const row =
+      (await prisma.gouvernorat.findUnique({ where: { code: gouvernorat.code } })) ??
+      (await prisma.gouvernorat.create({
+        data: { code: gouvernorat.code, nameFr: gouvernorat.nameFr, nameAr: gouvernorat.nameAr },
+      }));
     for (const [code, nameFr, nameAr] of gouvernorat.delegations) {
-      await prisma.delegation.upsert({
-        where: { code },
-        update: { nameFr, nameAr, gouvernoratId: row.id },
-        create: { code, nameFr, nameAr, gouvernoratId: row.id },
-      });
+      if (await prisma.delegation.findUnique({ where: { code } })) continue;
+      await prisma.delegation.create({ data: { code, nameFr, nameAr, gouvernoratId: row.id } });
     }
   }
 

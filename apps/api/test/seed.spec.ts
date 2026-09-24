@@ -232,7 +232,11 @@ describe('running it again', () => {
     const centre = await prisma.zone.findUniqueOrThrow({ where: { name: 'Tunis Centre' } });
     await prisma.zone.update({ where: { id: centre.id }, data: { name: 'Centre-ville' } });
     const bardo = await delegation('TUN-BARDO');
-    await prisma.delegation.update({ where: { id: bardo.id }, data: { zoneId: centre.id } });
+    await prisma.delegation.update({
+      where: { id: bardo.id },
+      data: { zoneId: centre.id, nameFr: 'Bardo', nameAr: 'الباردو' },
+    });
+    await prisma.gouvernorat.update({ where: { code: 'MAN' }, data: { nameAr: 'ولاية منوبة' } });
 
     await seed(prisma, QUIET);
 
@@ -253,7 +257,14 @@ describe('running it again', () => {
     ).toBe('6000');
     expect(await prisma.zone.count()).toBe(15);
     expect(await prisma.zone.findUnique({ where: { name: 'Tunis Centre' } })).toBeNull();
-    expect((await delegation('TUN-BARDO')).zoneId).toBe(centre.id);
+    expect(await delegation('TUN-BARDO')).toMatchObject({
+      zoneId: centre.id,
+      nameFr: 'Bardo',
+      nameAr: 'الباردو',
+    });
+    expect((await prisma.gouvernorat.findUniqueOrThrow({ where: { code: 'MAN' } })).nameAr).toBe(
+      'ولاية منوبة',
+    );
   });
 });
 
@@ -286,14 +297,18 @@ describe('a database seeded by the first version (phase 0)', () => {
     await old.db.close();
   });
 
-  it('corrects the old names in place, by code', async () => {
+  it('keeps the names already there: délégations are create-only now (D-51)', async () => {
     const before = await old.prisma.delegation.findUniqueOrThrow({
       where: { code: 'TUN-BABBHAR' },
     });
     await seed(old.prisma, { ...QUIET, adminPassword: 'x-Mot-De-Passe-42' });
     const after = await old.prisma.delegation.findUniqueOrThrow({ where: { code: 'TUN-BABBHAR' } });
     expect(after.id).toBe(before.id);
-    expect(after.nameFr).toBe('Bab El Bhar');
+    expect(after.nameFr).toBe('Bab Bhar');
+    // The missing ones are created, with the approved spellings.
+    expect(
+      (await old.prisma.delegation.findUniqueOrThrow({ where: { code: 'TUN-KABARIA' } })).nameAr,
+    ).toBe('الكبارية');
   });
 
   it('deletes the Den Den délégation when nothing refers to it', async () => {

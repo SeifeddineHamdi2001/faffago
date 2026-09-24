@@ -311,6 +311,52 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 "Reportés" is the tile of D-9 postponements, added with D-48; the other five
 tile labels are Vendeur 4.1's list, capitalised.
 
+## Paramètres › Zones (`/admin/parametres/zones`, D-51)
+
+| Key                                       | Français                                                                                     |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| web `parametres-tabs`                     | Zones · Géographie                                                                           |
+| web `zones-screen` — aide                 | Les délégations changent de zone dans l’onglet Géographie.                                   |
+| web `zones-screen` — boutons              | Créer une zone · Renommer · Désactiver · Réactiver · Enregistrer les coursiers               |
+| web `zones-screen` — champs               | Nom de la zone · Livreur titulaire · Livreur backup · Ramasseur titulaire · Ramasseur backup |
+| web `zones-screen` — choix vide, états    | Personne · Aucune délégation · Désactivée · Enregistré · {nom} (ne reçoit plus de travail)   |
+| web `zones-screen` — dialogue             | Renommer la zone                                                                             |
+| `ZONE_ASSIGNMENT_KIND_LABELS_FR`          | Titulaire · Backup                                                                           |
+| `SAME_TITULAR_AND_BACKUP_MESSAGE`         | Le titulaire et le backup doivent être deux personnes différentes                            |
+| API `ZONE_EXISTE`                         | Une zone s’appelle déjà « {nom} ».                                                           |
+| API `ZONE_INACTIVE`                       | Cette zone est désactivée : réactivez-la d’abord.                                            |
+| API `ZONE_NON_VIDE`                       | Cette zone contient encore {n} délégation(s) : déplacez-les d’abord vers une autre zone.     |
+| API `AFFECTATION_ROLE_INCORRECT`          | Ce compte n’est pas un livreur. · …pas un ramasseur.                                         |
+| API `COURSIER_INDISPONIBLE` (affectation) | {prénom nom} ne reçoit plus de nouveau travail : il ne peut pas être affecté.                |
+| `SANS_ZONE_LABEL`, `SANS_COURSIER_LABEL`  | Sans zone · Sans coursier                                                                    |
+
+## Paramètres › Géographie (`/admin/parametres/geographie`, D-17, D-51)
+
+| Key                                               | Français                                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| web `geography-screen` — lien                     | Colis classés sous Autre · Localités ({n}) · ← Géographie                                                               |
+| web `geography-screen` — colonnes                 | Délégation · Nom en arabe · Zone · Localités                                                                            |
+| web `geography-screen` — dialogue                 | Modifier {nom} · Nom en français · Nom en arabe                                                                         |
+| web `localites-screen` — colonnes                 | Localité · Nom en arabe · Code postal · Autres noms                                                                     |
+| web `localites-screen` — boutons, champ           | Ajouter une localité · Modifier · Désactiver · Réactiver · Autres noms (séparés par des virgules)                       |
+| web `geographie/autre` — page                     | Les 200 plus récents. Ajoutez les localités qui manquent dans la délégation concernée. · Aucun colis classé sous Autre. |
+| web `geographie/autre` — colonnes                 | Colis · Délégation · Adresse · Vendeur · Statut · Créé le                                                               |
+| API `GOUVERNORAT_EXISTE`                          | Un gouvernorat s’appelle déjà « {nom} ».                                                                                |
+| API `DELEGATION_EXISTE`                           | Ce gouvernorat a déjà une délégation « {nom} ».                                                                         |
+| API `GOUVERNORAT_INTROUVABLE`, `ZONE_INTROUVABLE` | Gouvernorat introuvable. · Zone introuvable.                                                                            |
+
+## Coursiers — Absences (`/admin/coursiers`, D-52)
+
+| Key                                               | Français                                                                                                                 |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| web `couriers-screen`                             | Absences · Absent aujourd’hui                                                                                            |
+| web `courier-absences-dialog` — titre, liste      | Absences de {prénom nom} · Absences prévues · Aucune absence prévue. · Chargement… · Retirer                             |
+| web `courier-absences-dialog` — formulaire        | Jour · Motif (facultatif) · Marquer absent · Fermer · Ce jour-là, ses zones passent à leur backup.                       |
+| web `courier-absences-dialog` — résultat          | Absent le {JJ/MM/AAAA}. · {boutique} : ramassage confié à {prénom} · {boutique} : aucun backup disponible, à replanifier |
+| API `ABSENCE_EXISTE`                              | Ce coursier est déjà marqué absent ce jour-là.                                                                           |
+| API `ABSENCE_DATE_PASSEE`                         | Choisissez aujourd’hui ou un jour à venir.                                                                               |
+| API `ABSENCE_INTROUVABLE`, `COURSIER_INTROUVABLE` | Aucune absence ce jour-là. · Coursier introuvable.                                                                       |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-47** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-47 are rules |
+| **D-1 … D-58** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-58 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-47**
+**Rules decided during the build — D-4 to D-58**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -78,6 +78,15 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-47 · Pickup requests and Profil](#d-47--pickup-requests-and-profil)
 - [D-48 · Tableau de bord: what happened over a period](#d-48--tableau-de-bord-what-happened-over-a-period)
 - [D-49 · Browser tests: Playwright on PGlite, a merge gate](#d-49--browser-tests-playwright-on-pglite-a-merge-gate)
+- [D-50 · What phase 5 contains](#d-50--what-phase-5-contains)
+- [D-51 · Geography and zones in Paramètres](#d-51--geography-and-zones-in-paramètres)
+- [D-52 · Marking a courier absent](#d-52--marking-a-courier-absent)
+- [D-53 · Depot scans](#d-53--depot-scans)
+- [D-54 · Cancelling a web scan](#d-54--cancelling-a-web-scan)
+- [D-55 · Tournées](#d-55--tournées)
+- [D-56 · Forcer un statut in phase 5](#d-56--forcer-un-statut-in-phase-5)
+- [D-57 · Applying a change request](#d-57--applying-a-change-request)
+- [D-58 · Planning pickups](#d-58--planning-pickups)
 
 **Money — A-1 to A-5**
 
@@ -1025,6 +1034,150 @@ Decided 2026-09-24, with the phase 4 step 8 plan.
 
 **Where.** `apps/web/playwright.config.ts`, `apps/web/e2e`,
 `apps/api/test/e2e/server.ts`, the `e2e` task in `turbo.json`.
+
+### D-50 · What phase 5 contains
+
+Decided 2026-09-24, with the phase 5 plan. Beyond the list in PROGRESS.md:
+
+- **Applying seller change requests** (D-39, D-44, D-57) and **Réimprimer
+  l'étiquette** for Dépôt and Admin (A-9) are in phase 5.
+- **Exceptions** (Admin 4.7): a first screen in phase 5 with the rows whose
+  data exists — Saisie manuelle (A-22), seller change request waiting, parcel
+  at the depot more than 48 h without a tour, pickup planned but not done.
+  Phase 10 adds the rest.
+- **The scan station ships with three modes**: Entrée dépôt, Sortie coursier,
+  Retour de tournée. Préparation retours and Archivage bons need the bons and
+  come with phase 8.
+- **The ramassage scan**, the extra parcels (D-47) and the pickup fee at
+  closing (A-13) stay in **phase 6**, with the ramasseur's app. For browser
+  tests before that, the demo seed (development only, D-16) puts demo parcels
+  in Ramassé through the parcel event service, acting as the demo ramasseur.
+- **Aujourd'hui** (back office, Admin 4.1) comes later: its courier and cash
+  blocks need phases 6 and 8.
+
+### D-51 · Geography and zones in Paramètres
+
+Decided 2026-09-24 (Admin 4.5, 4.16; refines D-17, D-19).
+
+- **Gouvernorats and délégations**: the admin renames them, in French and in
+  Arabic, and changes a délégation's zone. **No adding, no deactivating**:
+  the 4 gouvernorats and 48 délégations are fixed, and their codes never
+  change (D-19). Every change is audited.
+- **The seed becomes create-only** for gouvernorats and délégations, like
+  localités, zones and settings: a name the admin corrected survives every
+  later run.
+- **The admin editing Arabic names is the review path** for the native-speaker
+  check of the place names (PROGRESS, Open questions), closed once the screen
+  exists.
+- **Zones**: the admin creates, renames and deactivates them. Deactivating is
+  **refused while délégations are attached**. A délégation with no zone is
+  allowed; its parcels go to a **"Sans zone"** column in Tournées,
+  highlighted.
+- **Courier assignment** (Admin 4.5, 4.15): per zone, one livreur and one
+  ramasseur, each a titular and a backup. The courier's role must match, and
+  he must be active and accepting new work (D-12).
+
+### D-52 · Marking a courier absent
+
+Decided 2026-09-24 (Admin 4.5, 4.15).
+
+- **Admin and Dépôt** mark a courier absent for a day, and remove the
+  absence. Both are audited.
+- For that day his zones switch to their backup: Tournées fills his columns
+  with the backup livreur, and pickups are pre-filled with the backup
+  ramasseur (A-14). This is worked out when read, never stored.
+- **The absent ramasseur's pickups already planned for that day move to the
+  backup ramasseur in the same action.**
+- When the backup is absent or missing too, the column reads **"Sans
+  coursier"**, highlighted so it cannot be missed.
+
+### D-53 · Depot scans
+
+Decided 2026-09-24 (Admin 4.2, tech-stack 2).
+
+- Every scan carries a **UUID drawn by the browser**. The same id again
+  returns the first result, accepted or refused; the same id with a
+  different parcel or mode is refused. Refused scans are stored too.
+- **Sortie coursier to another courier than the one planned** is accepted:
+  the scan is the assignment; the result says "Prévu pour X". It is still
+  refused when the chosen courier is **unavailable** (inactive, not accepting
+  new work, or absent that day).
+- **Retour de tournée**: the courier is chosen first; a parcel another
+  courier carries is refused with "Colis d'un autre coursier".
+- **Two refusal codes added**: the courier is unavailable, and a scan
+  identifier reused for another scan.
+- **`Scan.parcelBefore`**: what the parcel was before the scan, kept so a
+  cancellation can restore it. A Sortie coursier clears the relance date,
+  slot and origin, and no event records them.
+- A parcel whose label must be reprinted (D-57) shows a warning on its next
+  depot scan.
+
+### D-54 · Cancelling a web scan
+
+Decided 2026-09-24 (A-11, Admin 4.2).
+
+- **Annuler le dernier scan**: the user's own last accepted scan, not yet
+  cancelled, within the window in Paramètres (60 s), measured on the
+  **server clock** (a web scan is online by nature), and only while nothing
+  has happened to the parcel since that scan.
+- **Only the person who scanned** can cancel it.
+- The parcel goes back to `parcelBefore`, with an `ANNULATION_SCAN` event;
+  the scan row keeps its place with `cancelledAt`.
+- After the window, only the admin corrects it (D-56). Once the courier's
+  caisse session is Clôturée nothing can be cancelled (A-11, phase 8).
+
+### D-55 · Tournées
+
+Decided 2026-09-24 (Admin 4.5).
+
+- Every parcel due today (`isDueForTour`) sits in its zone's column, under
+  the livreur covering that zone today (D-52).
+- A **manual move** is stored as the parcel's planned livreur and written as
+  an **`AFFECTATION_LIVREUR`** event, **hidden from the seller and from
+  public tracking**.
+- Parcels of a délégation with no zone: **"Sans zone"** column (D-51).
+
+### D-56 · Forcer un statut in phase 5
+
+Decided 2026-09-24 (Admin 4.3, 4.17). Admin only, a reason required, one
+`FORCAGE_STATUT` event and an `audit_log` entry, before and after.
+
+- **Allowed**: moves between **Ramassé** (with the ramasseur), **Au dépôt**
+  (at the depot) and **En livraison** (with the livreur chosen), and
+  **location-only fixes** (with the livreur ↔ at the depot) for **À vérifier,
+  Relancé and Retour au dépôt**.
+- **No effect runs**: no charge, no 48-hour clock, the attempt count
+  unchanged.
+- **Refused until phase 8** defines how money is reversed: anything touching
+  Livré, Annulé, a return status or a charge.
+- Cancelling a scan after its window (D-54) is the admin's, with a reason,
+  under the same rules.
+
+### D-57 · Applying a change request
+
+Decided 2026-09-24 (Vendeur 4.6, D-44).
+
+- **Service client and Admin** apply or refuse. A request is applied **as a
+  whole**.
+- A request with a **localité** is applied only while the parcel's
+  **location** is Au dépôt (D-44), whatever its status: the location, not
+  the status Au dépôt.
+- Applying writes a new event, **`MODIFICATION_APPLIQUEE`**, with each field
+  before and after; the seller's timeline shows it as "Faffa Go".
+- **Refusing requires a reason, and the seller sees it.**
+- **`labelReprintNeeded`**: set when an applied change touches a printed
+  field. A badge in Colis and Tournées, a warning on the next depot scan,
+  cleared when staff reprint the label.
+
+### D-58 · Planning pickups
+
+Decided 2026-09-24 (Admin 4.4, A-14).
+
+- The ramasseur is pre-filled with the one covering the zone of **the
+  pickup's address** that day (A-14, D-52); the team can change it.
+- **Staff cannot cancel a seller's pickup request**; the seller does it
+  himself (D-35).
+
 ---
 
 ## Money

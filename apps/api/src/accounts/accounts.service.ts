@@ -9,6 +9,7 @@ import {
   Role,
   STAFF_ROLES,
   can,
+  tunisDayKey,
   type CreateCourierAccountValues,
   type CreateStaffAccountValues,
 } from '@faffago/shared';
@@ -93,18 +94,25 @@ export class AccountsService {
 
   /**
    * Coursiers (D-11). Dépôt and Service client read name, phone, role and
-   * zones of the active couriers; the admin also reads the account (state,
-   * CIN, vehicle) and, with PAIE_COURSIERS, the pay plan. Today's parcels
-   * join the list with the Tournées in phase 5.
+   * zones of the active couriers, and whether they are absent today (D-52);
+   * the admin also reads the account (state, CIN, vehicle) and, with
+   * PAIE_COURSIERS, the pay plan. Today's parcels join the list with the
+   * Tournées (phase 5, step 4).
    */
   async listCouriers(role: Role): Promise<Record<string, unknown>[]> {
     const withAccount = can(role, Permission.GERER_VENDEURS_COURSIERS);
     const withPay = can(role, Permission.PAIE_COURSIERS);
+    const today = new Date(`${tunisDayKey(this.clock.now())}T00:00:00.000Z`);
     const users = await this.prisma.user.findMany({
       where: { role: { in: [...COURIER_ROLES] }, ...(withAccount ? {} : { isActive: true }) },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
       include: {
-        courier: { include: { zoneAssignments: { include: { zone: true } } } },
+        courier: {
+          include: {
+            zoneAssignments: { include: { zone: true } },
+            absences: { where: { date: today }, select: { id: true } },
+          },
+        },
       },
     });
     return users.map((user) => {
@@ -115,7 +123,12 @@ export class AccountsService {
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,
-        zones: courier.zoneAssignments.map((a) => ({ name: a.zone.name, kind: a.kind })),
+        zones: courier.zoneAssignments.map((a) => ({
+          name: a.zone.name,
+          role: a.role,
+          kind: a.kind,
+        })),
+        absentToday: courier.absences.length > 0,
       };
       if (withAccount) {
         Object.assign(row, {
@@ -167,7 +180,7 @@ export class AccountsService {
     return { user: view(user), password };
   }
 
-  /** Admin 4.15. Zones are assigned separately (phase 5). */
+  /** Admin 4.15. Zones are assigned in Paramètres › Zones (D-51). */
   async createCourier(
     actor: UserPrincipal,
     input: CreateCourierAccountValues,

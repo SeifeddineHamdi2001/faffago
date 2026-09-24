@@ -48,7 +48,9 @@ export interface CourierRow {
   firstName: string;
   lastName: string;
   phone: string;
-  zones: { name: string; kind: 'TITULAIRE' | 'BACKUP' }[];
+  zones: { name: string; role: 'LIVREUR' | 'RAMASSEUR'; kind: 'TITULAIRE' | 'BACKUP' }[];
+  /** Marked absent for today (D-52). */
+  absentToday: boolean;
   isActive?: boolean;
   acceptsWork?: boolean;
   accountState?: 'ACTIF' | 'INACTIF';
@@ -285,4 +287,69 @@ export interface SellerDashboard {
   from: string;
   to: string;
   counts: Record<DashboardTile, number>;
+}
+
+/** GET /zones (Paramètres › Zones, D-51). Couriers are named by their account id. */
+export interface ZoneCourierRef {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface ZoneRow {
+  id: string;
+  name: string;
+  isActive: boolean;
+  delegations: { id: string; code: string; nameFr: string }[];
+  assignments: Record<
+    'LIVREUR' | 'RAMASSEUR',
+    Record<'TITULAIRE' | 'BACKUP', ZoneCourierRef | null>
+  >;
+}
+
+/** GET /geo/admin (Paramètres › Géographie, D-51). */
+export interface GeographyRow {
+  id: string;
+  code: string;
+  nameFr: string;
+  nameAr: string;
+  delegations: {
+    id: string;
+    code: string;
+    nameFr: string;
+    nameAr: string;
+    isActive: boolean;
+    zone: { id: string; name: string } | null;
+    localiteCount: number;
+  }[];
+}
+
+/** GET /localites?delegationId= (Paramètres › Géographie, D-17). */
+export interface LocaliteAdminRow {
+  id: string;
+  delegationId: string;
+  nameFr: string;
+  nameAr: string | null;
+  postalCode: string | null;
+  aliases: string[];
+  isOther: boolean;
+  isActive: boolean;
+}
+
+/** GET /localites/autre/parcels (D-17). */
+export interface AutreParcelRow {
+  id: string;
+  code: string;
+  address: string;
+  landmark: string | null;
+  status: string;
+  createdAt: string;
+  delegation: { code: string; nameFr: string };
+  shopName: string;
+}
+
+/** GET /couriers/:id/absences (D-52). */
+export interface AbsenceRow {
+  date: string;
+  reason: string | null;
 }

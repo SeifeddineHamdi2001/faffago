@@ -52,7 +52,8 @@ export function formatTunisDay(key: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function isRealDay(key: string): boolean {
+/** Whether `key` is a real calendar day written `AAAA-MM-JJ`. */
+export function isTunisDayKey(key: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(key) && keyOfUtcMidnight(utcMidnightOf(key)) === key;
 }
 
@@ -119,7 +120,7 @@ export function dashboardTitle(period: DashboardPeriod, range: DayRange): string
     : `Du ${formatTunisDay(range.from)} au ${formatTunisDay(range.to)}`;
 }
 
-const dayKey = z.string().refine(isRealDay, 'Date invalide');
+const dayKey = z.string().refine(isTunisDayKey, 'Date invalide');
 
 /** GET /dashboard: both days or neither (then today), 366 days at most. */
 export const dashboardQuerySchema = z

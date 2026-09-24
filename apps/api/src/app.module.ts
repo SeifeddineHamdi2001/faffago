@@ -14,6 +14,7 @@ import { PickupsModule } from './pickups/pickups.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
+import { ZonesModule } from './zones/zones.module';
 
 /**
  * Domain modules are added one at a time, as each phase of docs/PROGRESS.md is
@@ -37,6 +38,7 @@ import { StorageModule } from './storage/storage.module';
     AccountsModule,
     SellersModule,
     GeoModule,
+    ZonesModule,
     // Before ParcelsModule: /parcels/labels must not be read as a parcel code.
     LabelsModule,
     ParcelsModule,

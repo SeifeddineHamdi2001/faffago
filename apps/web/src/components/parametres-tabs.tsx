@@ -3,21 +3,27 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+/** `exact`: the page alone; otherwise its sub-pages too (a délégation's localités). */
 const TABS = [
-  { href: '/admin/parametres', label: 'Tarifs et règles' },
-  { href: '/admin/parametres/utilisateurs', label: 'Utilisateurs' },
+  { href: '/admin/parametres', label: 'Tarifs et règles', exact: true },
+  { href: '/admin/parametres/zones', label: 'Zones', exact: false },
+  { href: '/admin/parametres/geographie', label: 'Géographie', exact: false },
+  { href: '/admin/parametres/utilisateurs', label: 'Utilisateurs', exact: false },
 ] as const;
 
 /**
- * The pages of Paramètres built so far (Admin 4.16). Zones, délégations and
- * localités join them with the zones and Tournées (phase 5, D-18).
+ * The pages of Paramètres (Admin 4.16): fees and rules, zones with their
+ * couriers, the gouvernorats, délégations and localités (D-17, D-51), and
+ * the staff accounts.
  */
 export function ParametresTabs() {
   const pathname = usePathname();
   return (
-    <nav aria-label="Paramètres" className="mb-6 flex gap-2 border-b border-navy/10">
+    <nav aria-label="Paramètres" className="mb-6 flex flex-wrap gap-2 border-b border-navy/10">
       {TABS.map((tab) => {
-        const active = pathname === tab.href;
+        const active = tab.exact
+          ? pathname === tab.href
+          : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
         return (
           <Link
             key={tab.href}

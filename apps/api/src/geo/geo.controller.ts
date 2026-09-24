@@ -2,8 +2,12 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from 
 import {
   Permission,
   createLocaliteSchema,
+  updateDelegationSchema,
+  updateGouvernoratSchema,
   updateLocaliteSchema,
   type CreateLocaliteValues,
+  type UpdateDelegationValues,
+  type UpdateGouvernoratValues,
   type UpdateLocaliteValues,
 } from '@faffago/shared';
 import {
@@ -21,7 +25,9 @@ import { GeoService } from './geo.service';
 /**
  * Gouvernorat → délégation → localité (D-17). Every signed-in user reads the
  * tree: the seller's parcel form and pickup addresses, the back office, the
- * courier app. Only the admin changes localités (Paramètres, Admin 4.16).
+ * courier app. Only the admin changes them (Paramètres, Admin 4.16): he
+ * renames gouvernorats and délégations, moves a délégation between zones
+ * (D-51), and adds, renames and deactivates localités (D-17).
  */
 @Controller()
 export class GeoController {
@@ -32,6 +38,35 @@ export class GeoController {
   @AllowImpersonation()
   tree() {
     return this.geo.tree();
+  }
+
+  /** Paramètres › Géographie: every gouvernorat and délégation, with its zone. */
+  @Get('geo/admin')
+  @RequirePermission(Permission.PARAMETRES)
+  geographyForAdmin() {
+    return this.geo.geographyForAdmin();
+  }
+
+  @Patch('gouvernorats/:id')
+  @RequirePermission(Permission.PARAMETRES)
+  updateGouvernorat(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateGouvernoratSchema)) body: UpdateGouvernoratValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.geo.updateGouvernorat(principal as UserPrincipal, id, body, meta);
+  }
+
+  @Patch('delegations/:id')
+  @RequirePermission(Permission.PARAMETRES)
+  updateDelegation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(updateDelegationSchema)) body: UpdateDelegationValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.geo.updateDelegation(principal as UserPrincipal, id, body, meta);
   }
 
   @Get('localites')

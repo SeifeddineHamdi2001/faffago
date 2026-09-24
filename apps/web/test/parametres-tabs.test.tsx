@@ -7,14 +7,28 @@ import { ParametresTabs } from '@/components/parametres-tabs';
 let pathname = '/admin/parametres';
 vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
 
-/** Paramètres (Admin 4.16): Tarifs et règles, then Utilisateurs. */
+/** Paramètres (Admin 4.16): Tarifs et règles, Zones, Géographie, Utilisateurs. */
 describe('ParametresTabs', () => {
-  it('links both pages and marks the current one', () => {
+  it('links every page and marks the current one', () => {
     pathname = '/admin/parametres';
     render(<ParametresTabs />);
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      'Tarifs et règles',
+      'Zones',
+      'Géographie',
+      'Utilisateurs',
+    ]);
     expect(screen.getByRole('link', { name: 'Tarifs et règles' })).toHaveAttribute(
       'aria-current',
       'page',
+    );
+    expect(screen.getByRole('link', { name: 'Zones' })).toHaveAttribute(
+      'href',
+      '/admin/parametres/zones',
+    );
+    expect(screen.getByRole('link', { name: 'Géographie' })).toHaveAttribute(
+      'href',
+      '/admin/parametres/geographie',
     );
     expect(screen.getByRole('link', { name: 'Utilisateurs' })).toHaveAttribute(
       'href',
@@ -31,6 +45,15 @@ describe('ParametresTabs', () => {
     );
     expect(screen.getByRole('link', { name: 'Tarifs et règles' })).not.toHaveAttribute(
       'aria-current',
+    );
+  });
+
+  it('keeps Géographie marked on a délégation’s localités', () => {
+    pathname = '/admin/parametres/geographie/3f1e4b6a-2c7d-4e8f-9a0b-1c2d3e4f5a6b';
+    render(<ParametresTabs />);
+    expect(screen.getByRole('link', { name: 'Géographie' })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
   });
 

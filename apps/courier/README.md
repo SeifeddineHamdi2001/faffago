@@ -4,7 +4,7 @@ React Native (Expo, TypeScript) application for the Livreur and the Ramasseur,
 from `docs/coursier.md`. Android only for version 1, installed by Faffa Go as a
 signed APK.
 
-Not scaffolded yet. It is built in phase 5 of `docs/PROGRESS.md`.
+Not scaffolded yet. It is built in phase 6 of `docs/PROGRESS.md`.
 
 It needs an Expo development build rather than Expo Go, because of
 `react-native-vision-camera` and `expo-sqlite` (tech-stack 4). Three

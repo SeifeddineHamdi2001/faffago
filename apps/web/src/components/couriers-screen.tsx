@@ -12,12 +12,14 @@ import {
 import { bff } from '@/lib/client/call';
 import type { CourierRow } from '@/lib/types';
 import { ErrorAlert, useAccountActions } from './account-actions';
+import { CourierAbsencesDialog } from './courier-absences-dialog';
 import { CreateCourierForm } from './create-courier-form';
 import { ConfirmDialog } from './dialog';
 
 /**
  * Coursiers (Admin 4.15, D-11, D-12). Dépôt and Service client read the list;
- * the admin also creates, regenerates, deactivates and reactivates.
+ * the admin also creates, regenerates, deactivates and reactivates. Admin and
+ * Dépôt mark a courier absent for a day (D-52).
  */
 export function CouriersScreen({
   rows,
@@ -30,10 +32,12 @@ export function CouriersScreen({
   const actions = useAccountActions();
   const [creating, setCreating] = useState(false);
   const [deactivating, setDeactivating] = useState<CourierRow | null>(null);
+  const [absences, setAbsences] = useState<CourierRow | null>(null);
   const [busy, setBusy] = useState(false);
 
   const canManage = permissions.includes(Permission.GERER_VENDEURS_COURSIERS);
   const canRegenerate = permissions.includes(Permission.REGENERER_MOT_DE_PASSE);
+  const canPlan = permissions.includes(Permission.PLANIFIER_RAMASSAGES_TOURNEES);
 
   async function deactivate(courier: CourierRow) {
     setBusy(true);
@@ -94,6 +98,11 @@ export function CouriersScreen({
                         .join(', ')
                     : 'Aucune zone'}
                 </p>
+                {courier.absentToday && (
+                  <p className="mt-1 text-sm">
+                    <span className="badge-warn">Absent aujourd’hui</span>
+                  </p>
+                )}
                 {courier.accountState && (
                   <p className="mt-1 text-sm">
                     <span className={inactive ? 'badge-muted' : 'badge-ok'}>
@@ -110,8 +119,17 @@ export function CouriersScreen({
                   </p>
                 )}
               </div>
-              {(canManage || canRegenerate) && (
+              {(canManage || canRegenerate || (canPlan && !inactive)) && (
                 <div className="flex flex-wrap gap-2">
+                  {canPlan && !inactive && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setAbsences(courier)}
+                    >
+                      Absences
+                    </button>
+                  )}
                   {canRegenerate && (
                     <button
                       type="button"
@@ -183,6 +201,7 @@ export function CouriersScreen({
           onCancel={() => setDeactivating(null)}
         />
       )}
+      {absences && <CourierAbsencesDialog courier={absences} onClose={() => setAbsences(null)} />}
       {actions.element}
     </section>
   );

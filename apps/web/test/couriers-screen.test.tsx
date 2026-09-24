@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_BY_ROLE } from '@faffago/shared';
@@ -17,7 +17,8 @@ const livreur: CourierRow = {
   firstName: 'Karim',
   lastName: 'Ben Ali',
   phone: '50990004',
-  zones: [{ name: 'Tunis Nord', kind: 'TITULAIRE' }],
+  zones: [{ name: 'Tunis Nord', role: 'LIVREUR', kind: 'TITULAIRE' }],
+  absentToday: false,
   isActive: true,
   acceptsWork: true,
   accountState: 'ACTIF',
@@ -36,17 +37,33 @@ function asAdmin(rows: CourierRow[] = [livreur]) {
 }
 
 describe('CouriersScreen — what each role sees', () => {
-  it('shows Dépôt the list without any account action', () => {
-    const { id, role, firstName, lastName, phone, zones } = livreur;
+  it('shows Dépôt the list with the absences, and no account action', () => {
+    const { id, role, firstName, lastName, phone, zones, absentToday } = livreur;
     render(
       <CouriersScreen
-        rows={[{ id, role, firstName, lastName, phone, zones }]}
+        rows={[{ id, role, firstName, lastName, phone, zones, absentToday }]}
         permissions={[...PERMISSIONS_BY_ROLE.DEPOT]}
       />,
     );
     expect(screen.getByText('Karim Ben Ali')).toBeInTheDocument();
     expect(screen.getByText(/Tunis Nord/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Absences']);
+  });
+
+  it('shows Service client the list with no button at all', () => {
+    const { id, role, firstName, lastName, phone, zones, absentToday } = livreur;
+    render(
+      <CouriersScreen
+        rows={[{ id, role, firstName, lastName, phone, zones, absentToday }]}
+        permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]}
+      />,
+    );
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('says who is absent today', () => {
+    asAdmin([{ ...livreur, absentToday: true }]);
+    expect(screen.getByText('Absent aujourd’hui')).toBeInTheDocument();
   });
 
   it('gives the admin creation, regeneration and deactivation', () => {
@@ -171,5 +188,77 @@ describe('Désactiver (D-12)', () => {
     expect(screen.getByText('Inactif')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Réactiver' }));
     expect(bff).toHaveBeenCalledWith('POST', 'accounts/couriers/u1/activate');
+  });
+});
+
+describe('Absences (D-52)', () => {
+  it('lists the absences to come, and marks a courier absent for a day', async () => {
+    const user = userEvent.setup();
+    bff
+      .mockResolvedValueOnce({ ok: true, data: [{ date: '2026-09-30', reason: null }] })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          absence: { date: '2026-09-28', reason: 'Malade' },
+          pickupsMoved: [
+            { id: 'p1', shopName: 'Boutique Yasmine', ramasseur: { id: 'u2', firstName: 'Hédi' } },
+          ],
+          pickupsNotMoved: [{ id: 'p2', shopName: 'Chic Tunis' }],
+        },
+      })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+    asAdmin();
+
+    await user.click(screen.getByRole('button', { name: 'Absences' }));
+    expect(bff).toHaveBeenCalledWith('GET', 'couriers/u1/absences');
+    const dialog = screen.getByRole('dialog', { name: 'Absences de Karim Ben Ali' });
+    expect(await within(dialog).findByText('30/09/2026')).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText('Jour'), { target: { value: '2026-09-28' } });
+    await user.type(within(dialog).getByLabelText(/Motif/), 'Malade');
+    await user.click(within(dialog).getByRole('button', { name: 'Marquer absent' }));
+
+    expect(bff).toHaveBeenCalledWith('POST', 'couriers/u1/absences', {
+      date: '2026-09-28',
+      reason: 'Malade',
+    });
+    expect(
+      await within(dialog).findByText('Boutique Yasmine : ramassage confié à Hédi'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('Chic Tunis : aucun backup disponible, à replanifier'),
+    ).toBeInTheDocument();
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('removes an absence', async () => {
+    const user = userEvent.setup();
+    bff
+      .mockResolvedValueOnce({ ok: true, data: [{ date: '2026-09-30', reason: 'Congé' }] })
+      .mockResolvedValueOnce({ ok: true, data: null })
+      .mockResolvedValueOnce({ ok: true, data: [] });
+    asAdmin();
+
+    await user.click(screen.getByRole('button', { name: 'Absences' }));
+    const dialog = screen.getByRole('dialog', { name: 'Absences de Karim Ben Ali' });
+    await user.click(await within(dialog).findByRole('button', { name: 'Retirer le 30/09/2026' }));
+
+    expect(bff).toHaveBeenCalledWith('DELETE', 'couriers/u1/absences/2026-09-30');
+    expect(await within(dialog).findByText('Aucune absence prévue.')).toBeInTheDocument();
+  });
+
+  it('shows the refusal of a day already marked', async () => {
+    const user = userEvent.setup();
+    bff.mockResolvedValueOnce({ ok: true, data: [] }).mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      error: { code: 'ABSENCE_EXISTE', message: 'Ce coursier est déjà marqué absent ce jour-là.' },
+    });
+    asAdmin();
+
+    await user.click(screen.getByRole('button', { name: 'Absences' }));
+    const dialog = screen.getByRole('dialog', { name: 'Absences de Karim Ben Ali' });
+    await user.click(within(dialog).getByRole('button', { name: 'Marquer absent' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('déjà marqué absent');
   });
 });
