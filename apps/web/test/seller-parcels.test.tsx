@@ -180,7 +180,12 @@ describe('Modifier (Vendeur 4.6, D-41)', () => {
     await user.clear(cod);
     await user.type(cod, '90,000');
     await user.click(screen.getByRole('button', { name: 'Enregistrer' }));
-    expect(screen.getByRole('status').textContent).toBe(REPRINT_WARNING);
+    const status = screen.getByRole('status');
+    expect(status.textContent).toContain(REPRINT_WARNING);
+    // The reprint is one click away, in both formats (Vendeur 4.4).
+    expect(
+      within(status).getByRole('link', { name: 'Thermique 10 × 15 cm' }).getAttribute('href'),
+    ).toBe('/api/bff/parcels/FG-8K2QX7AB/label?format=THERMAL');
   });
 });
 
@@ -308,5 +313,25 @@ describe('one waiting request, edited or withdrawn (D-44)', () => {
     expect(screen.getByText(/Retirée/)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Demander une modification' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Retirer la demande' })).toBeNull();
+  });
+});
+
+describe('Étiquettes (Vendeur 4.4)', () => {
+  it('prints the label in either format, from any status', () => {
+    render(
+      <ParcelScreen parcel={{ ...parcel, status: 'AU_DEPOT' }} tree={tree} readOnly={false} />,
+    );
+    expect(screen.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual(
+      [
+        ['Thermique 10 × 15 cm', '/api/bff/parcels/FG-8K2QX7AB/label?format=THERMAL'],
+        ['A4 (4 par page)', '/api/bff/parcels/FG-8K2QX7AB/label?format=A4'],
+      ],
+    );
+    expect(screen.getAllByRole('link')[0]!.getAttribute('target')).toBe('_blank');
+  });
+
+  it('offers no printing in "Voir comme le vendeur" (D-5)', () => {
+    render(<ParcelScreen parcel={parcel} tree={tree} readOnly />);
+    expect(screen.queryByRole('link')).toBeNull();
   });
 });

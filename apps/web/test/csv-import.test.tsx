@@ -159,6 +159,10 @@ describe('Import CSV (Vendeur 4.3, D-37)', () => {
     expect(screen.getByRole('link', { name: 'FG-BBBBBBBB' }).getAttribute('href')).toBe(
       '/vendeur/colis/FG-BBBBBBBB',
     );
+    // Imprimer toutes les étiquettes: every parcel of the file, in one PDF.
+    expect(screen.getByRole('link', { name: 'A4 (4 par page)' }).getAttribute('href')).toBe(
+      '/api/bff/parcels/imports/i1/labels?format=A4',
+    );
   });
 
   it('shows the rows the server refused, and imported nothing', async () => {

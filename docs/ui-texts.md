@@ -249,6 +249,18 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 | `csvImportRequestSchema`                | Aucun colis à importer · 500 colis au maximum par import                                                                                                                                                                                                                       |
 | api `parcel-imports.service`            | {n} ligne(s) refusée(s) : aucun colis n’a été importé. Corrigez-les dans l’aperçu. · Une même ligne du fichier est envoyée deux fois. · Import introuvable.                                                                                                                    |
 
+## Étiquettes (phase 4, étape 4, D-36)
+
+| Key                                  | Français                                                                                             |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| api `label-renderer` — texte imprimé | FAFFA GO · Expéditeur : {boutique} · COD · Destinataire                                              |
+| api `label-content` — drapeaux       | ÉCHANGE · OUVERTURE AUTORISÉE                                                                        |
+| `LABEL_FORMAT_LABELS_FR`             | Thermique 10 × 15 cm · A4 (4 par page)                                                               |
+| web `print-labels` — titres          | Imprimer l’étiquette · Réimprimer l’étiquette · Imprimer toutes les étiquettes                       |
+| api `labels.service` — refus         | Impression impossible pour le moment : l’adresse du site n’est pas configurée. · Import introuvable. |
+| api `labels.controller`              | Aucun colis · 500 étiquettes au maximum                                                              |
+| Noms des fichiers PDF                | etiquette-{code}.pdf · etiquettes.pdf · etiquettes-import.pdf                                        |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

@@ -24,6 +24,7 @@ import {
 import { bff } from '@/lib/client/call';
 import type { ApiError, ParcelImport, RefusedImportRow } from '@/lib/types';
 import { ErrorAlert } from './account-actions';
+import { PrintLabels } from './print-labels';
 
 /** The file's bytes, through FileReader: every browser has it, and so do the tests. */
 function readBytes(file: File): Promise<Uint8Array> {
@@ -139,6 +140,12 @@ export function CsvImportScreen({
         <p role="status" className="mb-4 rounded-xl bg-green-50 p-4 font-semibold text-green-900">
           {result.parcelCount} colis importés depuis {result.fileName}.
         </p>
+        <div className="mb-6">
+          <PrintLabels
+            path={`parcels/imports/${result.id}/labels`}
+            title="Imprimer toutes les étiquettes"
+          />
+        </div>
         <ul className="card mb-6 divide-y divide-navy/10 text-sm">
           {result.parcels.map((parcel) => (
             <li key={parcel.code} className="flex flex-wrap justify-between gap-2 py-2">

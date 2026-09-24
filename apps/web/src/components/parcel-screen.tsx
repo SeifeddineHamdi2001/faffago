@@ -23,6 +23,7 @@ import { Field } from './create-courier-form';
 import { ConfirmDialog, Dialog } from './dialog';
 import { LocalitePicker } from './localite-picker';
 import { ParcelForm } from './parcel-form';
+import { PrintLabels } from './print-labels';
 
 const dateTime = new Intl.DateTimeFormat('fr-TN', { dateStyle: 'short', timeStyle: 'short' });
 
@@ -115,12 +116,15 @@ export function ParcelScreen({
         Créé le {dateTime.format(new Date(parcel.createdAt))}
       </p>
       {reprint && (
-        <p
-          role="status"
-          className="mb-4 rounded-xl bg-orange/15 p-4 text-sm font-semibold text-navy"
-        >
-          {REPRINT_WARNING}
-        </p>
+        <div role="status" className="mb-4 space-y-3 rounded-xl bg-orange/15 p-4">
+          <p className="text-sm font-semibold text-navy">{REPRINT_WARNING}</p>
+          <PrintLabels path={`parcels/${parcel.code}/label`} title="Réimprimer l’étiquette" />
+        </div>
+      )}
+      {!readOnly && !reprint && (
+        <div className="mb-6">
+          <PrintLabels path={`parcels/${parcel.code}/label`} title="Imprimer l’étiquette" />
+        </div>
       )}
       {error && <ErrorAlert error={error} />}
 

@@ -168,7 +168,16 @@ committed in steps, each reported before the next.
       `GET /parcels/imports/:id` gives the codes back for the labels.
       Migration `20261001000000_parcel_imports` — 27 shared, 12 API e2e,
       7 web tests
-- [ ] Labels PDF (Code128 + QR; thermal and A4, D-36)
+- [x] Labels PDF (Code128 + QR; thermal and A4, D-36) — step 4. One
+      PDF per request, built by the API (pdfkit, bwip-js):
+      `GET /parcels/:code/label`, `GET /parcels/labels?codes=…` (up to 500,
+      in the order given) and `GET /parcels/imports/:id/labels` (file order),
+      each `?format=THERMAL|A4`. The Code128 holds the code, the QR the
+      tracking URL built from `NEXT_PUBLIC_SITE_URL` (D-43); without it the
+      API refuses to print. `parcelCodeFromScan` reads either symbol, any
+      domain. Web: print links on the parcel page and in the reprint
+      warning; "Imprimer toutes les étiquettes" after an import — 5 shared,
+      18 API, 3 web tests
 - [ ] Mes colis + Détail du colis (D-38, D-40)
 - [ ] Ramassage requests + pickup address at first request (D-35)
 - [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
@@ -549,6 +558,21 @@ committed in steps, each reported before the next.
   - "Imprimer toutes les étiquettes" after an import comes with the labels
     (step 4); the result screen lists each line with its code.
 
+- 2026-09-24 — **Phase 4, step 4 (labels).** Choices made while building:
+  - **GET, opened by a plain link** in a new tab: nothing is written, and a
+    link is never caught by a pop-up blocker. `Cache-Control: no-store`, as
+    the label carries the customer's name, phone and address.
+  - **Seller only** for now; the depot's Réimprimer l'étiquette (A-9) comes
+    with the Colis screen in phase 5.
+  - **Printed**: what Vendeur 4.4 lists, with **both phones** when there are
+    two. Landmark and courier note are not printed (4.4 does not list them;
+    the courier app shows them).
+  - **Any status** can be printed ("reprint anytime").
+  - The Code128 is 76 mm wide, centred, so it keeps its white margins for
+    the scanner. The QR is error-correction level M.
+  - A batch with one code that is not the seller's is refused as a whole,
+    as "Code inconnu" (D-26).
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -571,6 +595,10 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
+- **Arabic on labels**: the PDF uses the built-in fonts (Windows-1252). A
+  recipient name or address typed in Arabic prints as "?" for each letter;
+  place names are always French (Q6). If sellers type Arabic names, the
+  labels need an embedded Arabic font with right-to-left shaping. Do they?
 - **Suggestion (not in the specs): a downloadable list of localités** beside
   the délégation list, for sellers filling the `localite` column. Q5 offers
   the délégation list only.

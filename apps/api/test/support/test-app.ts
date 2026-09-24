@@ -64,6 +64,7 @@ export interface TestApp {
 export const TEST_SECRETS = {
   JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdef0123456789abcdef',
   JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdef0123456789abcdef',
+  NEXT_PUBLIC_SITE_URL: 'https://www.mirely.store',
   STORAGE_DRIVER: 'local',
   STORAGE_ENCRYPTION_KEY_ID: 'test1',
   STORAGE_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),

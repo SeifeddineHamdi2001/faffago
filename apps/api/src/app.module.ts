@@ -6,6 +6,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { ClockModule } from './common/clock.module';
 import { GeoModule } from './geo/geo.module';
+import { LabelsModule } from './labels/labels.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { SellersModule } from './sellers/sellers.module';
@@ -34,6 +35,8 @@ import { StorageModule } from './storage/storage.module';
     AccountsModule,
     SellersModule,
     GeoModule,
+    // Before ParcelsModule: /parcels/labels must not be read as a parcel code.
+    LabelsModule,
     ParcelsModule,
   ],
 })
