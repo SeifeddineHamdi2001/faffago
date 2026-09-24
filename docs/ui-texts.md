@@ -357,6 +357,24 @@ tile labels are Vendeur 4.1's list, capitalised.
 | API `ABSENCE_DATE_PASSEE`                         | Choisissez aujourd’hui ou un jour à venir.                                                                               |
 | API `ABSENCE_INTROUVABLE`, `COURSIER_INTROUVABLE` | Aucune absence ce jour-là. · Coursier introuvable.                                                                       |
 
+## Scan (`/admin/scan`, Admin 4.2, D-50, D-53)
+
+Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Colis d'un autre coursier", "Code inconnu" are the spec's.
+
+| Key                                                       | Français                                                                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| web `admin-nav`                                           | Scan                                                                                                                           |
+| web `scan-station` — champs                               | Coursier · Choisir… · Code du colis                                                                                            |
+| web `scan-station` — aide                                 | Douchette : scannez directement. Étiquette abîmée : tapez le code puis Entrée (saisie manuelle, signalée).                     |
+| web `scan-station` — caméra                               | Activer la caméra · Arrêter la caméra                                                                                          |
+| web `scan-station` — résultat                             | {statut} · {lieu} · Coursier : {prénom nom} · Prévu pour {prénom nom} · Saisie manuelle signalée · Touchez l’écran pour fermer |
+| web `scan-station` — liste                                | Derniers scans                                                                                                                 |
+| web `camera-scanner`                                      | Caméra indisponible : autorisez la caméra, ou utilisez la douchette.                                                           |
+| `SCAN_REFUSAL_MESSAGES_FR.COURSIER_INDISPONIBLE`          | Coursier indisponible : absent, inactif ou ne reçoit plus de travail                                                           |
+| `SCAN_REFUSAL_MESSAGES_FR.SCAN_ID_REUTILISE`              | Identifiant de scan déjà utilisé pour un autre scan                                                                            |
+| `SCAN_REFUSAL_MESSAGES_FR.COLIS_PAS_AU_DEPOT` (phase 3)   | Le colis n'est pas au dépôt                                                                                                    |
+| `SCAN_REFUSAL_MESSAGES_FR.COURSIER_NON_PRECISE` (phase 3) | Choisissez un coursier avant de scanner                                                                                        |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

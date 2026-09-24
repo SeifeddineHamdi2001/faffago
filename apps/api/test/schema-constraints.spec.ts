@@ -310,6 +310,39 @@ describe('scans', () => {
     await expect(failure('88888888-8888-8888-8888-888888888881')).resolves.toBeDefined();
     await expect(failure('88888888-8888-8888-8888-888888888882')).resolves.toBeDefined();
   });
+
+  it('keeps what the parcel was before an accepted depot scan (D-53, D-54)', async () => {
+    const depotScan = (clientScanId: string, parcelBefore: string | null) =>
+      db.query(
+        `insert into scans (id,"clientScanId",action,"rawCode","parcelId","actorUserId",source,
+           accepted,"parcelBefore","deviceTime","businessDate")
+         values (gen_random_uuid(),$1,'ENTREE_DEPOT','FG-8K2QX7AB',$2,$3,'WEB_DOUCHETTE',true,
+                 $4::jsonb,now(),current_date)`,
+        [clientScanId, PARCEL_ID, USER_ID, parcelBefore],
+      );
+
+    await expect(depotScan('99999999-9999-9999-9999-999999999991', null)).rejects.toThrow(
+      /scans_depot_scan_keeps_parcel_before/,
+    );
+    await expect(
+      depotScan(
+        '99999999-9999-9999-9999-999999999992',
+        '{"status":"RAMASSE","location":"AVEC_LE_RAMASSEUR"}',
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('says why a scan was refused', async () => {
+    await expect(
+      db.query(
+        `insert into scans (id,"clientScanId",action,"rawCode","actorUserId",source,
+           accepted,"deviceTime","businessDate")
+         values (gen_random_uuid(),'99999999-9999-9999-9999-999999999993','ENTREE_DEPOT',
+                 'FG-ZZZZZZZZ',$1,'WEB_DOUCHETTE',false,now(),current_date)`,
+        [USER_ID],
+      ),
+    ).rejects.toThrow(/scans_refused_has_reason/);
+  });
 });
 
 describe('parcels', () => {

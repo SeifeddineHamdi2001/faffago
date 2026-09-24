@@ -133,6 +133,10 @@ export const ScanRefusal = {
   DATE_REPORT_INVALIDE: 'DATE_REPORT_INVALIDE',
   /** The seller's Relancer carries its date (D-9, D-29). */
   DATE_RELANCE_REQUISE: 'DATE_RELANCE_REQUISE',
+  /** The chosen courier is absent, inactive or takes no new work (D-53). */
+  COURSIER_INDISPONIBLE: 'COURSIER_INDISPONIBLE',
+  /** The same scan UUID sent for another parcel or mode (D-53). */
+  SCAN_ID_REUTILISE: 'SCAN_ID_REUTILISE',
 } as const;
 export type ScanRefusal = (typeof ScanRefusal)[keyof typeof ScanRefusal];
 
@@ -153,6 +157,8 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   DATE_REPORT_INVALIDE: 'La date doit être comprise entre demain et 7 jours',
   // Neutral on purpose: the seller's wording comes with the phase 7 screen (D-29).
   DATE_RELANCE_REQUISE: 'Date de relance obligatoire',
+  COURSIER_INDISPONIBLE: 'Coursier indisponible : absent, inactif ou ne reçoit plus de travail',
+  SCAN_ID_REUTILISE: 'Identifiant de scan déjà utilisé pour un autre scan',
 };
 
 // ─────────────────────────────────────────────────────────────

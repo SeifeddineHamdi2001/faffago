@@ -261,7 +261,21 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       role and "absent today". Web: Paramètres › Zones and › Géographie (a
       délégation's localités, the Autre list), the Absences dialog on
       Coursiers. No migration — 16 shared, 32 API e2e (and the seed tests), 26 web tests
-- [ ] Web scan station (camera + USB gun), 3 modes (D-50), scan deduplication — step 2
+- [x] Web scan station (camera + USB gun), 3 modes (D-50), scan
+      deduplication — step 2, API and web (D-53). `POST /scans/depot`
+      (Admin, Dépôt): Entrée dépôt (D-28 included), Sortie coursier (the
+      chosen livreur must be able to work today; another than the one
+      planned is accepted and named "Prévu pour"), Retour de tournée (the
+      livreur first; another livreur's parcel refused; A-8 included). Every
+      scan stored, accepted or refused, under the browser's UUID: the same
+      one again answers 200 with the first result, the same one for another
+      parcel, mode or person is refused. Manual entry and clock skew flagged
+      (A-12, A-22). Migration `20261004000000_depot_scans`:
+      `scans.parcelBefore`, `scans.targetCourierId`, two CHECKs. Web: Scan
+      in the menu (Admin, Dépôt), the station with F1–F3, the courier
+      chooser, the gun or typed code, the camera (`BarcodeDetector`, zxing
+      otherwise), the full-screen result and the last 20 scans — 13 shared,
+      26 API e2e, 2 schema, 10 web tests
 - [ ] Annuler le dernier scan (D-54) — step 3
 - [ ] Tournées (parcels grouped by zone, manual moves, D-55) — step 4
 - [ ] Ramassages planning + À emporter (D-58) — step 5
@@ -757,6 +771,41 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     `localites` and `couriers`, and forwards PUT and DELETE.
   - Housekeeping (D-50): the back office home comment no longer says
     Aujourd'hui is phase 5; `apps/courier` now says phase 6.
+
+- 2026-09-24 — **Phase 5, step 2 (scan station).** Choices made while
+  building:
+  - **Gun or hand, told by the keys' timing**: one field takes both. A burst
+    (35 ms or less between keys on average) is the gun; anything slower, or
+    pasted, is manual entry and flagged (A-22), so typing into the gun's
+    field cannot avoid the flag. The threshold is
+    `GUN_MAX_MEAN_KEY_INTERVAL_MS` in shared.
+  - **The camera** takes the same code once in 3 seconds
+    (`CAMERA_REPEAT_WINDOW_MS`): it keeps reading the label in front of it.
+    Each read is a new scan with its own UUID; the server refuses a second
+    Entrée dépôt of the same parcel anyway.
+  - **Modes on F1, F2, F3**: a gun types letters, digits and Enter.
+  - **The courier is checked before the code**: no courier chosen is refused
+    on the page without calling the API; the server refuses it too.
+  - **Retour de tournée takes back from any livreur**, even one who no
+    longer takes work (D-12): what he carries must still come back.
+  - **"Prévu pour"** is the manual move of Tournées, else the zone's livreur
+    today. It is written on the Sortie coursier event (`prevuPour` in its
+    metadata, never shown to the seller), so a replay answers the same. The
+    manual move is cleared once the parcel is out.
+  - **A refused scan keeps `parcelBefore` too**, to show the parcel as it
+    was when refused; null only when the code matched no parcel. The CHECK
+    requiring it on accepted scans covers the three depot modes only; the
+    courier app's scans (phase 6) decide their own rule.
+  - **`scans.targetCourierId`** (not in the plan): the courier chosen on the
+    station, kept for the history and the replay.
+  - **A green result clears itself after 1.5 s**, a red one stays until the
+    next scan or a tap. White text on green-700 and red-700 passes WCAG AA.
+  - **Dependency**: `@zxing/browser` and `@zxing/library` (web), loaded only
+    when the browser has no `BarcodeDetector`.
+  - Not yet: the reprint warning on a depot scan comes with
+    `labelReprintNeeded` (step 7, D-57); cancelling a scan is step 3. The
+    station is not browser-tested yet (step 10), and the camera has only
+    been typechecked: to try on a phone.
 
 ## Open questions
 

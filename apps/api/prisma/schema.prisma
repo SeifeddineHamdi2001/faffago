@@ -527,6 +527,7 @@ model Courier {
   bonsVersement   BonVersement[]
   bonsRetour      BonRetour[]
   chatThreads     ChatThread[]
+  targetedScans   Scan[]           @relation("ScanTargetCourier")
 
   @@index([accountState])
   @@map("couriers")
@@ -884,12 +885,18 @@ model Scan {
   pickupId          String?        @db.Uuid
   actorUserId       String         @db.Uuid
   source            ScanSource
+  /// The courier chosen on the station before scanning (D-53): the livreur a
+  /// Sortie coursier assigns, the one a Retour de tournée takes back from.
+  targetCourierId   String?        @db.Uuid
   /// Allowed when a label is damaged, but flagged to the admin (Coursier 01).
   manualEntry       Boolean        @default(false)
   accepted          Boolean
   refusalReason     String?
   failureReason     FailureReason?
   collectedMillimes BigInt?
+  /// What the parcel was just before an accepted depot scan, so the scan can
+  /// be cancelled (D-53, D-54). See `ParcelBefore` in packages/shared.
+  parcelBefore      Json?
 
   gpsLat       Decimal? @db.Decimal(9, 6)
   gpsLng       Decimal? @db.Decimal(9, 6)
@@ -911,8 +918,9 @@ model Scan {
   cancelledByUserId String?   @db.Uuid
   cancelReason      String?
 
-  parcel Parcel? @relation(fields: [parcelId], references: [id])
-  actor  User    @relation(fields: [actorUserId], references: [id])
+  parcel        Parcel?  @relation(fields: [parcelId], references: [id])
+  actor         User     @relation(fields: [actorUserId], references: [id])
+  targetCourier Courier? @relation("ScanTargetCourier", fields: [targetCourierId], references: [id])
 
   @@index([parcelId, action])
   @@index([actorUserId, businessDate])

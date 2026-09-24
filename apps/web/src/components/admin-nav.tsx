@@ -9,6 +9,7 @@ import { Permission } from '@faffago/shared';
  * use". Only the screens built so far are listed; each phase adds its own.
  */
 const ITEMS: { href: string; label: string; permission: Permission }[] = [
+  { href: '/admin/scan', label: 'Scan', permission: Permission.SCAN_DEPOT },
   { href: '/admin/vendeurs', label: 'Vendeurs', permission: Permission.VENDEURS_LECTURE },
   { href: '/admin/coursiers', label: 'Coursiers', permission: Permission.COURSIERS_LECTURE },
   { href: '/admin/parametres', label: 'Paramètres', permission: Permission.PARAMETRES },

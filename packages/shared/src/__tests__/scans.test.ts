@@ -1,0 +1,119 @@
+import { describe, expect, it } from 'vitest';
+import { ParcelAction, SCAN_REFUSAL_MESSAGES_FR, ScanRefusal } from '../parcel-state-machine.js';
+import {
+  CAMERA_REPEAT_WINDOW_MS,
+  DEPOT_SCAN_MODES,
+  DEPOT_SCAN_MODE_LABELS_FR,
+  DEPOT_SCAN_MODE_SHORTCUTS,
+  PARCEL_ACTION_BY_DEPOT_MODE,
+  ScanSource,
+  classifyKeyboardEntry,
+  depotModeNeedsCourier,
+  depotScanSchema,
+  isRepeatRead,
+} from '../scans.js';
+
+const SCAN_ID = '3f1e4b6a-2c7d-4e8f-9a0b-1c2d3e4f5a6b';
+const COURIER_ID = '5d0c2a8e-1f3b-4c6d-9e7f-0a1b2c3d4e5f';
+
+describe('the depot scan modes (Admin 4.2, D-50)', () => {
+  it('ships three modes, in the order of the spec', () => {
+    expect(DEPOT_SCAN_MODES).toEqual(['ENTREE_DEPOT', 'SORTIE_COURSIER', 'RETOUR_DE_TOURNEE']);
+    expect(DEPOT_SCAN_MODES.map((mode) => DEPOT_SCAN_MODE_LABELS_FR[mode])).toEqual([
+      'Entrée dépôt',
+      'Sortie coursier',
+      'Retour de tournée',
+    ]);
+  });
+
+  it('gives each mode its keyboard shortcut, out of the way of a barcode gun', () => {
+    expect(DEPOT_SCAN_MODES.map((mode) => DEPOT_SCAN_MODE_SHORTCUTS[mode])).toEqual([
+      'F1',
+      'F2',
+      'F3',
+    ]);
+  });
+
+  it('maps each mode to its action of the state machine', () => {
+    expect(PARCEL_ACTION_BY_DEPOT_MODE).toEqual({
+      ENTREE_DEPOT: ParcelAction.SCAN_ENTREE_DEPOT,
+      SORTIE_COURSIER: ParcelAction.SCAN_SORTIE_COURSIER,
+      RETOUR_DE_TOURNEE: ParcelAction.SCAN_RETOUR_DE_TOURNEE,
+    });
+  });
+
+  it('asks for the courier first on Sortie coursier and Retour de tournée (D-53)', () => {
+    expect(depotModeNeedsCourier('ENTREE_DEPOT')).toBe(false);
+    expect(depotModeNeedsCourier('SORTIE_COURSIER')).toBe(true);
+    expect(depotModeNeedsCourier('RETOUR_DE_TOURNEE')).toBe(true);
+  });
+});
+
+describe('the scan the station sends (D-53)', () => {
+  const scan = {
+    clientScanId: SCAN_ID,
+    mode: 'SORTIE_COURSIER',
+    rawCode: ' FG-8K2QX7AB ',
+    source: ScanSource.WEB_DOUCHETTE,
+    courierId: COURIER_ID,
+    deviceTime: '2026-09-25T09:00:00.000+01:00',
+  };
+
+  it('carries the browser’s UUID, the code as read, the source and the device time', () => {
+    expect(depotScanSchema.parse(scan)).toEqual({ ...scan, rawCode: 'FG-8K2QX7AB' });
+  });
+
+  it('takes Entrée dépôt without a courier', () => {
+    const { courierId: _, ...entree } = scan;
+    expect(depotScanSchema.safeParse({ ...entree, mode: 'ENTREE_DEPOT' }).success).toBe(true);
+  });
+
+  it('refuses a scan without its UUID, a mode of phase 8, or the courier app as source', () => {
+    expect(depotScanSchema.safeParse({ ...scan, clientScanId: 'abc' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, mode: 'ARCHIVAGE_BON' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, source: 'APP_COURSIER' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, deviceTime: 'hier' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, rawCode: '  ' }).success).toBe(false);
+  });
+});
+
+describe('a barcode gun or a person typing (Coursier rule 1, A-22)', () => {
+  it('reads a burst of keys as the gun', () => {
+    const times = [0, 8, 15, 24, 31, 40, 47, 55, 63, 70, 78];
+    expect(classifyKeyboardEntry(times)).toBe(ScanSource.WEB_DOUCHETTE);
+  });
+
+  it('reads anything slower as manual entry, which is flagged', () => {
+    const times = [0, 180, 350, 520, 700, 910, 1100, 1260, 1400, 1580, 1750];
+    expect(classifyKeyboardEntry(times)).toBe(ScanSource.SAISIE_MANUELLE);
+  });
+
+  it('reads a pasted code, or a single key, as manual entry', () => {
+    expect(classifyKeyboardEntry([])).toBe(ScanSource.SAISIE_MANUELLE);
+    expect(classifyKeyboardEntry([0])).toBe(ScanSource.SAISIE_MANUELLE);
+  });
+});
+
+describe('the camera reading the same label again', () => {
+  it('ignores the same code within the window, and takes it again after', () => {
+    const last = { code: 'FG-8K2QX7AB', at: 1_000 };
+    expect(isRepeatRead(last, 'FG-8K2QX7AB', 1_000 + CAMERA_REPEAT_WINDOW_MS - 1)).toBe(true);
+    expect(isRepeatRead(last, 'FG-8K2QX7AB', 1_000 + CAMERA_REPEAT_WINDOW_MS)).toBe(false);
+  });
+
+  it('takes another code at once', () => {
+    expect(isRepeatRead({ code: 'FG-8K2QX7AB', at: 1_000 }, 'FG-3M9TW2CD', 1_010)).toBe(false);
+    expect(isRepeatRead(null, 'FG-8K2QX7AB', 1_000)).toBe(false);
+  });
+});
+
+describe('the two refusals added by D-53', () => {
+  it('have their message', () => {
+    expect(SCAN_REFUSAL_MESSAGES_FR[ScanRefusal.COURSIER_INDISPONIBLE]).toBe(
+      'Coursier indisponible : absent, inactif ou ne reçoit plus de travail',
+    );
+    expect(SCAN_REFUSAL_MESSAGES_FR[ScanRefusal.SCAN_ID_REUTILISE]).toBe(
+      'Identifiant de scan déjà utilisé pour un autre scan',
+    );
+  });
+});

@@ -353,3 +353,25 @@ export interface AbsenceRow {
   date: string;
   reason: string | null;
 }
+
+/** POST /scans/depot (Admin 4.2, D-53): what the station shows after a scan. */
+export interface DepotScanResult {
+  scanId: string | null;
+  clientScanId: string;
+  mode: string;
+  accepted: boolean;
+  replayed: boolean;
+  refusal: string | null;
+  message: string;
+  manualEntry: boolean;
+  clockSkewFlagged: boolean;
+  parcel: {
+    code: string;
+    status: string;
+    location: string;
+    shopName: string;
+    delegationNameFr: string;
+  } | null;
+  courier: ZoneCourierRef | null;
+  plannedFor: ZoneCourierRef | null;
+}

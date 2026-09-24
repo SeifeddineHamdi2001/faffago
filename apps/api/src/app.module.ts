@@ -11,6 +11,7 @@ import { LabelsModule } from './labels/labels.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { PickupsModule } from './pickups/pickups.module';
+import { ScansModule } from './scans/scans.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
@@ -43,6 +44,7 @@ import { ZonesModule } from './zones/zones.module';
     LabelsModule,
     ParcelsModule,
     PickupsModule,
+    ScansModule,
     DashboardModule,
   ],
 })

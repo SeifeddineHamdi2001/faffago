@@ -29,3 +29,4 @@ export * from './seller-parcels.js';
 export * from './pickups.js';
 export * from './seller-dashboard.js';
 export * from './zones.js';
+export * from './scans.js';

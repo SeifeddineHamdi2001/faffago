@@ -1,6 +1,12 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { generateParcelCode } from '@faffago/shared';
-import type { ParcelCashStatus, ParcelLocation, ParcelStatus, PrismaClient } from '@prisma/client';
+import type {
+  ParcelCashStatus,
+  ParcelLocation,
+  ParcelStatus,
+  Prisma,
+  PrismaClient,
+} from '@prisma/client';
 
 /**
  * Just enough operational data to put work "in a courier's hands": parcels,
@@ -40,6 +46,8 @@ export async function createParcel(
     /** Defaults to the first localité there is. */
     where?: { delegationId: string; localiteId: string };
     address?: string;
+    /** Any other column, e.g. the relance date of a Relancé parcel. */
+    extra?: Partial<Prisma.ParcelUncheckedCreateInput>;
   },
 ): Promise<string> {
   const where = input.where ?? (await place(prisma));
@@ -66,6 +74,7 @@ export async function createParcel(
         location,
         cashStatus: input.cashStatus ?? null,
         currentLivreurId: input.currentLivreurId ?? null,
+        ...input.extra,
       },
     });
     await tx.parcelEvent.create({
