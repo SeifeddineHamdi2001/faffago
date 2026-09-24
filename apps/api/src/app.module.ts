@@ -9,6 +9,7 @@ import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
+import { PickupsModule } from './pickups/pickups.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
@@ -38,6 +39,7 @@ import { StorageModule } from './storage/storage.module';
     // Before ParcelsModule: /parcels/labels must not be read as a parcel code.
     LabelsModule,
     ParcelsModule,
+    PickupsModule,
   ],
 })
 export class AppModule {}

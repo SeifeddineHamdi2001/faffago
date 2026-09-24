@@ -4,7 +4,14 @@
  * under /auth has its own route handler (login, refresh, logout,
  * impersonation), so the proxy never touches a token-issuing endpoint.
  */
-const PROXIED_ROOTS = new Set(['accounts', 'sellers', 'settings', 'parcels']);
+const PROXIED_ROOTS = new Set([
+  'accounts',
+  'sellers',
+  'settings',
+  'parcels',
+  'pickups',
+  'pickup-addresses',
+]);
 
 export function isProxiedPath(segments: string[]): boolean {
   if (segments.length === 0) return false;

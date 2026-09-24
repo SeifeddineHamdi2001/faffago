@@ -196,7 +196,21 @@ committed in steps, each reported before the next.
       track line, "Tentative n sur m", the money block and the history.
       Migration `20261002000000_parcel_event_sequence` — 15 shared, 11 API
       e2e, 9 web tests
-- [ ] Ramassage requests + pickup address at first request (D-35)
+- [x] Ramassage requests + pickup address at first request (D-35) — step 6,
+      API and web. `POST /pickups` (idempotent by the client's UUID): a
+      saved address or a new one, the parcels ready (Créé, in no open
+      request) or only their number, Matin or Après-midi, a note. One open
+      request per address; a suspended seller cannot request. `GET /pickups`,
+      `GET /pickups/:id` (which parcels were picked up once Effectué, the
+      ramasseur's first name), `POST /pickups/:id/cancel` while Demandé or
+      Planifié. Addresses: list, add, edit (replaced once a request used
+      them), choose the default. Web: Ramassages, Demander un ramassage with
+      the fee rule before confirming, the request page with Annuler.
+      Migration `20261003000000_pickup_requests` — 7 shared, 19 API e2e,
+      13 web tests
+- [x] Profil (Vendeur 4.14) — step 6, built with the pickup addresses.
+      `GET /profile`: shop, contact, statut with the retenue note, rates;
+      the pickup addresses managed on the same page — 1 API e2e, 5 web tests
 - [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
 - [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
       the seller logs in → creates a parcel. Covers the phase 1 screens too
@@ -618,6 +632,23 @@ committed in steps, each reported before the next.
     when the page is rendered on the server.
   - Appels Faffa Go (phase 7) and the chat (phase 10) join the parcel page
     with their phases.
+
+- 2026-09-24 — **Phase 4, step 6 (Ramassages, Profil).** Choices made while
+  building, **awaiting review**:
+  - Profil is built now, since the pickup addresses live there.
+  - A parcel is in one open request at most, and only Créé parcels can be
+    chosen. A request lists parcels **or** gives a number, not both.
+  - The first address saved becomes the default.
+  - Editing an address no request has used rewrites it; once used, it is
+    replaced (D-35).
+  - The seller sees the ramasseur's first name and the planned day and
+    window, once the depot plans it.
+  - The request carries a window only, no date (D-35).
+  - A suspended seller still manages addresses and cancels requests, but
+    cannot request a new pickup.
+  - Pickup requests are not written to `audit_log`: the seller's own
+    requests, with who cancelled them on the row.
+  - Profil also shows the pickup fee rule next to the three rates of 4.14.
 
 ## Open questions
 

@@ -26,3 +26,4 @@ export * from './parcel-forms.js';
 export * from './csv-import.js';
 export * from './labels.js';
 export * from './seller-parcels.js';
+export * from './pickups.js';

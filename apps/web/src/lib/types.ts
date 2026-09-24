@@ -9,6 +9,8 @@ import type {
   ParcelEventType,
   ParcelGroup,
   ParcelLocation,
+  PickupSlot,
+  PickupStatus,
   ParcelStatus,
   Permission,
   Role,
@@ -211,4 +213,68 @@ export interface SellerParcelDetail extends SellerParcel {
   lastFailureReason: FailureReason | null;
   bonNumber: string | null;
   timeline: TimelineEntry[];
+}
+
+/** A pickup address (Vendeur 4.5, 4.14). */
+export interface PickupAddress {
+  id: string;
+  label: string | null;
+  localiteId: string;
+  localiteNameFr: string;
+  delegationNameFr: string;
+  gouvernoratNameFr: string;
+  address: string;
+  landmark: string | null;
+  isDefault: boolean;
+}
+
+/** GET /pickups: one request (Vendeur 4.5). */
+export interface PickupView {
+  id: string;
+  status: PickupStatus;
+  requestedSlot: PickupSlot | null;
+  note: string | null;
+  declaredCount: number | null;
+  expectedCount: number;
+  scannedCount: number;
+  plannedDate: string | null;
+  plannedSlot: PickupSlot | null;
+  ramasseurFirstName: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  address: PickupAddress;
+}
+
+export interface PickupDetail extends PickupView {
+  parcels: { code: string; recipientName: string; status: ParcelStatus; pickedUp: boolean }[];
+}
+
+/** GET /pickups/ready-parcels: what the request form offers. */
+export interface ReadyParcel {
+  code: string;
+  recipientName: string;
+  delegationNameFr: string;
+  codAmountMillimes: string;
+  createdAt: string;
+}
+
+/** GET /profile (Vendeur 4.14). Money as digit strings of millimes. */
+export interface SellerProfile {
+  shopName: string;
+  productCategory: string;
+  storeLink: string | null;
+  contactFullName: string;
+  contactPhone: string;
+  email: string | null;
+  statut: string;
+  accountState: string;
+  rates: {
+    deliveryFeeMillimes: string;
+    returnFeeMillimes: string;
+    changeClientFeeMillimes: string;
+    pickupFeeMillimes: string;
+    pickupFreeThreshold: number;
+    retenueRateBps: number;
+  };
 }

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 /**
  * The seller menu (Vendeur 3). Only the screens built so far are listed;
- * Ramassages and the rest join it with
+ * À vérifier, Paiements, Retours, Notifications and the rest join it with
  * their steps.
  */
 const ITEMS: { href: string; label: string; exact?: boolean }[] = [
@@ -13,6 +13,8 @@ const ITEMS: { href: string; label: string; exact?: boolean }[] = [
   { href: '/vendeur/colis', label: 'Mes colis', exact: true },
   { href: '/vendeur/colis/nouveau', label: 'Créer un colis' },
   { href: '/vendeur/colis/import', label: 'Import CSV' },
+  { href: '/vendeur/ramassages', label: 'Ramassages' },
+  { href: '/vendeur/profil', label: 'Profil' },
 ];
 
 export function SellerNav() {

@@ -186,6 +186,12 @@ enum ScanSource {
   SAISIE_MANUELLE
 }
 
+/// The time window of a pickup request (D-35).
+enum PickupSlot {
+  MATIN
+  APRES_MIDI
+}
+
 enum PickupStatus {
   DEMANDE
   PLANIFIE
@@ -467,22 +473,28 @@ model SellerDocument {
 }
 
 model PickupAddress {
-  id           String  @id @default(uuid()) @db.Uuid
-  sellerId     String  @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
+  sellerId     String   @db.Uuid
   label        String?
-  delegationId String  @db.Uuid
+  delegationId String   @db.Uuid
   /// The délégation always comes from the localité (D-17); the two-column key
   /// below makes a disagreement impossible.
-  localiteId   String  @db.Uuid
+  localiteId   String   @db.Uuid
   address      String
   landmark     String?
-  isDefault    Boolean @default(false)
-  isActive     Boolean @default(true)
+  /// One default per seller, and only an active one.
+  isDefault    Boolean  @default(false)
+  /// False once replaced or no longer used: kept for the pickups that used it (D-35).
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  replacedById String?  @unique @db.Uuid
 
-  seller     Seller     @relation(fields: [sellerId], references: [id])
-  delegation Delegation @relation(fields: [delegationId], references: [id])
-  localite   Localite   @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
+  seller     Seller         @relation(fields: [sellerId], references: [id])
+  delegation Delegation     @relation(fields: [delegationId], references: [id])
+  localite   Localite       @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
   pickups    Pickup[]
+  replacedBy PickupAddress? @relation("PickupAddressReplacement", fields: [replacedById], references: [id])
+  replaces   PickupAddress? @relation("PickupAddressReplacement")
 
   @@index([sellerId])
   @@map("pickup_addresses")
@@ -914,27 +926,30 @@ model Scan {
 // ─────────────────────────────────────────────────────────────
 
 model Pickup {
-  id              String       @id @default(uuid()) @db.Uuid
-  sellerId        String       @db.Uuid
-  pickupAddressId String       @db.Uuid
-  status          PickupStatus @default(DEMANDE)
+  id                String       @id @default(uuid()) @db.Uuid
+  sellerId          String       @db.Uuid
+  pickupAddressId   String       @db.Uuid
+  status            PickupStatus @default(DEMANDE)
   /// The seller either lists the parcels or just says how many (Vendeur 4.5).
-  declaredCount   Int?
-  requestedSlot   String?
-  note            String?
-  plannedDate     DateTime?    @db.Date
-  plannedSlot     String?
+  declaredCount     Int?
+  requestedSlot     PickupSlot?
+  note              String?
+  plannedDate       DateTime?    @db.Date
+  plannedSlot       PickupSlot?
   /// Pre-filled with the ramasseur of the zone of this pickup address (A-14).
-  ramasseurId     String?      @db.Uuid
-  completedAt     DateTime?
-  scannedCount    Int          @default(0)
+  ramasseurId       String?      @db.Uuid
+  completedAt       DateTime?
+  scannedCount      Int          @default(0)
   /// Set when the pickup is closed below the free threshold with at least one
   /// parcel scanned; zero parcels costs nothing (A-13).
-  feeChargeId     String?      @db.Uuid
-  cancelledAt     DateTime?
-  cancelReason    String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  feeChargeId       String?      @db.Uuid
+  cancelledAt       DateTime?
+  cancelledByUserId String?      @db.Uuid
+  cancelReason      String?
+  /// Drawn by the seller's form: a request sent twice is created once.
+  clientRequestId   String?      @unique @db.Uuid
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   seller        Seller         @relation(fields: [sellerId], references: [id])
   pickupAddress PickupAddress  @relation(fields: [pickupAddressId], references: [id])
