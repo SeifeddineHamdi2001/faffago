@@ -286,7 +286,20 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       Asked twice, it answers the same. Web: "Annuler le dernier scan" on the
       newest accepted scan of the station, the result in navy, "Annulé" in
       the list. No migration — 5 shared, 11 API e2e, 3 web tests
-- [ ] Tournées (parcels grouped by zone, manual moves, D-55) — step 4
+- [x] Tournées (parcels grouped by zone, manual moves, D-55) — step 4, API
+      and web. `GET /tournees` (Admin, Dépôt): the parcels at the depot due
+      today (`isDueForTour`: Au dépôt, or Relancé on or after its date), in
+      their zone's column under the livreur covering it today (D-52), "Sans
+      coursier" and "Sans zone" apart; each courier's load.
+      `POST /tournees/moves`: parcels to another livreur able to go out
+      today, or back under their zone with null; all or nothing; one
+      `AFFECTATION_LIVREUR` event per parcel moved
+      (`ParcelEventService.recordPlannedLivreur`), kept off the seller's
+      timeline by `EVENT_TYPES_HIDDEN_FROM_SELLER` and off public tracking by
+      its whitelist. The Coursiers list gains each livreur's parcels today
+      (in hand, planned). Web: Tournées in the menu (Admin, Dépôt), the
+      columns, the loads, a selection moved from a bar at the bottom. No
+      migration — 9 shared, 14 API e2e, 9 web tests
 - [ ] Ramassages planning + À emporter (D-58) — step 5
 - [ ] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6
 - [ ] Applying seller change requests (D-57) — step 7
@@ -846,6 +859,31 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
   - **A-11's caisse rule** does not apply to depot scans, which move no
     cash; it comes with the courier's scans (phases 6 and 8).
   - The cancelled result is shown in navy, apart from green and red.
+
+- 2026-09-24 — **Phase 5, step 4 (Tournées).** Choices made while building:
+  - **Admin and Dépôt only**, like the other planning (Admin 2 "Plan pickups
+    and tours"); Service client does not see Tournées.
+  - **Only zones with parcels to go out** are shown, by name; "Sans zone"
+    first, highlighted, and a zone nobody covers reads "Sans coursier",
+    highlighted.
+  - **A moved parcel stays in its zone's column**, marked "→ {livreur}", and
+    counts in that livreur's load.
+  - **A move to a livreur who cannot go out today** (absent, no longer
+    taking work) is set aside for the day: the parcel falls back to its
+    zone's livreur, and the move applies again once he can. Moving is only
+    offered, and accepted, to a livreur able to go out today.
+  - **A move is all or nothing**: one parcel that is not waiting for today's
+    tour refuses the whole selection, with its code. Moving a parcel to the
+    courier it is already planned for writes nothing.
+  - **"Today's parcels" on Coursiers** (D-11): for a livreur, the parcels he
+    carries now and those Tournées plans for him. A ramasseur's work comes
+    with the pickups (step 5).
+  - A move written after an Entrée dépôt means the parcel changed since that
+    scan, so the scan can no longer be cancelled (D-54): the team planned it.
+  - **Route order**: the Coursiers list now reads Tournées, which brought the
+    parcels module in before the labels module, and `/parcels/labels` was
+    taken for a parcel code (the labels tests caught it). `LabelsModule` now
+    comes first in `AppModule`, with the reason beside it.
 
 ## Open questions
 

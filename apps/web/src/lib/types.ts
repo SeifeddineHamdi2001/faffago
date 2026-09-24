@@ -51,6 +51,8 @@ export interface CourierRow {
   zones: { name: string; role: 'LIVREUR' | 'RAMASSEUR'; kind: 'TITULAIRE' | 'BACKUP' }[];
   /** Marked absent for today (D-52). */
   absentToday: boolean;
+  /** Livreurs only: parcels he carries and those Tournées plans for him (D-55). */
+  parcelsToday?: { withHim: number; planned: number } | null;
   isActive?: boolean;
   acceptsWork?: boolean;
   accountState?: 'ACTIF' | 'INACTIF';
@@ -377,4 +379,33 @@ export interface DepotScanResult {
   /** Until when Annuler le dernier scan is possible, server clock (D-54). */
   cancellableUntil: string | null;
   serverTime: string;
+}
+
+/** GET /tournees (Admin 4.5, D-55). */
+export interface TourParcelRow {
+  id: string;
+  code: string;
+  status: string;
+  relaunchDate: string | null;
+  relaunchSlot: string | null;
+  attemptCount: number;
+  localiteNameFr: string;
+  delegationNameFr: string;
+  shopName: string;
+  plannedLivreur: ZoneCourierRef | null;
+  moved: boolean;
+}
+
+export interface TourneesView {
+  date: string;
+  zones: {
+    id: string;
+    name: string;
+    livreur: ZoneCourierRef | null;
+    livreurKind: 'TITULAIRE' | 'BACKUP' | null;
+    parcels: TourParcelRow[];
+  }[];
+  sansZone: TourParcelRow[];
+  loads: { courier: ZoneCourierRef; count: number }[];
+  withoutCourier: number;
 }

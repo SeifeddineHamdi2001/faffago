@@ -98,6 +98,12 @@ export function CouriersScreen({
                         .join(', ')
                     : 'Aucune zone'}
                 </p>
+                {courier.parcelsToday && (
+                  <p className="text-sm text-navy/70">
+                    Aujourd’hui : {courier.parcelsToday.withHim} en main ·{' '}
+                    {courier.parcelsToday.planned} prévus en tournée
+                  </p>
+                )}
                 {courier.absentToday && (
                   <p className="mt-1 text-sm">
                     <span className="badge-warn">Absent aujourd’hui</span>

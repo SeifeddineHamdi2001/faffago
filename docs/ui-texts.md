@@ -377,6 +377,18 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | `SCAN_REFUSAL_MESSAGES_FR.COLIS_PAS_AU_DEPOT` (phase 3)   | Le colis n'est pas au dépôt                                                                                                                                                                                                                                                              |
 | `SCAN_REFUSAL_MESSAGES_FR.COURSIER_NON_PRECISE` (phase 3) | Choisissez un coursier avant de scanner                                                                                                                                                                                                                                                  |
 
+## Tournées (`/admin/tournees`, Admin 4.5, D-55)
+
+| Key                                 | Français                                                                                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `admin-nav`                     | Tournées                                                                                                                                     |
+| web `tournees-screen` — titre, vide | Tournées du {JJ/MM/AAAA} · Aucun colis à sortir aujourd’hui.                                                                                 |
+| web `tournees-screen` — charge      | Charge par livreur · {prénom nom} : {n} · Sans coursier : {n}                                                                                |
+| web `tournees-screen` — colonne     | {prénom nom} · titulaire / backup · Tout · {localité}, {délégation} · {boutique} · Relancé · {créneau} · tentative {n} · → {prénom nom}      |
+| web `tournees-screen` — sélection   | 1 colis sélectionné · {n} colis sélectionnés · Livreur · Choisir… · Déplacer · Remettre selon la zone · 1 colis déplacé · {n} colis déplacés |
+| API `COLIS_HORS_TOURNEE`            | Colis pas au dépôt en attente d’une tournée : {codes}.                                                                                       |
+| web `couriers-screen`               | Aujourd’hui : {n} en main · {n} prévus en tournée                                                                                            |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

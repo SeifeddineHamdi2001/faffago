@@ -317,6 +317,38 @@ export class ParcelEventService {
     return restored;
   }
 
+  /**
+   * Tournées: the parcel planned for another courier, or back under its
+   * zone's livreur with null (D-55). Status and location do not move; the
+   * AFFECTATION_LIVREUR event keeps who planned what, and the seller never
+   * reads it.
+   */
+  async recordPlannedLivreur(
+    tx: Prisma.TransactionClient,
+    input: { parcelId: string; actor: UserPrincipal; plannedLivreurId: string | null },
+  ): Promise<Parcel> {
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const parcel = await tx.parcel.update({
+      where: { id: input.parcelId },
+      data: { plannedLivreurId: input.plannedLivreurId },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: parcel.id,
+        type: ParcelEventType.AFFECTATION_LIVREUR,
+        previousStatus: parcel.status,
+        newStatus: parcel.status,
+        previousLocation: parcel.location,
+        newLocation: parcel.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        serverTime: this.clock.now(),
+        metadata: { livreurPrevu: input.plannedLivreurId },
+      },
+    });
+    return parcel;
+  }
+
   /** Why, when the type alone does not say: a cancellation after pickup, a planned date (D-9). */
   private metadataOf(
     step: ParcelTransitionEvent,

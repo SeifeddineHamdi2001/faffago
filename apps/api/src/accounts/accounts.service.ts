@@ -25,6 +25,7 @@ import {
   telephoneDejaUtilise,
   withUniqueAccountErrors,
 } from './account-errors';
+import { TourneesService } from '../tournees/tournees.service';
 import { courierOpenWork } from './courier-open-work';
 
 type Tx = Prisma.TransactionClient;
@@ -81,6 +82,7 @@ export class AccountsService {
     private readonly sessions: SessionsService,
     private readonly audit: AuditService,
     @Inject(CLOCK) private readonly clock: Clock,
+    private readonly tournees: TourneesService,
   ) {}
 
   /** Paramètres › Utilisateurs. Admin only, by the route's permission. */
@@ -96,13 +98,14 @@ export class AccountsService {
    * Coursiers (D-11). Dépôt and Service client read name, phone, role and
    * zones of the active couriers, and whether they are absent today (D-52);
    * the admin also reads the account (state, CIN, vehicle) and, with
-   * PAIE_COURSIERS, the pay plan. Today's parcels join the list with the
-   * Tournées (phase 5, step 4).
+   * PAIE_COURSIERS, the pay plan. A livreur's parcels today: those he
+   * carries and those Tournées plans for him (D-11, D-55).
    */
   async listCouriers(role: Role): Promise<Record<string, unknown>[]> {
     const withAccount = can(role, Permission.GERER_VENDEURS_COURSIERS);
     const withPay = can(role, Permission.PAIE_COURSIERS);
     const today = new Date(`${tunisDayKey(this.clock.now())}T00:00:00.000Z`);
+    const todayByCourier = await this.tournees.parcelsToday();
     const users = await this.prisma.user.findMany({
       where: { role: { in: [...COURIER_ROLES] }, ...(withAccount ? {} : { isActive: true }) },
       orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
@@ -129,6 +132,7 @@ export class AccountsService {
           kind: a.kind,
         })),
         absentToday: courier.absences.length > 0,
+        parcelsToday: user.role === 'LIVREUR' ? (todayByCourier.get(courier.id) ?? null) : null,
       };
       if (withAccount) {
         Object.assign(row, {

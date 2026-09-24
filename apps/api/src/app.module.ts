@@ -15,6 +15,7 @@ import { ScansModule } from './scans/scans.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
 import { StorageModule } from './storage/storage.module';
+import { TourneesModule } from './tournees/tournees.module';
 import { ZonesModule } from './zones/zones.module';
 
 /**
@@ -36,15 +37,18 @@ import { ZonesModule } from './zones/zones.module';
     StorageModule,
     SettingsModule,
     AuthModule,
+    // Before any module that brings in ParcelsModule (Accounts does, through
+    // Tournées): routes register in module order, and /parcels/labels must
+    // not be read as a parcel code.
+    LabelsModule,
     AccountsModule,
     SellersModule,
     GeoModule,
     ZonesModule,
-    // Before ParcelsModule: /parcels/labels must not be read as a parcel code.
-    LabelsModule,
     ParcelsModule,
     PickupsModule,
     ScansModule,
+    TourneesModule,
     DashboardModule,
   ],
 })

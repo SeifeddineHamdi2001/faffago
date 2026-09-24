@@ -78,7 +78,7 @@ describe('GET /sellers', () => {
 });
 
 describe('GET /accounts/couriers', () => {
-  it('gives Dépôt name, phone, role, zones and absence, no account or pay data', async () => {
+  it('gives Dépôt name, phone, role, zones, absence and today’s parcels, no account or pay data', async () => {
     const response = await t.request('GET', '/accounts/couriers', { token: tokens.DEPOT });
     expect(response.status).toBe(200);
     const row = response.body.find((c: { id: string }) => c.id === livreur.id);
@@ -90,6 +90,7 @@ describe('GET /accounts/couriers', () => {
       phone: livreur.phone,
       zones: [{ name: 'Tunis Nord', role: 'LIVREUR', kind: 'TITULAIRE' }],
       absentToday: false,
+      parcelsToday: { withHim: 0, planned: 0 },
     });
   });
 

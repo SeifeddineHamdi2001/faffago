@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import {
   BYTE_ORDER_MARK,
   CANCELLATION_AFTER_PICKUP,
+  EVENT_TYPES_HIDDEN_FROM_SELLER,
   MAX_EXPORT_ROWS,
   PARCELS_PAGE_SIZE,
   PARCEL_CASH_STATUS_LABELS_FR,
@@ -194,7 +195,8 @@ export class ParcelQueriesService {
         },
       }),
       this.prisma.parcelEvent.findMany({
-        where: { parcelId: view.id },
+        // The team's planning stays off the seller's timeline (D-55).
+        where: { parcelId: view.id, type: { notIn: [...EVENT_TYPES_HIDDEN_FROM_SELLER] } },
         orderBy: { sequence: 'asc' },
         // Never GPS, device or free text: what the seller reads is chosen here (D-38).
         select: {

@@ -61,6 +61,11 @@ describe('CouriersScreen — what each role sees', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('gives a livreur’s parcels today: in hand and planned (D-11, D-55)', () => {
+    asAdmin([{ ...livreur, parcelsToday: { withHim: 3, planned: 12 } }]);
+    expect(screen.getByText('Aujourd’hui : 3 en main · 12 prévus en tournée')).toBeInTheDocument();
+  });
+
   it('says who is absent today', () => {
     asAdmin([{ ...livreur, absentToday: true }]);
     expect(screen.getByText('Absent aujourd’hui')).toBeInTheDocument();

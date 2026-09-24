@@ -30,3 +30,4 @@ export * from './pickups.js';
 export * from './seller-dashboard.js';
 export * from './zones.js';
 export * from './scans.js';
+export * from './tournees.js';

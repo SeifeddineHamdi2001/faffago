@@ -14,15 +14,15 @@ function links() {
 describe('AdminNav', () => {
   it('gives the admin every built screen', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
-    expect(links()).toEqual(['Scan', 'Vendeurs', 'Coursiers', 'Paramètres']);
+    expect(links()).toEqual(['Scan', 'Tournées', 'Vendeurs', 'Coursiers', 'Paramètres']);
   });
 
-  it('gives Dépôt the Scan, Vendeurs and Coursiers, never Paramètres', () => {
+  it('gives Dépôt the Scan, Tournées, Vendeurs and Coursiers, never Paramètres', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.DEPOT]} />);
-    expect(links()).toEqual(['Scan', 'Vendeurs', 'Coursiers']);
+    expect(links()).toEqual(['Scan', 'Tournées', 'Vendeurs', 'Coursiers']);
   });
 
-  it('gives Service client Vendeurs and Coursiers, no Scan (Admin 2)', () => {
+  it('gives Service client Vendeurs and Coursiers, no Scan nor Tournées (Admin 2)', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
     expect(links()).toEqual(['Vendeurs', 'Coursiers']);
   });
