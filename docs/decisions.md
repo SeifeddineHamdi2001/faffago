@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-46** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-46 are rules |
+| **D-1 … D-47** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-47 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-46**
+**Rules decided during the build — D-4 to D-47**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -75,6 +75,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-44 · Demander une modification](#d-44--demander-une-modification)
 - [D-45 · What a label prints, Arabic included](#d-45--what-a-label-prints-arabic-included)
 - [D-46 · Mes colis and Détail du colis](#d-46--mes-colis-and-détail-du-colis)
+- [D-47 · Pickup requests and Profil](#d-47--pickup-requests-and-profil)
 
 **Money — A-1 to A-5**
 
@@ -922,6 +923,32 @@ seller reads of it. Status corrections and cancelled scans are shown.
 
 **Where.** `packages/shared/src/seller-parcels.ts`.
 
+### D-47 · Pickup requests and Profil
+
+Decided 2026-09-24, with the phase 4 step 6 review (Vendeur 4.5, 4.14).
+Completes D-35.
+
+- **Which parcels**: a parcel is in one open request (Demandé or Planifié)
+  at most, and only **Créé** parcels can be chosen. A request lists its
+  parcels **or** gives their number, never both.
+- **The first address** the seller saves becomes the default.
+- **Editing an address**: one no request has used is edited in place; once
+  a request has used it, it is replaced (D-35).
+- **What the seller sees once planned**: the ramasseur's first name, the
+  planned day and window.
+- **The seller asks for a window only** (Matin or Après-midi), not a date:
+  the depot plans the day. Fine for launch.
+- **A suspended seller** manages addresses and cancels requests, but cannot
+  request a new pickup.
+- **No `audit_log` entry** for pickup requests: who cancelled is stored on
+  the request itself.
+- **Profil** shows the pickup fee rule next to the three rates of 4.14.
+- **Extra parcels at the scan** (for phase 6): the ramasseur can scan Créé
+  parcels of the same seller that the request did not list
+  (`PickupParcel.expected = false`). They are picked up normally and count
+  toward the 5-parcel free threshold.
+
+**Where.** `packages/shared/src/pickups.ts`, `apps/api/src/pickups`.
 ---
 
 ## Money

@@ -113,7 +113,9 @@ only, no HTTP endpoint (D-22).
 ## Phase 4 — Seller space
 
 Plan approved 2026-09-24; answers recorded as D-32 to D-41. Built and
-committed in steps, each reported before the next.
+committed in steps, each reported before the next. Steps 1 to 6 are done
+and approved; **step 7 (Tableau de bord) is next**, then step 8
+(Playwright), then the merge into `main`.
 
 - [x] Seller accounts created by admin (statut, documents in private storage,
       encrypted, D-32, D-33, D-34) — step 1, API and web:
@@ -211,7 +213,8 @@ committed in steps, each reported before the next.
 - [x] Profil (Vendeur 4.14) — step 6, built with the pickup addresses.
       `GET /profile`: shop, contact, statut with the retenue note, rates;
       the pickup addresses managed on the same page — 1 API e2e, 5 web tests
-- [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
+- [ ] **Next — step 7:** Tableau de bord: Aujourd'hui counts and quick
+      actions (D-39)
 - [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
       the seller logs in → creates a parcel. Covers the phase 1 screens too
       (logins, Copier les identifiants, Voir comme le vendeur)
@@ -231,7 +234,11 @@ committed in steps, each reported before the next.
 - [ ] Expo dev build, login with role choice, PIN
 - [ ] Livreur: Ma journée, Ma tournée, Trouver le client, Livrer / Échec
 - [ ] Mémoire d'adresse (linked to customer phone)
-- [ ] Ramasseur: pickups, parcel scans, bon Remis scan, Retour reçu scans
+- [ ] Ramasseur: pickups, parcel scans, bon Remis scan, Retour reçu scans.
+      Extra parcels (D-47): the ramasseur can scan Créé parcels of the same
+      seller that the request did not list (`PickupParcel.expected = false`);
+      they are picked up normally and count toward the 5-parcel free
+      threshold
 - [ ] SQLite scan queue + sync + no double scan + conflict handling
 - [ ] Ma caisse, notifications, profile
 - [ ] APK distribution, forced update (only with empty queue), OTA updates
@@ -633,22 +640,15 @@ committed in steps, each reported before the next.
   - Appels Faffa Go (phase 7) and the chat (phase 10) join the parcel page
     with their phases.
 
-- 2026-09-24 — **Phase 4, step 6 (Ramassages, Profil).** Choices made while
-  building, **awaiting review**:
-  - Profil is built now, since the pickup addresses live there.
-  - A parcel is in one open request at most, and only Créé parcels can be
-    chosen. A request lists parcels **or** gives a number, not both.
-  - The first address saved becomes the default.
-  - Editing an address no request has used rewrites it; once used, it is
-    replaced (D-35).
-  - The seller sees the ramasseur's first name and the planned day and
-    window, once the depot plans it.
-  - The request carries a window only, no date (D-35).
-  - A suspended seller still manages addresses and cancels requests, but
-    cannot request a new pickup.
-  - Pickup requests are not written to `audit_log`: the seller's own
-    requests, with who cancelled them on the row.
-  - Profil also shows the pickup fee rule next to the three rates of 4.14.
+- 2026-09-24 — **Phase 4, step 6 (Ramassages, Profil).** The choices made
+  while building were approved as built and recorded as **D-47**: one open
+  request per parcel, Créé parcels only, a list or a number; the first
+  address becomes the default; a used address is replaced, not edited; the
+  ramasseur's first name and the planned day shown once planned; a window,
+  no date; a suspended seller cannot request; no `audit_log` entry; the
+  pickup fee rule kept in Profil. Profil was built with this step, since the
+  pickup addresses live there. D-47 also settles, for phase 6, the extra
+  parcels scanned at a pickup.
 
 ## Open questions
 
