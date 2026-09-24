@@ -10,6 +10,7 @@ import { Permission } from '@faffago/shared';
  */
 const ITEMS: { href: string; label: string; permission: Permission }[] = [
   { href: '/admin/scan', label: 'Scan', permission: Permission.SCAN_DEPOT },
+  { href: '/admin/colis', label: 'Colis', permission: Permission.COLIS_LECTURE },
   {
     href: '/admin/ramassages',
     label: 'Ramassages',

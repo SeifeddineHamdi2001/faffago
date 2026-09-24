@@ -164,6 +164,10 @@ describe('the seller page', () => {
     expect(screen.getByText('Yasmine Trabelsi')).toBeTruthy();
     expect(screen.queryByText('Documents')).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
+    // His parcels, in Colis (D-11).
+    expect(screen.getByRole('link', { name: 'Voir ses colis' }).getAttribute('href')).toBe(
+      '/admin/colis?sellerId=s1',
+    );
   });
 
   it('opens each document through the BFF, never a public URL, old versions included', async () => {

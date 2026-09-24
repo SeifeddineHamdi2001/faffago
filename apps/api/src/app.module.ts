@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { ColisModule } from './colis/colis.module';
 import { ClockModule } from './common/clock.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { GeoModule } from './geo/geo.module';
@@ -49,6 +50,7 @@ import { ZonesModule } from './zones/zones.module';
     PickupsModule,
     ScansModule,
     TourneesModule,
+    ColisModule,
     DashboardModule,
   ],
 })

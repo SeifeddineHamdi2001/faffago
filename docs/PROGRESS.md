@@ -315,7 +315,20 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       Ramassages in the menu (Admin, Dépôt), a tab per status, Planifier /
       Replanifier with the ramasseur pre-filled, the detail with À emporter
       — 2 shared, 16 API e2e, 10 web tests
-- [ ] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6
+- [x] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6, API and
+      web. `GET /colis` (Admin, Dépôt, Service client): every parcel,
+      searched by code, customer name or phone, or shop; filtered by
+      status, cash status, seller, livreur, zone ("Sans zone" included) and
+      creation day in Tunis time; 50 a page. `GET /colis/filters`,
+      `GET /colis/export` (CSV, 10 000 rows at most). `GET /colis/:code`: the
+      customer, the seller, the money (COD, frozen fees, charges, cash
+      status, bon), the courier's reason and note, and the whole event log
+      (full names and roles, source, statuses and places, GPS, device time,
+      manual entry, cancelled scan, clock skew, "Prévu pour").
+      `GET /colis/:code/label` (Admin, Dépôt): Réimprimer l'étiquette, same
+      code (A-9). Web: Colis in the menu, the filters in the address, the
+      pages, Exporter, the detail; "Voir ses colis" on the seller's page. No
+      migration — 5 shared, 19 API e2e, 10 web tests
 - [ ] Applying seller change requests (D-57) — step 7
 - [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
 - [ ] Exceptions, first rows (D-50) — step 9
@@ -915,6 +928,23 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
   - **À emporter** lists every bon Préparé of that seller, not cancelled.
     Attaching a bon to one pickup comes with the bons (phase 8).
   - **Done and cancelled pickups**: the 200 newest.
+
+- 2026-09-24 — **Phase 5, step 6 (Colis).** Choices made while building:
+  - **The team's routes are `/colis`**; the seller keeps `/parcels`.
+    Reading and exporting are open to the three staff roles
+    (`COLIS_LECTURE`), reprinting to Admin and Dépôt.
+  - **The search also takes the shop name**; the courier filter is the
+    livreur the parcel was last given to, kept once delivered, so a
+    livreur's delivered parcels can be found.
+  - **The detail shows what the seller never sees** (D-38): GPS
+    coordinates, the phone's time, staff by full name, the scan flags. The
+    Tournées planning events are shown here with "Prévu pour".
+  - **A filter the API refuses** (an address edited by hand) shows the list
+    without filters rather than an error page.
+  - Joining the detail with their steps: the change requests (step 7),
+    Forcer un statut (step 8); the calls (phase 7) and the chat (phase 10).
+  - Labels added to shared: `CHARGE_STATUS_LABELS_FR`,
+    `SCAN_SOURCE_LABELS_FR` (in `docs/ui-texts.md`).
 
 ## Open questions
 

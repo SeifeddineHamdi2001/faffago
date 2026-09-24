@@ -72,7 +72,8 @@ export interface SellerParcelDetail extends SellerParcelView {
 
 const COURIER_ROLES: readonly Role[] = [Role.LIVREUR, Role.RAMASSEUR];
 
-function localDateTime(date: Date): string {
+/** `JJ/MM/AAAA HH:MM` in Tunis time, for the CSV exports. */
+export function localDateTime(date: Date): string {
   const local = new Date(date.getTime() + TUNISIA_UTC_OFFSET_MINUTES * 60_000);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(local.getUTCDate())}/${pad(local.getUTCMonth() + 1)}/${local.getUTCFullYear()} ${pad(local.getUTCHours())}:${pad(local.getUTCMinutes())}`;

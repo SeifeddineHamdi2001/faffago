@@ -31,3 +31,4 @@ export * from './seller-dashboard.js';
 export * from './zones.js';
 export * from './scans.js';
 export * from './tournees.js';
+export * from './colis.js';

@@ -442,3 +442,106 @@ export interface RamassageDetail extends RamassageRow {
     bonsRetour: { number: string; parcelCount: number }[];
   };
 }
+
+/** The filters of Colis, as they sit in the page's address (Admin 4.3). */
+export interface ColisQuery {
+  q?: string;
+  status?: string;
+  cashStatus?: string;
+  sellerId?: string;
+  courierId?: string;
+  zoneId?: string;
+  from?: string;
+  to?: string;
+  page?: string;
+}
+
+/** GET /colis/filters. */
+export interface ColisFilters {
+  zones: { id: string; name: string }[];
+  sellers: { id: string; shopName: string }[];
+  livreurs: { id: string; firstName: string; lastName: string }[];
+}
+
+/** GET /colis. */
+export interface StaffParcelList {
+  items: {
+    code: string;
+    createdAt: string;
+    sellerId: string;
+    shopName: string;
+    recipientName: string;
+    recipientPhone: string;
+    delegationNameFr: string;
+    localiteNameFr: string;
+    zoneName: string | null;
+    status: string;
+    location: string;
+    cashStatus: string | null;
+    codAmountMillimes: string;
+    courier: { firstName: string; lastName: string } | null;
+  }[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** One line of the full event log (Admin 4.3). */
+export interface StaffEventRow {
+  type: string;
+  at: string;
+  deviceTime: string | null;
+  actor: { name: string; role: string | null } | null;
+  source: string | null;
+  previousStatus: string | null;
+  newStatus: string | null;
+  previousLocation: string | null;
+  newLocation: string | null;
+  reasonCode: string | null;
+  reasonText: string | null;
+  gps: { lat: number; lng: number; accuracyM: number | null } | null;
+  scan: { manualEntry: boolean; cancelled: boolean; clockSkewFlagged: boolean } | null;
+  plannedFor: string | null;
+  cancelledAfterPickup: boolean;
+}
+
+/** GET /colis/:code. */
+export interface StaffParcelDetail {
+  code: string;
+  createdAt: string;
+  seller: { id: string; shopName: string; contactPhone: string };
+  recipientName: string;
+  recipientPhone: string;
+  recipientPhone2: string | null;
+  address: string;
+  landmark: string | null;
+  localiteNameFr: string;
+  delegationNameFr: string;
+  zoneName: string | null;
+  productDescription: string;
+  pieceCount: number;
+  isExchange: boolean;
+  openingAllowed: boolean;
+  courierNote: string | null;
+  status: string;
+  location: string;
+  attemptCount: number;
+  lastFailureReason: string | null;
+  lastFailureNote: string | null;
+  verifyDeadlineAt: string | null;
+  relaunchDate: string | null;
+  relaunchSlot: string | null;
+  currentLivreur: ZoneCourierRef | null;
+  plannedLivreur: ZoneCourierRef | null;
+  money: {
+    codAmountMillimes: string;
+    deliveryFeeMillimes: string;
+    returnFeeMillimes: string;
+    changeClientFeeMillimes: string;
+    courierRateMillimes: string | null;
+    cashStatus: string | null;
+    bonNumber: string | null;
+    charges: { type: string; amountMillimes: string; status: string }[];
+  };
+  events: StaffEventRow[];
+}

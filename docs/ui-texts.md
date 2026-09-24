@@ -402,6 +402,21 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | API `DATE_PASSEE`                  | Choisissez aujourd’hui ou un jour à venir.                                                                                                                                                                    |
 | `planPickupSchema`                 | Date invalide · Choisissez un créneau · Choisissez un ramasseur                                                                                                                                               |
 
+## Colis, équipe (`/admin/colis`, Admin 4.3)
+
+| Key                             | Français                                                                                                                                                                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `admin-nav`                 | Colis                                                                                                                                                                                                                                             |
+| web `colis-screen` — filtres    | Recherche · Code, client, téléphone ou boutique · Statut · Paiement · Vendeur · Livreur · Zone · Tous · Toutes · Créé du · au · Rechercher · Effacer · Exporter                                                                                   |
+| web `colis-screen` — liste      | Colis · Vendeur · Destinataire · Lieu · Statut · Montant · Livreur · {n} colis · page {n} sur {n} · Page précédente · Page suivante · Aucun colis.                                                                                                |
+| web `colis-screen` — détail     | ← Colis · Réimprimer l’étiquette · Destinataire · Colis · Argent · Vendeur : · {n} pièce(s) · Échange · Ouverture autorisée · Note : · Avec : · Prévu pour : · Tentative {n} · Décision du vendeur avant le {date} · Relancé pour le {JJ/MM/AAAA} |
+| web `colis-screen` — argent     | Montant COD · Frais de livraison · Frais de retour · Changement de client · Tarif livreur · Argent · Bon de versement                                                                                                                             |
+| web `colis-screen` — journal    | Journal du colis · Règle automatique · Après ramassage · Prévu pour {nom} · GPS {lat}, {lng} (± {n} m) · Heure du téléphone : · Saisie manuelle · Scan annulé · Horloge décalée                                                                   |
+| `CHARGE_STATUS_LABELS_FR`       | En attente · Déduite · Annulée                                                                                                                                                                                                                    |
+| `SCAN_SOURCE_LABELS_FR`         | Application coursier · Caméra · Douchette · Saisie manuelle                                                                                                                                                                                       |
+| API `EXPORT_TROP_GRAND` (Colis) | {n} colis : 10000 au maximum par export. Choisissez des filtres.                                                                                                                                                                                  |
+| web `seller-detail-screen`      | Voir ses colis                                                                                                                                                                                                                                    |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

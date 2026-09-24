@@ -20,6 +20,7 @@ const PROXIED_ROOTS = new Set([
   'scans',
   'tournees',
   'ramassages',
+  'colis',
 ]);
 
 export function isProxiedPath(segments: string[]): boolean {

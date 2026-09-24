@@ -38,6 +38,18 @@ export class LabelsService {
     return this.render(ordered as LabelParcel[], format);
   }
 
+  /**
+   * Réimprimer l'étiquette (A-9): Dépôt and Admin, any seller's parcel, the
+   * same code. The route's permission is the check; there is no seller scope.
+   */
+  async forStaff(rawCode: string, format: LabelFormat) {
+    const code = normalizeParcelCode(rawCode);
+    if (!isValidParcelCode(code)) throw colisIntrouvable();
+    const parcels = await this.load(null, { code: { in: [code] } });
+    if (parcels.length === 0) throw colisIntrouvable();
+    return this.render(parcels, format);
+  }
+
   /** "Imprimer toutes les étiquettes" after an Import CSV, in file order. */
   async forImport(principal: Principal, importId: string, format: LabelFormat) {
     const sellerId = sellerIdOf(principal);
@@ -49,11 +61,12 @@ export class LabelsService {
   }
 
   private async load(
-    sellerId: string,
+    /** Null for the team's reprint (A-9); the seller's own otherwise. */
+    sellerId: string | null,
     where: { code?: { in: string[] }; importId?: string },
   ): Promise<LabelParcel[]> {
     const parcels = await this.prisma.parcel.findMany({
-      where: { ...where, sellerId },
+      where: { ...where, ...(sellerId ? { sellerId } : {}) },
       orderBy: [{ importLine: 'asc' }, { createdAt: 'asc' }],
       include: {
         seller: { select: { shopName: true } },

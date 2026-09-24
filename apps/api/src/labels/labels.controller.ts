@@ -75,6 +75,18 @@ export class LabelsController {
     return this.pdf(response, pdf, `etiquette-${normalizeParcelCode(code)}`);
   }
 
+  /** Réimprimer l'étiquette (A-9): Dépôt and Admin, any seller's parcel. */
+  @Get('colis/:code/label')
+  @RequirePermission(Permission.REIMPRIMER_ETIQUETTE)
+  async reprint(
+    @Param('code') code: string,
+    @Query(new ZodValidationPipe(formatQuery)) query: FormatQuery,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const pdf = await this.labels.forStaff(code, query.format);
+    return this.pdf(response, pdf, `etiquette-${normalizeParcelCode(code)}`);
+  }
+
   private pdf(response: Response, pdf: Buffer, name: string): StreamableFile {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');

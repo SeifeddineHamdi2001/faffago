@@ -16,6 +16,7 @@ describe('AdminNav', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
     expect(links()).toEqual([
       'Scan',
+      'Colis',
       'Ramassages',
       'Tournées',
       'Vendeurs',
@@ -24,14 +25,14 @@ describe('AdminNav', () => {
     ]);
   });
 
-  it('gives Dépôt the Scan, Ramassages, Tournées, Vendeurs and Coursiers, never Paramètres', () => {
+  it('gives Dépôt the Scan, Colis, Ramassages, Tournées, Vendeurs and Coursiers, never Paramètres', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.DEPOT]} />);
-    expect(links()).toEqual(['Scan', 'Ramassages', 'Tournées', 'Vendeurs', 'Coursiers']);
+    expect(links()).toEqual(['Scan', 'Colis', 'Ramassages', 'Tournées', 'Vendeurs', 'Coursiers']);
   });
 
-  it('gives Service client Vendeurs and Coursiers, no Scan nor Tournées (Admin 2)', () => {
+  it('gives Service client Colis, Vendeurs and Coursiers, no Scan nor planning (Admin 2, D-11)', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
-    expect(links()).toEqual(['Vendeurs', 'Coursiers']);
+    expect(links()).toEqual(['Colis', 'Vendeurs', 'Coursiers']);
   });
 
   it('marks the current screen', () => {

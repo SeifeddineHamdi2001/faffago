@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import {
@@ -95,6 +96,10 @@ export function SellerDetailScreen({
             {SELLER_ACCOUNT_STATE_LABELS_FR[state]}
           </span>
         )}
+        {/* D-11: every role that reads a seller reads his parcels in Colis. */}
+        <Link href={`/admin/colis?sellerId=${seller.id}`} className="btn-secondary ml-auto">
+          Voir ses colis
+        </Link>
       </div>
       {(error ?? actions.error) && <ErrorAlert error={(error ?? actions.error)!} />}
 

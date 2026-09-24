@@ -32,6 +32,13 @@ export const ScanSource = {
 } as const;
 export type ScanSource = (typeof ScanSource)[keyof typeof ScanSource];
 
+export const SCAN_SOURCE_LABELS_FR: Record<ScanSource, string> = {
+  APP_COURSIER: 'Application coursier',
+  WEB_CAMERA: 'Caméra',
+  WEB_DOUCHETTE: 'Douchette',
+  SAISIE_MANUELLE: 'Saisie manuelle',
+};
+
 // ── The depot's station ─────────────────────────────────────
 
 /**

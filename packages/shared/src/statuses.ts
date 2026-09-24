@@ -246,6 +246,12 @@ export const ChargeStatus = {
 } as const;
 export type ChargeStatus = (typeof ChargeStatus)[keyof typeof ChargeStatus];
 
+export const CHARGE_STATUS_LABELS_FR: Record<ChargeStatus, string> = {
+  EN_ATTENTE: 'En attente',
+  DEDUITE: 'Déduite',
+  ANNULEE: 'Annulée',
+};
+
 /**
  * Why a parcel is in RELANCE (D-9).
  *
