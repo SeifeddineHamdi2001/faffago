@@ -15,6 +15,7 @@ import {
   SYSTEM_ACTOR,
   type FailureReason,
   type ParcelAction,
+  type ParcelBefore,
   type ParcelSnapshot,
   type ParcelTransitionEvent,
   type RelaunchSlot,
@@ -263,6 +264,57 @@ export class ParcelEventService {
         serverTime,
       })),
     });
+  }
+
+  /**
+   * Puts a parcel back as it was before a scan (A-11, D-54): the columns the
+   * scan changed, from what the scan kept, and one ANNULATION_SCAN event
+   * naming the scan. No effect runs: a depot scan created no charge and
+   * started no clock. The caller has checked that nothing happened since.
+   */
+  async restoreBeforeScan(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      scanId: string;
+      scanAction: string;
+      before: ParcelBefore;
+      reason?: string | null;
+    },
+  ): Promise<Parcel> {
+    const { before } = input;
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const current = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    const restored = await tx.parcel.update({
+      where: { id: current.id },
+      data: {
+        status: before.status,
+        location: before.location,
+        currentLivreurId: before.currentLivreurId,
+        plannedLivreurId: before.plannedLivreurId,
+        relaunchDate: before.relaunchDate ? new Date(`${before.relaunchDate}T00:00:00.000Z`) : null,
+        relaunchSlot: before.relaunchSlot,
+        relaunchOrigin: before.relaunchOrigin,
+      },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: current.id,
+        type: ParcelEventType.ANNULATION_SCAN,
+        previousStatus: current.status,
+        newStatus: restored.status,
+        previousLocation: current.location,
+        newLocation: restored.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        scanId: input.scanId,
+        reasonText: input.reason ?? null,
+        serverTime: this.clock.now(),
+        metadata: { scanAnnule: input.scanAction },
+      },
+    });
+    return restored;
   }
 
   /** Why, when the type alone does not say: a cancellation after pickup, a planned date (D-9). */

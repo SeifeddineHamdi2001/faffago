@@ -140,3 +140,56 @@ export interface ParcelBefore {
   relaunchSlot: RelaunchSlot | null;
   relaunchOrigin: RelaunchOrigin | null;
 }
+
+// ── Annuler le dernier scan (A-11, D-54) ────────────────────
+
+export const ScanCancelRefusal = {
+  SCAN_INTROUVABLE: 'SCAN_INTROUVABLE',
+  ANNULATION_SCAN_REFUSE: 'ANNULATION_SCAN_REFUSE',
+  ANNULATION_AUTRE_PERSONNE: 'ANNULATION_AUTRE_PERSONNE',
+  ANNULATION_PAS_DERNIER: 'ANNULATION_PAS_DERNIER',
+  ANNULATION_HORS_DELAI: 'ANNULATION_HORS_DELAI',
+  ANNULATION_COLIS_MODIFIE: 'ANNULATION_COLIS_MODIFIE',
+} as const;
+export type ScanCancelRefusal = (typeof ScanCancelRefusal)[keyof typeof ScanCancelRefusal];
+
+export const SCAN_CANCEL_REFUSAL_MESSAGES_FR: Record<ScanCancelRefusal, string> = {
+  SCAN_INTROUVABLE: 'Scan introuvable',
+  ANNULATION_SCAN_REFUSE: 'Ce scan a été refusé : il n’a rien changé',
+  ANNULATION_AUTRE_PERSONNE: 'Seule la personne qui a scanné peut annuler ce scan',
+  ANNULATION_PAS_DERNIER: 'Seul votre dernier scan peut être annulé',
+  ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
+  ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
+};
+
+export interface DepotScanCancelFacts {
+  accepted: boolean;
+  /** The person asking is the one who scanned. */
+  byActor: boolean;
+  /** No later accepted, not cancelled scan of his. */
+  isLatestOfActor: boolean;
+  /** When the server received the scan. */
+  receivedAt: Date;
+  /** The server clock: a web scan is online by nature (D-54). */
+  now: Date;
+  /** `scan_cancel_window_seconds` in Paramètres (60). */
+  windowSeconds: number;
+  /** The scan's event is still the parcel's last one. */
+  parcelUnchangedSince: boolean;
+}
+
+/**
+ * Whether a depot scan can be cancelled (A-11, D-54): the scanner's own last
+ * accepted scan, within the window, while nothing else has happened to the
+ * parcel. Null when it can. After the window only the admin corrects (D-56).
+ */
+export function depotScanCancelRefusal(facts: DepotScanCancelFacts): ScanCancelRefusal | null {
+  if (!facts.accepted) return ScanCancelRefusal.ANNULATION_SCAN_REFUSE;
+  if (!facts.byActor) return ScanCancelRefusal.ANNULATION_AUTRE_PERSONNE;
+  if (!facts.isLatestOfActor) return ScanCancelRefusal.ANNULATION_PAS_DERNIER;
+  if (facts.now.getTime() - facts.receivedAt.getTime() > facts.windowSeconds * 1000) {
+    return ScanCancelRefusal.ANNULATION_HORS_DELAI;
+  }
+  if (!facts.parcelUnchangedSince) return ScanCancelRefusal.ANNULATION_COLIS_MODIFIE;
+  return null;
+}

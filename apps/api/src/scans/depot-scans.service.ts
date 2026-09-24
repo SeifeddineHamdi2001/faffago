@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma, type Parcel, type Scan } from '@prisma/client';
 import {
+  DEPOT_SCAN_MODES,
   PARCEL_ACTION_BY_DEPOT_MODE,
+  SCAN_CANCEL_REFUSAL_MESSAGES_FR,
+  ScanCancelRefusal,
+  depotScanCancelRefusal,
   PARCEL_LOCATION_LABELS_FR,
   PARCEL_STATUS_LABELS_FR,
   ParcelLocation,
@@ -23,6 +27,7 @@ import {
 } from '@faffago/shared';
 import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
+import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { SettingsService } from '../settings/settings.service';
@@ -58,6 +63,24 @@ export interface DepotScanResult {
   /** Sortie coursier to someone else than the livreur planned: who was (D-53). */
   plannedFor: CourierRef | null;
 }
+
+/** What the station shows after "Annuler le dernier scan" (D-54). */
+export interface ScanCancelResult {
+  scanId: string;
+  cancelled: true;
+  message: string;
+  parcel: { code: string; status: ParcelStatus; location: ParcelLocation };
+}
+
+function cancelRefused(refusal: ScanCancelRefusal) {
+  return apiError(
+    refusal === ScanCancelRefusal.SCAN_INTROUVABLE ? 404 : 409,
+    refusal,
+    SCAN_CANCEL_REFUSAL_MESSAGES_FR[refusal],
+  );
+}
+
+const DEPOT_ACTIONS: readonly string[] = DEPOT_SCAN_MODES;
 
 export interface DepotScanOutcome {
   /** 201 for a new scan; 200 for one sent before, or an identifier reused. */
@@ -298,6 +321,100 @@ export class DepotScansService {
       courier: courierRef,
       plannedForCourierId: plannedFor,
     });
+  }
+
+  /**
+   * Annuler le dernier scan (A-11, D-54): the scanner's own last accepted
+   * scan, within the window of Paramètres on the server clock, while nothing
+   * else has happened to the parcel. Asked again, it answers the same.
+   */
+  async cancel(actor: UserPrincipal, scanId: string): Promise<ScanCancelResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const found = await tx.scan.findUnique({ where: { id: scanId } });
+      if (!found || !DEPOT_ACTIONS.includes(found.action)) {
+        throw cancelRefused(ScanCancelRefusal.SCAN_INTROUVABLE);
+      }
+      // Two cancellations of one scan queue on the parcel, then read the scan again.
+      if (found.parcelId) {
+        await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${found.parcelId}::uuid FOR UPDATE`;
+      }
+      const scan = await tx.scan.findUniqueOrThrow({ where: { id: scanId } });
+      if (scan.cancelledAt && scan.cancelledByUserId === actor.userId) {
+        return this.cancelResultOf(tx, scan.id);
+      }
+
+      const { settings } = await this.settings.current(tx);
+      const now = this.clock.now();
+      let isLatestOfActor = false;
+      let parcelUnchangedSince = false;
+      if (scan.accepted && scan.parcelId && !scan.cancelledAt) {
+        // His accepted scans not cancelled, from this one on; the latest is
+        // the one whose event came last.
+        const candidates = await tx.scan.findMany({
+          where: {
+            actorUserId: scan.actorUserId,
+            accepted: true,
+            cancelledAt: null,
+            action: { in: [...DEPOT_SCAN_MODES] },
+            receivedAt: { gte: scan.receivedAt },
+          },
+          select: { id: true },
+        });
+        const latestOfActor = await tx.parcelEvent.findFirst({
+          where: { scanId: { in: candidates.map((c) => c.id) } },
+          orderBy: { sequence: 'desc' },
+        });
+        isLatestOfActor = latestOfActor?.scanId === scan.id;
+        const latestOfParcel = await tx.parcelEvent.findFirst({
+          where: { parcelId: scan.parcelId },
+          orderBy: { sequence: 'desc' },
+        });
+        parcelUnchangedSince = latestOfParcel?.scanId === scan.id;
+      }
+
+      const refusal = depotScanCancelRefusal({
+        accepted: scan.accepted && !scan.cancelledAt,
+        byActor: scan.actorUserId === actor.userId,
+        isLatestOfActor,
+        receivedAt: scan.receivedAt,
+        now,
+        windowSeconds: settings.scanCancelWindowSeconds,
+        parcelUnchangedSince,
+      });
+      if (refusal) throw cancelRefused(refusal);
+
+      await this.events.restoreBeforeScan(tx, {
+        parcelId: scan.parcelId!,
+        actor,
+        scanId: scan.id,
+        scanAction: scan.action,
+        before: scan.parcelBefore as unknown as ParcelBefore,
+      });
+      await tx.scan.update({
+        where: { id: scan.id },
+        data: { cancelledAt: now, cancelledByUserId: actor.userId },
+      });
+      return this.cancelResultOf(tx, scan.id);
+    });
+  }
+
+  /** From the ANNULATION_SCAN event, so asking again answers the same. */
+  private async cancelResultOf(
+    tx: Prisma.TransactionClient,
+    scanId: string,
+  ): Promise<ScanCancelResult> {
+    const event = await tx.parcelEvent.findFirstOrThrow({
+      where: { scanId, type: 'ANNULATION_SCAN' },
+      include: { parcel: { select: { code: true } } },
+    });
+    const status = event.newStatus!;
+    const location = event.newLocation!;
+    return {
+      scanId,
+      cancelled: true,
+      message: `Scan annulé · ${successMessage(status, location)}`,
+      parcel: { code: event.parcel.code, status, location },
+    };
   }
 
   /**

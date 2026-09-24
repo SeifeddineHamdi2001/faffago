@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res } from '@nestjs/common';
+import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { Permission, depotScanSchema, type DepotScanValues } from '@faffago/shared';
 import { CurrentPrincipal, RequirePermission } from '../auth/decorators';
@@ -28,5 +28,16 @@ export class ScansController {
     const { created, result } = await this.depotScans.scan(principal as UserPrincipal, body);
     response.status(created ? 201 : 200);
     return result;
+  }
+
+  /**
+   * Annuler le dernier scan (A-11, D-54): only the person who scanned, within
+   * the window. After it, only the admin corrects (D-56).
+   */
+  @Post('depot/:scanId/cancel')
+  @RequirePermission(Permission.SCAN_DEPOT)
+  @HttpCode(200)
+  cancel(@Param('scanId', ParseUUIDPipe) scanId: string, @CurrentPrincipal() principal: Principal) {
+    return this.depotScans.cancel(principal as UserPrincipal, scanId);
   }
 }

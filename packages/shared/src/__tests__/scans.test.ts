@@ -6,9 +6,12 @@ import {
   DEPOT_SCAN_MODE_LABELS_FR,
   DEPOT_SCAN_MODE_SHORTCUTS,
   PARCEL_ACTION_BY_DEPOT_MODE,
+  SCAN_CANCEL_REFUSAL_MESSAGES_FR,
+  ScanCancelRefusal,
   ScanSource,
   classifyKeyboardEntry,
   depotModeNeedsCourier,
+  depotScanCancelRefusal,
   depotScanSchema,
   isRepeatRead,
 } from '../scans.js';
@@ -115,5 +118,58 @@ describe('the two refusals added by D-53', () => {
     expect(SCAN_REFUSAL_MESSAGES_FR[ScanRefusal.SCAN_ID_REUTILISE]).toBe(
       'Identifiant de scan déjà utilisé pour un autre scan',
     );
+  });
+});
+
+describe('Annuler le dernier scan (A-11, D-54)', () => {
+  const at = new Date('2026-09-25T08:00:00.000Z');
+  const ok = {
+    accepted: true,
+    byActor: true,
+    isLatestOfActor: true,
+    receivedAt: at,
+    now: new Date(at.getTime() + 30_000),
+    windowSeconds: 60,
+    parcelUnchangedSince: true,
+  };
+
+  it('allows the scanner’s own last accepted scan, within the window, parcel untouched', () => {
+    expect(depotScanCancelRefusal(ok)).toBeNull();
+  });
+
+  it('measures the window on the server clock, its last second included', () => {
+    expect(depotScanCancelRefusal({ ...ok, now: new Date(at.getTime() + 60_000) })).toBeNull();
+    expect(depotScanCancelRefusal({ ...ok, now: new Date(at.getTime() + 60_001) })).toBe(
+      ScanCancelRefusal.ANNULATION_HORS_DELAI,
+    );
+  });
+
+  it('refuses a refused scan, someone else’s scan, and an older scan of his', () => {
+    expect(depotScanCancelRefusal({ ...ok, accepted: false })).toBe(
+      ScanCancelRefusal.ANNULATION_SCAN_REFUSE,
+    );
+    expect(depotScanCancelRefusal({ ...ok, byActor: false })).toBe(
+      ScanCancelRefusal.ANNULATION_AUTRE_PERSONNE,
+    );
+    expect(depotScanCancelRefusal({ ...ok, isLatestOfActor: false })).toBe(
+      ScanCancelRefusal.ANNULATION_PAS_DERNIER,
+    );
+  });
+
+  it('refuses once something else has happened to the parcel', () => {
+    expect(depotScanCancelRefusal({ ...ok, parcelUnchangedSince: false })).toBe(
+      ScanCancelRefusal.ANNULATION_COLIS_MODIFIE,
+    );
+  });
+
+  it('gives each refusal its message', () => {
+    expect(SCAN_CANCEL_REFUSAL_MESSAGES_FR).toEqual({
+      SCAN_INTROUVABLE: 'Scan introuvable',
+      ANNULATION_SCAN_REFUSE: 'Ce scan a été refusé : il n’a rien changé',
+      ANNULATION_AUTRE_PERSONNE: 'Seule la personne qui a scanné peut annuler ce scan',
+      ANNULATION_PAS_DERNIER: 'Seul votre dernier scan peut être annulé',
+      ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
+      ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
+    });
   });
 });

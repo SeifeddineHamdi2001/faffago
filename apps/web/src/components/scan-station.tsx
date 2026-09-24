@@ -21,7 +21,11 @@ import { CameraScanner } from './camera-scanner';
 /** One line of the station: the API's result, or a refusal the page made itself. */
 interface Shown {
   key: string;
+  /** The server's scan id, for "Annuler le dernier scan"; null when refused on the page. */
+  scanId: string | null;
   accepted: boolean;
+  /** Cancelled with "Annuler le dernier scan" (D-54), or the result of that cancellation. */
+  cancelled: boolean;
   message: string;
   code: string | null;
   shopName: string | null;
@@ -115,7 +119,9 @@ export function ScanStation({
     if (needsCourier && !courierId) {
       show({
         key: clientScanId,
+        scanId: null,
         accepted: false,
+        cancelled: false,
         message: SCAN_REFUSAL_MESSAGES_FR[ScanRefusal.COURSIER_NON_PRECISE],
         code: rawCode,
         shopName: null,
@@ -136,7 +142,9 @@ export function ScanStation({
     if (!response.ok) {
       show({
         key: clientScanId,
+        scanId: null,
         accepted: false,
+        cancelled: false,
         message: response.error.message,
         code: rawCode,
         shopName: null,
@@ -149,7 +157,9 @@ export function ScanStation({
     const result = response.data;
     show({
       key: result.scanId ?? clientScanId,
+      scanId: result.scanId,
       accepted: result.accepted,
+      cancelled: false,
       message: result.message,
       code: result.parcel?.code ?? rawCode,
       shopName: result.parcel?.shopName ?? null,
@@ -158,6 +168,38 @@ export function ScanStation({
       manualEntry: result.manualEntry,
     });
   }
+
+  /**
+   * Annuler le dernier scan (A-11, D-54). The server checks the window, that
+   * it is this person's last scan and that nothing happened to the parcel.
+   */
+  async function cancelLast(line: Shown) {
+    if (!line.scanId) return;
+    const response = await bff<{ message: string; parcel: { code: string } }>(
+      'POST',
+      `scans/depot/${line.scanId}/cancel`,
+    );
+    const shown: Shown = {
+      key: `annulation-${line.key}`,
+      scanId: null,
+      accepted: response.ok,
+      cancelled: response.ok,
+      message: response.ok ? response.data.message : response.error.message,
+      code: line.code,
+      shopName: null,
+      courier: null,
+      plannedFor: null,
+      manualEntry: false,
+    };
+    if (response.ok) {
+      setHistory((h) => h.map((l) => (l.key === line.key ? { ...l, cancelled: true } : l)));
+    }
+    setCurrent(shown);
+    input.current?.focus();
+  }
+
+  // The newest accepted scan not cancelled: the only one the button offers.
+  const cancellable = history.find((line) => line.accepted && line.scanId && !line.cancelled);
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === 'Enter') {
@@ -266,11 +308,27 @@ export function ScanStation({
               <li
                 key={line.key}
                 className={`card flex flex-wrap items-center justify-between gap-2 border-l-4 ${
-                  line.accepted ? 'border-l-green-700' : 'border-l-red-700'
+                  line.cancelled
+                    ? 'border-l-slate-400'
+                    : line.accepted
+                      ? 'border-l-green-700'
+                      : 'border-l-red-700'
                 }`}
               >
                 <span className="font-mono">{line.code}</span>
-                <span className="font-semibold">{line.message}</span>
+                <span className="font-semibold">
+                  {line.message}
+                  {line.cancelled && <span className="badge-muted ml-2">Annulé</span>}
+                </span>
+                {line === cancellable && (
+                  <button
+                    type="button"
+                    className="btn-secondary min-h-14"
+                    onClick={() => void cancelLast(line)}
+                  >
+                    Annuler le dernier scan
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -282,7 +340,7 @@ export function ScanStation({
   );
 }
 
-/** Full screen, green or red, readable from arm's length (Admin 4.2). */
+/** Full screen, readable from arm's length (Admin 4.2): green, red, or navy once cancelled. */
 function ResultOverlay({ line, onClose }: { line: Shown; onClose: () => void }) {
   return (
     <div
@@ -290,7 +348,7 @@ function ResultOverlay({ line, onClose }: { line: Shown; onClose: () => void }) 
       aria-label={line.accepted ? 'Résultat du scan' : undefined}
       onClick={onClose}
       className={`fixed inset-0 z-40 flex cursor-pointer flex-col items-center justify-center gap-3 p-6 text-center text-white ${
-        line.accepted ? 'bg-green-700' : 'bg-red-700'
+        line.cancelled ? 'bg-navy' : line.accepted ? 'bg-green-700' : 'bg-red-700'
       }`}
     >
       <p className="font-display text-4xl font-bold sm:text-5xl">{line.message}</p>

@@ -224,3 +224,82 @@ describe('ScanStation (Admin 4.2, D-50)', () => {
     );
   });
 });
+
+describe('Annuler le dernier scan (A-11, D-54)', () => {
+  it('cancels the last accepted scan and marks it in the list', async () => {
+    bff.mockResolvedValueOnce({ ok: true, data: accepted }).mockResolvedValueOnce({
+      ok: true,
+      data: {
+        scanId: 's1',
+        cancelled: true,
+        message: 'Scan annulé · Ramassé · Avec le ramasseur',
+        parcel: { code: 'FG-8K2QX7AB', status: 'RAMASSE', location: 'AVEC_LE_RAMASSEUR' },
+      },
+    });
+    render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+    await typeCode('FG-8K2QX7AB');
+    await screen.findByRole('status', { name: 'Résultat du scan' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler le dernier scan' }));
+
+    expect(bff).toHaveBeenLastCalledWith('POST', 'scans/depot/s1/cancel');
+    expect(await screen.findByRole('status', { name: 'Résultat du scan' })).toHaveTextContent(
+      'Scan annulé · Ramassé · Avec le ramasseur',
+    );
+    const [item] = within(screen.getByRole('list', { name: 'Derniers scans' })).getAllByRole(
+      'listitem',
+    );
+    expect(item).toHaveTextContent('Annulé');
+    expect(screen.queryByRole('button', { name: 'Annuler le dernier scan' })).toBeNull();
+  });
+
+  it('offers it on the latest accepted scan only, never on a refused one', async () => {
+    bff
+      .mockResolvedValueOnce({ ok: true, data: accepted })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          ...accepted,
+          scanId: 's2',
+          accepted: false,
+          refusal: 'CODE_INCONNU',
+          message: 'Code inconnu',
+          parcel: null,
+        },
+      })
+      .mockResolvedValueOnce({ ok: true, data: { ...accepted, scanId: 's3' } })
+      .mockResolvedValueOnce({
+        ok: true,
+        data: { scanId: 's3', cancelled: true, message: 'Scan annulé', parcel: accepted.parcel },
+      });
+    render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+    await typeCode('FG-8K2QX7AB');
+    await screen.findByRole('status', { name: 'Résultat du scan' });
+    await typeCode('FG-ZZZZZZZZ');
+    await screen.findByRole('alert');
+    expect(screen.getAllByRole('button', { name: 'Annuler le dernier scan' })).toHaveLength(1);
+
+    await typeCode('FG-3M9TW2CD');
+    await screen.findByRole('status', { name: 'Résultat du scan' });
+    const buttons = screen.getAllByRole('button', { name: 'Annuler le dernier scan' });
+    expect(buttons).toHaveLength(1);
+    await userEvent.click(buttons[0]!);
+    expect(bff).toHaveBeenLastCalledWith('POST', 'scans/depot/s3/cancel');
+  });
+
+  it('shows why a scan can no longer be cancelled', async () => {
+    bff.mockResolvedValueOnce({ ok: true, data: accepted }).mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      error: {
+        code: 'ANNULATION_HORS_DELAI',
+        message: 'Délai d’annulation dépassé : seul l’admin peut corriger',
+      },
+    });
+    render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+    await typeCode('FG-8K2QX7AB');
+    await screen.findByRole('status', { name: 'Résultat du scan' });
+    await userEvent.click(screen.getByRole('button', { name: 'Annuler le dernier scan' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Délai d’annulation dépassé');
+  });
+});

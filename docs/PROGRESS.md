@@ -276,7 +276,16 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       chooser, the gun or typed code, the camera (`BarcodeDetector`, zxing
       otherwise), the full-screen result and the last 20 scans — 13 shared,
       26 API e2e, 2 schema, 10 web tests
-- [ ] Annuler le dernier scan (D-54) — step 3
+- [x] Annuler le dernier scan (D-54) — step 3, API and web.
+      `POST /scans/depot/:scanId/cancel` (Admin, Dépôt): the scanner's own
+      last accepted scan, within `scan_cancel_window_seconds` (60 s) on the
+      server clock, while the scan's event is still the parcel's last. The
+      parcel goes back to `parcelBefore` (relance and manual move included)
+      through `ParcelEventService.restoreBeforeScan`, with one
+      `ANNULATION_SCAN` event; the scan keeps its row with `cancelledAt`.
+      Asked twice, it answers the same. Web: "Annuler le dernier scan" on the
+      newest accepted scan of the station, the result in navy, "Annulé" in
+      the list. No migration — 5 shared, 11 API e2e, 3 web tests
 - [ ] Tournées (parcels grouped by zone, manual moves, D-55) — step 4
 - [ ] Ramassages planning + À emporter (D-58) — step 5
 - [ ] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6
@@ -325,6 +334,10 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ
       retour and Retour reçu when `cancelledAt` is set (D-31)
+- [ ] The public timeline skips the events of a cancelled scan (D-54): a
+      Sortie coursier cancelled at the depot must not read "En cours de
+      livraison". The seller's timeline shows both, with "Scan annulé"
+      (D-46)
 - [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
 - [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
 
@@ -806,6 +819,25 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     `labelReprintNeeded` (step 7, D-57); cancelling a scan is step 3. The
     station is not browser-tested yet (step 10), and the camera has only
     been typechecked: to try on a phone.
+
+- 2026-09-24 — **Phase 5, step 3 (Annuler le dernier scan).** Choices made
+  while building:
+  - **The button names the scan** (`/scans/depot/:scanId/cancel`) rather
+    than "my last scan": a double tap cancels once, and asked again the
+    endpoint answers the same result.
+  - **"Last" follows the order of the scans' events** (`parcel_events.sequence`),
+    not the clock, so two scans in the same second are still ordered. A
+    refused scan is never "the last scan"; once the last one is cancelled,
+    the one before becomes the last, within its own window.
+  - **The window is checked by the server only.** Dépôt cannot read
+    Paramètres, so the button stays on the newest accepted scan and the
+    server answers "Délai d'annulation dépassé : seul l'admin peut corriger"
+    after 60 s.
+  - **Nobody else cancels through this route, the admin included**: his
+    correction is Forcer un statut (step 8, D-56).
+  - **A-11's caisse rule** does not apply to depot scans, which move no
+    cash; it comes with the courier's scans (phases 6 and 8).
+  - The cancelled result is shown in navy, apart from green and red.
 
 ## Open questions
 
