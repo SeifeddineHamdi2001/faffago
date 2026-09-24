@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { LogoutButton } from '@/components/logout-button';
+import { SellerNav } from '@/components/seller-nav';
 import { requireMe } from '@/lib/server/session';
 
 /**
@@ -20,6 +21,7 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
         </p>
         <p className="font-semibold">{me.seller?.shopName}</p>
       </header>
+      <SellerNav />
       <main className="mx-auto max-w-4xl p-4">
         {children}
         {!me.impersonation && (

@@ -1,4 +1,10 @@
-import type { CourierBlocker, Permission, Role, SellerDocumentType } from '@faffago/shared';
+import type {
+  CourierBlocker,
+  ParcelStatus,
+  Permission,
+  Role,
+  SellerDocumentType,
+} from '@faffago/shared';
 
 /** GET /auth/me. */
 export interface Me {
@@ -92,4 +98,50 @@ export interface StaffRow {
 export interface CreatedAccount {
   user: { id: string; role: Role; username: string | null; phone: string };
   password: string;
+}
+
+/** A change request as its seller sees it (Vendeur 4.6). */
+export interface ParcelChangeRequest {
+  id: string;
+  requestedFields: Partial<
+    Record<'recipientPhone' | 'recipientPhone2' | 'address' | 'landmark', string>
+  >;
+  sellerNote: string | null;
+  status: 'EN_ATTENTE' | 'APPLIQUEE' | 'REFUSEE';
+  createdAt: string;
+  handledAt: string | null;
+}
+
+/** GET /parcels/:code, for the seller. Money as digit strings of millimes. */
+export interface SellerParcel {
+  id: string;
+  code: string;
+  status: ParcelStatus;
+  location: string;
+  cashStatus: string | null;
+  recipientName: string;
+  recipientPhone: string;
+  recipientPhone2: string | null;
+  localite: { id: string; nameFr: string };
+  delegation: { id: string; nameFr: string; gouvernoratNameFr: string };
+  address: string;
+  landmark: string | null;
+  productDescription: string;
+  pieceCount: number;
+  codAmountMillimes: string;
+  isExchange: boolean;
+  openingAllowed: boolean;
+  courierNote: string | null;
+  deliveryFeeMillimes: string;
+  returnFeeMillimes: string;
+  createdAt: string;
+  cancelledAt: string | null;
+  changeRequests: ParcelChangeRequest[];
+}
+
+/** PATCH /parcels/:code. */
+export interface ParcelEdit {
+  parcel: SellerParcel;
+  changedFields: string[];
+  reprintLabel: boolean;
 }

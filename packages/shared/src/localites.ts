@@ -277,3 +277,39 @@ export function resolveLocalite(
         `(${matches.map((localite) => localite.nameFr).join(', ')}). Choisissez la bonne.`;
   return withDelegation(LocaliteLookupError.LOCALITE_AMBIGUE, message, matches);
 }
+
+// ── The tree every form reads ───────────────────────────────
+
+/** `GET /geo`: gouvernorat → délégation → localité, active ones only (D-17). */
+export interface GeoTreeView {
+  gouvernorats: ReadonlyArray<{
+    code: string;
+    nameFr: string;
+    nameAr: string;
+    delegations: ReadonlyArray<{
+      id: string;
+      code: string;
+      nameFr: string;
+      nameAr: string;
+      localites: ReadonlyArray<Omit<LocaliteRecord, 'delegation'>>;
+    }>;
+  }>;
+}
+
+/** Every localité of the tree with its délégation attached, for the search box. */
+export function localitesOfTree(tree: GeoTreeView): LocaliteRecord[] {
+  return tree.gouvernorats.flatMap((gouvernorat) =>
+    gouvernorat.delegations.flatMap((delegation) => {
+      const record: DelegationRecord = {
+        id: delegation.id,
+        code: delegation.code,
+        nameFr: delegation.nameFr,
+        nameAr: delegation.nameAr,
+        gouvernoratCode: gouvernorat.code,
+        gouvernoratNameFr: gouvernorat.nameFr,
+        gouvernoratNameAr: gouvernorat.nameAr,
+      };
+      return delegation.localites.map((localite) => ({ ...localite, delegation: record }));
+    }),
+  );
+}

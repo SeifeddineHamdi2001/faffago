@@ -723,6 +723,9 @@ model Parcel {
   exchangeItemStatus    ParcelStatus?
 
   createdByUserId String    @db.Uuid
+  /// Drawn by the seller's form when it opens: a retried creation finds the
+  /// parcel instead of making a second one.
+  clientRequestId String?   @unique @db.Uuid
   createdAt       DateTime  @default(now())
   pickedUpAt      DateTime?
   deliveredAt     DateTime?

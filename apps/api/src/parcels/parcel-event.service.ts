@@ -51,6 +51,11 @@ export interface ParcelEventContext {
   deviceTime?: Date | null;
   /** The courier's note on a failure, shown with its reason. */
   note?: string | null;
+  /**
+   * What the action carried that the type alone does not say, written on its
+   * first event: the fields a Modifier changed, before and after (D-41).
+   */
+  details?: Prisma.InputJsonObject | null;
 }
 
 export interface ParcelActionInput {
@@ -189,7 +194,7 @@ export class ParcelEventService {
             appVersion: context.appVersion ?? null,
             deviceTime: context.deviceTime ?? null,
             serverTime: now,
-            metadata: this.metadataOf(step, updated),
+            metadata: this.metadataOf(step, updated, index === 0 ? context.details : null),
           },
         }),
       );
@@ -242,8 +247,12 @@ export class ParcelEventService {
   private metadataOf(
     step: ParcelTransitionEvent,
     parcel: Parcel,
+    details?: Prisma.InputJsonObject | null,
   ): Prisma.InputJsonObject | undefined {
-    const metadata: Record<string, string> = { ...step.metadata };
+    const metadata: Record<string, Prisma.InputJsonValue> = { ...step.metadata };
+    for (const [key, value] of Object.entries(details ?? {})) {
+      if (value !== undefined && value !== null) metadata[key] = value;
+    }
     if (step.effects.includes(ParcelEffect.PLANIFIER_RELANCE) && parcel.relaunchDate) {
       metadata.relaunchDate = documentDateKey(parcel.relaunchDate);
       if (parcel.relaunchSlot) metadata.relaunchSlot = parcel.relaunchSlot;

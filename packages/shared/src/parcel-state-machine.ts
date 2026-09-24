@@ -907,7 +907,12 @@ export function isPostponedByCustomer(parcel: ParcelSnapshot): boolean {
 
 /** Annuler: free before pickup, a charged return after it (Vendeur 4.6, D-28). */
 export function canCancel(parcel: ParcelSnapshot): boolean {
-  return parcel.status === ParcelStatus.CREE || CANCELLABLE_AFTER_PICKUP.includes(parcel.status);
+  return canCancelStatus(parcel.status);
+}
+
+/** The same rule from the status alone, for a screen that has no full snapshot. */
+export function canCancelStatus(status: ParcelStatus): boolean {
+  return status === ParcelStatus.CREE || CANCELLABLE_AFTER_PICKUP.includes(status);
 }
 
 /** A parcel can be edited freely only before it is picked up (Vendeur 4.6). */

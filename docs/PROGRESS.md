@@ -134,8 +134,22 @@ committed in steps, each reported before the next.
 - [x] Changer de contact (D-42): a different contact person with his CIN
       front and back in one action, the previous CIN kept as replaced;
       Modifier stays for typos — 7 API e2e, 1 web test
-- [ ] Créer un colis + validation; Modifier / Annuler (D-39, D-41);
-      Demander une modification, seller side (D-39)
+- [x] Créer un colis + validation; Modifier / Annuler (D-39, D-41);
+      Demander une modification, seller side (D-39) — step 2, API and web:
+      `POST /parcels` (retry-safe: the form's UUID in `clientRequestId`,
+      201 then 200 for the same request), `GET /parcels/:code` (also for
+      Voir comme le vendeur), `PATCH /parcels/:code` (Créé only; one
+      MODIFICATION_VENDEUR event with each changed field before and after;
+      fees untouched; `reprintLabel` when a printed field changed),
+      `POST /parcels/:code/cancel` (Annulé before pickup, the return flow
+      with the frozen return fee after, D-28), and
+      `POST /parcels/:code/change-requests` (after pickup, until delivered
+      or returned). Another seller's code is "Code inconnu" everywhere (D-26); a
+      suspended seller still edits, cancels and asks (D-25). Web: Créer un
+      colis with the localité search and cascade, the parcel page with
+      Modifier, Annuler, Demander une modification. Migration
+      `20260929000000_parcel_client_request` — 29 API e2e, 9 shared, 10 web
+      tests
 - [ ] Import CSV (client preview + server validation, D-37)
 - [ ] Labels PDF (Code128 + QR; thermal and A4, D-36)
 - [ ] Mes colis + Détail du colis (D-38, D-40)
@@ -469,6 +483,22 @@ committed in steps, each reported before the next.
   `NEXT_PUBLIC_SITE_URL` (production `https://www.mirely.store`), never a
   Paramètres value, since every label's QR code carries it.
 
+- 2026-09-24 — **Phase 4, step 2 (parcels).** Choices made while building:
+  - **Demander une modification** carries the phone, phone 2, address and
+    landmark (Vendeur 4.6 says "phone, address"). It is open from Ramassé to
+    Relancé, and refused once delivered, cancelled or in a return. Several
+    requests may wait at once: nothing in the specs limits them.
+  - **Modifier** writes nothing when nothing changed, and records every
+    changed field, before and after, on its MODIFICATION_VENDEUR event
+    (money as digit strings). The reprint warning shows when any field
+    printed on the label changed (Vendeur 4.4), not only the COD.
+  - `ParcelEventService` takes `details` for the first event of an action;
+    Modifier is its first user.
+  - The seller's staff-side note on a change request (`staffNote`) is never
+    sent to the seller.
+  - The seller menu lists the screens built so far; the rest of Vendeur 3
+    joins as each step lands.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -491,3 +521,9 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
+- **Demander une modification, the localité**: the request carries phone and
+  address only, as Vendeur 4.6 words it. A wrong localité after pickup
+  (which moves the parcel to another zone) cannot be requested yet. Should
+  it be?
+- **Several change requests waiting on one parcel**: allowed for now. Should
+  a new one be refused while another is still En attente?

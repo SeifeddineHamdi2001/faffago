@@ -48,6 +48,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = 'Annuler',
   busy,
   onConfirm,
   onCancel,
@@ -55,6 +56,8 @@ export function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel: string;
+  /** When the action itself is a cancellation, "Annuler" would say both things. */
+  cancelLabel?: string;
   busy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -64,7 +67,7 @@ export function ConfirmDialog({
       <p className="mb-6 text-sm text-navy/80">{message}</p>
       <div className="flex justify-end gap-3">
         <button type="button" className="btn-secondary" onClick={onCancel}>
-          Annuler
+          {cancelLabel}
         </button>
         <button type="button" className="btn-primary" disabled={busy} onClick={onConfirm}>
           {confirmLabel}

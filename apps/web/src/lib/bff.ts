@@ -1,9 +1,10 @@
 /**
- * The API paths the back office may reach through /api/bff/… . Everything
+ * The API paths the browser may reach through /api/bff/… : the back office's,
+ * and the seller's own parcels. The API decides what each role may do. Everything
  * under /auth has its own route handler (login, refresh, logout,
  * impersonation), so the proxy never touches a token-issuing endpoint.
  */
-const PROXIED_ROOTS = new Set(['accounts', 'sellers', 'settings']);
+const PROXIED_ROOTS = new Set(['accounts', 'sellers', 'settings', 'parcels']);
 
 export function isProxiedPath(segments: string[]): boolean {
   if (segments.length === 0) return false;
