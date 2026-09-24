@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-41** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-41 are rules |
+| **D-1 … D-43** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-43 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-41**
+**Rules decided during the build — D-4 to D-43**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -70,6 +70,8 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-39 · What phase 4 contains](#d-39--what-phase-4-contains)
 - [D-40 · The net shown on Détail du colis](#d-40--the-net-shown-on-détail-du-colis)
 - [D-41 · Changing the COD before pickup](#d-41--changing-the-cod-before-pickup)
+- [D-42 · Correcting the contact, or changing it](#d-42--correcting-the-contact-or-changing-it)
+- [D-43 · The site's domain is an environment variable](#d-43--the-sites-domain-is-an-environment-variable)
 
 **Money — A-1 to A-5**
 
@@ -771,6 +773,9 @@ it was computed with (phase 8); an existing bon is never recalculated.
   for the site's domain. Every scanner extracts the code from that URL, and
   accepts the bare code as well. Both are tested.
 
+> Refined by **D-43**: that setting is the environment variable
+> `NEXT_PUBLIC_SITE_URL`, never a Paramètres value.
+
 ### D-37 · CSV import
 
 - Verdicts: a **localité** problem the seller can settle in the preview's
@@ -809,6 +814,28 @@ While the parcel is **Créé** the seller may change the COD like any other
 field. The fees stay as frozen (they do not depend on the COD). The change is
 a `MODIFICATION_VENDEUR` event. The label printed before carries the old
 amount, so the screen warns the seller to **reprint the label** after saving.
+
+### D-42 · Correcting the contact, or changing it
+
+The contact person is the one whose CIN was submitted (Vendeur 2.3), so two
+separate actions, decided 2026-09-24:
+
+- **Modifier** corrects the contact's name or phone (a typo). Audited, no
+  document.
+- **Changer de contact** names a different person and requires **the new
+  person's CIN front and back in the same action**, like a statut change
+  (D-33). The previous CIN documents are kept as replaced versions (D-32).
+  Audited, before and after.
+
+The seller's login email is not part of either: it belongs to the account.
+
+### D-43 · The site's domain is an environment variable
+
+The public site's address is `NEXT_PUBLIC_SITE_URL`, **not a Paramètres
+setting**: it is printed in the QR code of every label (D-36) and must never
+change once labels are printed. Production: **https://www.mirely.store**.
+The API reads the same variable to build the QR code, and refuses to print
+labels without it.
 
 ---
 

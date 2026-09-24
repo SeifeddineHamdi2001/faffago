@@ -129,7 +129,11 @@ committed in steps, each reported before the next.
       document rows never deleted and changed only to be marked replaced,
       once (trigger + revoked DELETE). Web: Créer un vendeur, the seller
       page, the BFF carrying uploads and files — 38 API e2e, 33 storage, 10
-      schema, 13 shared, 13 web tests
+      schema, 13 shared, 13 web tests. Browser-tested and approved
+      2026-09-24.
+- [x] Changer de contact (D-42): a different contact person with his CIN
+      front and back in one action, the previous CIN kept as replaced;
+      Modifier stays for typos — 7 API e2e, 1 web test
 - [ ] Créer un colis + validation; Modifier / Annuler (D-39, D-41);
       Demander une modification, seller side (D-39)
 - [ ] Import CSV (client preview + server validation, D-37)
@@ -460,6 +464,11 @@ committed in steps, each reported before the next.
     development `.env` needs `STORAGE_ENCRYPTION_KEY_ID` and a key from
     `openssl rand -base64 32` (see `.env.example`).
 
+- 2026-09-24 — **Answers recorded as D-42 and D-43**: Modifier corrects the
+  contact, Changer de contact replaces him with his CIN; the site's domain is
+  `NEXT_PUBLIC_SITE_URL` (production `https://www.mirely.store`), never a
+  Paramètres value, since every label's QR code carries it.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -482,7 +491,3 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
-- **Changing the contact person** (Vendeur 2.3): the contact is the person
-  whose CIN was submitted. Modifier lets the admin correct the contact's
-  name without uploading a new CIN (for a typo). Should a new contact person
-  require new CIN documents in the same action, like a statut change?

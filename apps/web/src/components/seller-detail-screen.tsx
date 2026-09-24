@@ -12,6 +12,8 @@ import {
   SELLER_STATUT_LABELS_FR,
   STATUT_DOCUMENT,
   SellerStatut,
+  CONTACT_DOCUMENTS,
+  changeSellerContactSchema,
   requiredDocumentsFor,
   updateSellerSchema,
   type ProductCategory as ProductCategoryT,
@@ -38,7 +40,8 @@ function documentHref(sellerId: string, documentId: string): string {
   return `/api/bff/sellers/${sellerId}/documents/${documentId}`;
 }
 
-type Open = 'modifier' | 'statut' | 'suspendre' | 'reactiver' | { remplacer: SellerDocumentType };
+type Open =
+  'modifier' | 'contact' | 'statut' | 'suspendre' | 'reactiver' | { remplacer: SellerDocumentType };
 
 /**
  * The seller page (Admin 4.14). Dépôt and Service client read the shop and
@@ -129,6 +132,9 @@ export function SellerDetailScreen({
           <button type="button" className="btn-secondary" onClick={() => setOpen('modifier')}>
             Modifier
           </button>
+          <button type="button" className="btn-secondary" onClick={() => setOpen('contact')}>
+            Changer de contact
+          </button>
           <button type="button" className="btn-secondary" onClick={() => setOpen('statut')}>
             Changer le statut
           </button>
@@ -171,6 +177,9 @@ export function SellerDetailScreen({
 
       {open === 'modifier' && (
         <EditSellerDialog seller={seller} onDone={done} onCancel={() => setOpen(null)} />
+      )}
+      {open === 'contact' && (
+        <ChangeContactDialog sellerId={seller.id} onDone={done} onCancel={() => setOpen(null)} />
       )}
       {open === 'statut' && statut && (
         <ChangeStatutDialog
@@ -425,6 +434,104 @@ function EditSellerDialog({
           </button>
           <button type="submit" className="btn-primary" disabled={busy}>
             Enregistrer
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/**
+ * D-42: a different person, with his CIN front and back. The previous CIN is
+ * kept as a replaced version. A typo in the name or phone is Modifier.
+ */
+function ChangeContactDialog({
+  sellerId,
+  onDone,
+  onCancel,
+}: {
+  sellerId: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [values, setValues] = useState({
+    contactFirstName: '',
+    contactLastName: '',
+    contactPhone: '',
+  });
+  const [files, setFiles] = useState<Partial<Record<SellerDocumentType, File>>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [apiError, setApiError] = useState<ApiError | null>(null);
+  const [busy, setBusy] = useState(false);
+  const set = (key: keyof typeof values) => (value: string) =>
+    setValues((current) => ({ ...current, [key]: value }));
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const parsed = changeSellerContactSchema.safeParse(values);
+    const found = parsed.success ? {} : fieldErrors(parsed.error.issues);
+    for (const type of CONTACT_DOCUMENTS) {
+      const file = files[type];
+      if (!file) found[type] = 'Document obligatoire';
+      else if (file.size > SELLER_DOCUMENT_POLICY.maxBytes) found[type] = FILE_TOO_LARGE;
+    }
+    setErrors(found);
+    if (Object.keys(found).length > 0) return;
+    const form = new FormData();
+    for (const [key, value] of Object.entries(values)) form.append(key, value);
+    for (const type of CONTACT_DOCUMENTS) form.append(type, files[type]!, files[type]!.name);
+    setBusy(true);
+    const result = await bff('POST', `sellers/${sellerId}/contact`, form);
+    setBusy(false);
+    if (result.ok) onDone();
+    else setApiError(result.error);
+  }
+
+  return (
+    <Dialog title="Changer de contact" onDismiss={onCancel}>
+      {apiError && <ErrorAlert error={apiError} />}
+      <form onSubmit={submit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1" noValidate>
+        <p className="text-sm text-navy/70">
+          Une autre personne devient le contact : elle reçoit l’argent et les retours et signe les
+          bons. Joignez sa CIN. Pour corriger une faute de frappe, utilisez Modifier.
+        </p>
+        <Field
+          id="newContactFirstName"
+          label="Prénom"
+          value={values.contactFirstName}
+          onChange={set('contactFirstName')}
+          error={errors.contactFirstName}
+        />
+        <Field
+          id="newContactLastName"
+          label="Nom"
+          value={values.contactLastName}
+          onChange={set('contactLastName')}
+          error={errors.contactLastName}
+        />
+        <Field
+          id="newContactPhone"
+          label="Téléphone"
+          value={values.contactPhone}
+          onChange={set('contactPhone')}
+          error={errors.contactPhone}
+          inputMode="tel"
+        />
+        {CONTACT_DOCUMENTS.map((type) => (
+          <DocumentInput
+            key={type}
+            id={`contact-${type}`}
+            label={SELLER_DOCUMENT_TYPE_LABELS_FR[type]}
+            error={errors[type]}
+            onChange={(file) => setFiles((current) => ({ ...current, [type]: file ?? undefined }))}
+          />
+        ))}
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" className="btn-secondary" onClick={onCancel}>
+            Annuler
+          </button>
+          <button type="submit" className="btn-primary" disabled={busy}>
+            Changer de contact
           </button>
         </div>
       </form>

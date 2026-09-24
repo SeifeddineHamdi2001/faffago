@@ -591,6 +591,129 @@ describe('Remplacer un document (D-32)', () => {
   });
 });
 
+describe('Changer de contact (D-42)', () => {
+  async function changeContact(
+    sellerId: string,
+    fields: Record<string, string>,
+    files: Record<string, Buffer>,
+    token = adminToken,
+  ) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    for (const [type, bytes] of Object.entries(files))
+      form.append(type, blob(bytes), `${type}.png`);
+    return t.request('POST', `/sellers/${sellerId}/contact`, {
+      token,
+      form,
+      headers: headersFor(token),
+    });
+  }
+
+  const newPerson = () => ({
+    contactFirstName: 'Mehdi',
+    contactLastName: 'Ben Salah',
+    contactPhone: nextPhone(),
+  });
+
+  it("names a new person with the new person's CIN; the old CIN stays, marked replaced", async () => {
+    const { seller, password } = await createdSeller();
+    const before = await documentsOf(seller.id);
+    const person = newPerson();
+
+    const response = await changeContact(seller.id, person, {
+      CIN_RECTO: await png(),
+      CIN_VERSO: await png(),
+    });
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      contactFullName: 'Mehdi Ben Salah',
+      contactFirstName: 'Mehdi',
+      contactLastName: 'Ben Salah',
+      contactPhone: person.contactPhone,
+      email: seller.email,
+    });
+
+    const documents = await documentsOf(seller.id);
+    expect(documents).toHaveLength(4);
+    for (const old of before) {
+      expect(documents.find((d) => d.id === old.id)!.replacedAt).not.toBeNull();
+    }
+    expect(
+      documents
+        .filter((d) => d.replacedAt === null)
+        .map((d) => d.type)
+        .sort(),
+    ).toEqual(['CIN_RECTO', 'CIN_VERSO']);
+
+    const [entry] = await t.prisma.auditLog.findMany({
+      where: { entityId: seller.id, action: 'CHANGEMENT_CONTACT_VENDEUR' },
+    });
+    expect(entry!.before).toMatchObject({ contactFullName: 'Yasmine Trabelsi' });
+    expect(entry!.after).toMatchObject({ contactFullName: 'Mehdi Ben Salah' });
+
+    // The account and its login are untouched.
+    const loggedIn = await t.request('POST', '/auth/login/vendeur', {
+      body: { email: seller.email, password },
+    });
+    expect(loggedIn.status).toBe(200);
+  });
+
+  it.each([
+    ['no CIN at all', {}],
+    ['the front only', { CIN_RECTO: 'png' }],
+    ['the back only', { CIN_VERSO: 'png' }],
+  ])('refuses %s, and changes nothing', async (_label, kinds) => {
+    const { seller } = await createdSeller();
+    const files: Record<string, Buffer> = {};
+    for (const type of Object.keys(kinds)) files[type] = await png();
+    const stored = storedFiles().length;
+
+    const response = await changeContact(seller.id, newPerson(), files);
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('DOCUMENT_MANQUANT');
+    expect(storedFiles()).toHaveLength(stored);
+    const unchanged = await t.request('GET', `/sellers/${seller.id}`, { token: adminToken });
+    expect(unchanged.body.contactFullName).toBe('Yasmine Trabelsi');
+  });
+
+  it('refuses a patente: only the CIN belongs to the contact', async () => {
+    const { seller } = await createdSeller();
+    const response = await changeContact(seller.id, newPerson(), {
+      CIN_RECTO: await png(),
+      CIN_VERSO: await png(),
+      PATENTE: PDF,
+    });
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe('DOCUMENT_INATTENDU');
+  });
+
+  it("refuses another seller's phone, and removes the files it wrote", async () => {
+    const other = nextPhone();
+    await createdSeller({ fields: { contactPhone: other } });
+    const { seller } = await createdSeller();
+    const stored = storedFiles().length;
+    const response = await changeContact(
+      seller.id,
+      { ...newPerson(), contactPhone: other },
+      { CIN_RECTO: await png(), CIN_VERSO: await png() },
+    );
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe('TELEPHONE_DEJA_UTILISE');
+    expect(storedFiles()).toHaveLength(stored);
+  });
+
+  it('is the admin’s alone', async () => {
+    const { seller } = await createdSeller();
+    const response = await changeContact(
+      seller.id,
+      newPerson(),
+      { CIN_RECTO: await png(), CIN_VERSO: await png() },
+      await tokenOf(serviceClient),
+    );
+    expect(response.status).toBe(403);
+  });
+});
+
 describe('Suspendre / Réactiver (Vendeur 2.5)', () => {
   it('suspends and reactivates, audited; a suspended seller still logs in', async () => {
     const { seller, password } = await createdSeller();

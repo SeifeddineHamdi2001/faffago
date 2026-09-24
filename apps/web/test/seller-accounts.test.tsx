@@ -204,6 +204,30 @@ describe('the seller page', () => {
     expect(refresh).toHaveBeenCalled();
   });
 
+  it('changes the contact only with the new person’s CIN front and back (D-42)', async () => {
+    const user = userEvent.setup();
+    bff.mockResolvedValueOnce({ ok: true, data: {} });
+    render(<SellerDetailScreen seller={detail} permissions={admin} />);
+    await user.click(screen.getByRole('button', { name: 'Changer de contact' }));
+    const dialog = screen.getByRole('dialog', { name: 'Changer de contact' });
+    await user.type(within(dialog).getByLabelText('Prénom'), 'Mehdi');
+    await user.type(within(dialog).getByLabelText('Nom'), 'Ben Salah');
+    await user.type(within(dialog).getByLabelText('Téléphone'), '98123456');
+    await user.upload(within(dialog).getByLabelText('CIN (recto)'), file('recto.jpg'));
+    await user.click(within(dialog).getByRole('button', { name: 'Changer de contact' }));
+    expect(within(dialog).getByText('Document obligatoire')).toBeTruthy();
+    expect(bff).not.toHaveBeenCalled();
+
+    await user.upload(within(dialog).getByLabelText('CIN (verso)'), file('verso.jpg'));
+    await user.click(within(dialog).getByRole('button', { name: 'Changer de contact' }));
+    const [method, path, body] = bff.mock.calls[0]!;
+    expect([method, path]).toEqual(['POST', 'sellers/s1/contact']);
+    const form = body as FormData;
+    expect(form.get('contactLastName')).toBe('Ben Salah');
+    expect((form.get('CIN_RECTO') as File).name).toBe('recto.jpg');
+    expect((form.get('CIN_VERSO') as File).name).toBe('verso.jpg');
+  });
+
   it('sends only the fields that changed', async () => {
     const user = userEvent.setup();
     bff.mockResolvedValueOnce({ ok: true, data: {} });

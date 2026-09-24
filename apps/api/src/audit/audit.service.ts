@@ -21,6 +21,8 @@ export const AuditAction = {
   MODIFICATION_VENDEUR: 'MODIFICATION_VENDEUR',
   /** Applies to the bons prepared after it (D-34). */
   CHANGEMENT_STATUT_VENDEUR: 'CHANGEMENT_STATUT_VENDEUR',
+  /** A different contact person, with his CIN (D-42). */
+  CHANGEMENT_CONTACT_VENDEUR: 'CHANGEMENT_CONTACT_VENDEUR',
   SUSPENSION_VENDEUR: 'SUSPENSION_VENDEUR',
   REACTIVATION_VENDEUR: 'REACTIVATION_VENDEUR',
   /** Every upload and every view of a CIN or patente (D-32). */

@@ -25,10 +25,12 @@ import {
   SellerErrorCode,
   SellerDocumentType,
   addSellerDocumentSchema,
+  changeSellerContactSchema,
   changeSellerStatutSchema,
   createSellerSchema,
   updateSellerSchema,
   type AddSellerDocumentValues,
+  type ChangeSellerContactValues,
   type ChangeSellerStatutValues,
   type CreateSellerValues,
   type DocumentMimeType,
@@ -54,6 +56,15 @@ interface UploadedDocument {
 }
 
 type DocumentFiles = Partial<Record<SellerDocumentType, UploadedDocument[]>>;
+
+function uploadsOf(files: DocumentFiles | undefined): Upload[] {
+  const uploads: Upload[] = [];
+  for (const [type, list] of Object.entries(files ?? {})) {
+    const file = list?.[0];
+    if (file) uploads.push({ type: type as SellerDocumentType, bytes: file.buffer });
+  }
+  return uploads;
+}
 
 /**
  * Vendeurs (Admin 4.14, D-11). Reading is open to Dépôt and Service client,
@@ -87,12 +98,7 @@ export class SellersController {
     @CurrentPrincipal() principal: Principal,
     @Meta() meta: RequestMeta,
   ) {
-    const uploads: Upload[] = [];
-    for (const [type, list] of Object.entries(files ?? {})) {
-      const file = list?.[0];
-      if (file) uploads.push({ type: type as SellerDocumentType, bytes: file.buffer });
-    }
-    return this.sellers.create(principal as UserPrincipal, body, uploads, meta);
+    return this.sellers.create(principal as UserPrincipal, body, uploadsOf(files), meta);
   }
 
   @Patch(':id')
@@ -126,6 +132,25 @@ export class SellersController {
       file?.buffer ?? null,
       meta,
     );
+  }
+
+  /**
+   * Changer de contact (D-42): the new person's CIN front and back in the same
+   * request. Any other file is refused.
+   */
+  @Post(':id/contact')
+  @RequirePermission(Permission.GERER_VENDEURS_COURSIERS)
+  @HttpCode(200)
+  @UseFilters(UploadErrorsFilter)
+  @UseInterceptors(FileFieldsInterceptor(DOCUMENT_FIELDS, { limits: UPLOAD_LIMITS }))
+  changeContact(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(changeSellerContactSchema)) body: ChangeSellerContactValues,
+    @UploadedFiles() files: DocumentFiles | undefined,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.sellers.changeContact(principal as UserPrincipal, id, body, uploadsOf(files), meta);
   }
 
   @Post(':id/suspend')

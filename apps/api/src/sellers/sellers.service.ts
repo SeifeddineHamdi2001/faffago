@@ -3,6 +3,7 @@ import type { Prisma, Seller, SellerDocument, User } from '@prisma/client';
 import {
   Permission,
   Role,
+  CONTACT_DOCUMENTS,
   SELLER_MESSAGES,
   STATUT_DOCUMENT,
   SellerAccountState,
@@ -10,6 +11,7 @@ import {
   can,
   checkDocumentSet,
   requiredDocumentsFor,
+  type ChangeSellerContactValues,
   type ChangeSellerStatutValues,
   type CreateSellerValues,
   type ProductCategory,
@@ -338,6 +340,72 @@ export class SellersService {
   }
 
   /**
+   * Changer de contact (D-42): a different person becomes the contact, with
+   * his CIN front and back in the same action. The previous CIN stays as a
+   * replaced version. The login email belongs to the account and is kept.
+   */
+  async changeContact(
+    principal: UserPrincipal,
+    sellerId: string,
+    values: ChangeSellerContactValues,
+    uploads: Upload[],
+    meta: RequestMeta,
+  ): Promise<SellerAdminView> {
+    const provided = uploads.map((upload) => upload.type);
+    const unexpected = provided.filter((type) => !CONTACT_DOCUMENTS.includes(type));
+    if (unexpected.length > 0) throw documentInattendu(unexpected);
+    const missing = CONTACT_DOCUMENTS.filter((type) => !provided.includes(type));
+    if (missing.length > 0) throw documentManquant(missing);
+
+    const current = await this.prisma.seller.findUnique({ where: { id: sellerId } });
+    if (!current) throw vendeurIntrouvable();
+    await this.assertPhoneFree(this.prisma, values.contactPhone, current.userId);
+
+    const staged = await this.documents.stageAll(
+      CONTACT_DOCUMENTS.map((type) => uploads.find((upload) => upload.type === type)!),
+    );
+    const actor = actorOf(principal);
+    return this.keepingFilesOnlyIfCommitted(staged, () =>
+      withUniqueAccountErrors(() =>
+        this.prisma.$transaction(async (tx) => {
+          const seller = await this.lockSeller(tx, sellerId);
+          await this.assertPhoneFree(tx, values.contactPhone, seller.userId);
+          await tx.user.update({
+            where: { id: seller.userId },
+            data: {
+              firstName: values.contactFirstName,
+              lastName: values.contactLastName,
+              phone: values.contactPhone,
+            },
+          });
+          const contactFullName = `${values.contactFirstName} ${values.contactLastName}`;
+          const updated = await tx.seller.update({
+            where: { id: sellerId },
+            data: { contactFullName, contactPhone: values.contactPhone },
+            include: { user: true },
+          });
+          await this.audit.record(tx, {
+            actor,
+            action: AuditAction.CHANGEMENT_CONTACT_VENDEUR,
+            entityType: 'seller',
+            entityId: sellerId,
+            before: { contactFullName: seller.contactFullName, contactPhone: seller.contactPhone },
+            after: {
+              contactFullName,
+              contactPhone: values.contactPhone,
+              documentIds: staged.map((document) => document.id),
+            },
+            ip: meta.ip,
+            userAgent: meta.userAgent,
+          });
+          await this.documents.record(tx, sellerId, staged, actor, meta);
+          return adminView(updated);
+        }),
+      ),
+    );
+  }
+
+  /**
    * Adds a document, replacing the current one of its type; the old version
    * is kept (D-32). Only the documents the seller's statut calls for.
    */
@@ -433,6 +501,13 @@ export class SellersService {
     if (await db.user.findFirst({ where: { phone, role: Role.VENDEUR, ...except } })) {
       throw telephoneDejaUtilise();
     }
+  }
+
+  private async assertPhoneFree(db: Tx, phone: string, exceptUserId: string): Promise<void> {
+    const taken = await db.user.findFirst({
+      where: { phone, role: Role.VENDEUR, id: { not: exceptUserId } },
+    });
+    if (taken) throw telephoneDejaUtilise();
   }
 
   private async lockSeller(tx: Tx, sellerId: string): Promise<SellerWithUser> {

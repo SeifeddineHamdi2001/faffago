@@ -183,6 +183,23 @@ export const changeSellerStatutSchema = z.object({
 });
 export type ChangeSellerStatutValues = z.output<typeof changeSellerStatutSchema>;
 
+/**
+ * Changer de contact (D-42): a different person, whose CIN front and back come
+ * in the same request. Correcting a typo in the name or phone is Modifier.
+ */
+export const changeSellerContactSchema = z.object({
+  contactFirstName: sellerFields.contactFirstName,
+  contactLastName: sellerFields.contactLastName,
+  contactPhone: sellerFields.contactPhone,
+});
+export type ChangeSellerContactValues = z.output<typeof changeSellerContactSchema>;
+
+/** The documents that belong to the contact person, not to the business. */
+export const CONTACT_DOCUMENTS: readonly SellerDocumentType[] = [
+  SellerDocumentType.CIN_RECTO,
+  SellerDocumentType.CIN_VERSO,
+];
+
 export const addSellerDocumentSchema = z.object({
   type: z.nativeEnum(SellerDocumentType, {
     errorMap: () => ({ message: 'Type de document obligatoire' }),
