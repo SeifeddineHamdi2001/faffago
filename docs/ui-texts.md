@@ -106,7 +106,6 @@ where the text lives, so a change is made in one place.
 
 | Key                                     | Français                                                |
 | --------------------------------------- | ------------------------------------------------------- |
-| web `vendeur/page` — accueil            | Bienvenue, {boutique}.                                  |
 | web `impersonation-banner` — sous-titre | Consultation en lecture seule : aucune action possible. |
 | web `impersonation-banner` — bouton     | Quitter                                                 |
 | `AUTH_MESSAGES.lectureSeule`            | Consultation en lecture seule : aucune action possible. |
@@ -297,6 +296,20 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 | web `profile-screen` — boutique              | Profil · Boutique et contact · Boutique · Catégorie de produits · Lien de la boutique · Personne de contact · Téléphone · Email (identifiant de connexion) · Statut · Retenue à la source de {taux} % sur chaque paiement, après les frais Faffa Go. · Pour modifier ces informations ou votre mot de passe, contactez Faffa Go.                                                                   |
 | web `profile-screen` — tarifs                | Tarifs · Frais de livraison · Frais de retour · Changement de client · Ramassage · {frais} en dessous de {n} colis, gratuit à partir de {n} · Les mêmes pour tous les vendeurs.                                                                                                                                                                                                                    |
 | web `profile-screen` — adresses              | Adresses de ramassage · Ajouter une adresse · Aucune adresse : elle est demandée à votre premier ramassage. · Par défaut · Choisir par défaut · Modifier · Modifier l’adresse · Les ramassages déjà demandés gardent l’ancienne adresse. · Annuler · Enregistrer                                                                                                                                   |
+
+## Tableau de bord (phase 4, étape 7, D-48)
+
+| Key                                      | Français                                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `DASHBOARD_TILE_LABELS_FR` (Vendeur 4.1) | Créés · Ramassés · En livraison · Livrés · Échecs · Reportés                                                                    |
+| `DASHBOARD_PERIOD_LABELS_FR` (D-48)      | Aujourd’hui · Hier · 7 derniers jours · Ce mois · Période personnalisée                                                         |
+| `dashboardTitle` — période personnalisée | Du {JJ/MM/AAAA} au {JJ/MM/AAAA} · Le {JJ/MM/AAAA}                                                                               |
+| web `seller-dashboard-screen` — période  | Du · Au · Afficher · Période invalide ({raison}) : aujourd’hui est affiché. · Période inconnue                                  |
+| web `seller-dashboard-screen` — suspendu | Votre compte est suspendu : vous ne pouvez pas créer de colis ni demander de ramassage.                                         |
+| `dashboardQuerySchema`                   | Date invalide · Indiquez la date de début et la date de fin · La date de début doit précéder la date de fin · 366 jours au plus |
+
+"Reportés" is the tile of D-9 postponements, added with D-48; the other five
+tile labels are Vendeur 4.1's list, capitalised.
 
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 

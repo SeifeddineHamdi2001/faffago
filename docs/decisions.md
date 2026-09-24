@@ -76,6 +76,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-45 · What a label prints, Arabic included](#d-45--what-a-label-prints-arabic-included)
 - [D-46 · Mes colis and Détail du colis](#d-46--mes-colis-and-détail-du-colis)
 - [D-47 · Pickup requests and Profil](#d-47--pickup-requests-and-profil)
+- [D-48 · Tableau de bord: what happened over a period](#d-48--tableau-de-bord-what-happened-over-a-period)
 
 **Money — A-1 to A-5**
 
@@ -949,6 +950,53 @@ Completes D-35.
   toward the 5-parcel free threshold.
 
 **Where.** `packages/shared/src/pickups.ts`, `apps/api/src/pickups`.
+
+### D-48 · Tableau de bord: what happened over a period
+
+Decided 2026-09-24, with the phase 4 step 7 plan (Vendeur 4.1, D-39).
+
+**What the tiles count**: what **happened** to the seller's parcels during
+the period, not where they are now. Each tile counts **distinct parcels**
+with at least one event of its kind in the period:
+
+| Tile         | Event                                                   |
+| ------------ | ------------------------------------------------------- |
+| Créés        | `CREATION`                                              |
+| Ramassés     | `RAMASSAGE`                                             |
+| En livraison | `SORTIE_COURSIER`                                       |
+| Livrés       | `LIVRAISON`                                             |
+| Échecs       | `ECHEC_LIVRAISON`, any reason but Reporté par le client |
+| Reportés     | `ECHEC_LIVRAISON`, reason `REPORTE_PAR_LE_CLIENT` (D-9) |
+
+- **Reportés** is a tile added to Vendeur 4.1's list: a customer
+  postponement is not a failure to verify (D-9), so Échecs leaves it out.
+- A parcel counts in several tiles when several things happened to it (out
+  in the morning, delivered at noon: En livraison and Livrés). It counts once
+  per tile, however many events of that kind it had.
+- **A cancelled scan is taken back** (its scan has `cancelledAt`, A-11). A
+  **status correction** (`FORCAGE_STATUT`) counts nowhere.
+- **Which day an event belongs to**: the Tunis calendar day (D-46) of the
+  phone's clock for a scan, so an offline scan synced the next morning stays
+  on the day it was made (as A-12 does for the Caisse); the server's clock
+  for everything else.
+
+**The period (added beyond the spec)**: Aujourd'hui (default), Hier, 7
+derniers jours (today and the 6 days before), Ce mois (from the 1st to
+today), and a custom range of **366 days at most**. The block's title
+follows the choice; a custom range reads "Du JJ/MM/AAAA au JJ/MM/AAAA".
+The period lives in the page's address. A refused range shows today, with
+the reason. **The delivery rate (phase 8) uses this same selector.**
+
+**API**: `GET /dashboard?from=AAAA-MM-JJ&to=AAAA-MM-JJ` (both or neither,
+then today), VENDEUR only and open to Voir comme le vendeur (read-only);
+the seller comes from the session. Other roles 403.
+
+**Quick actions**: Créer un colis and Demander un ramassage, hidden for a
+suspended seller (with one line saying why) and under Voir comme le vendeur.
+The tiles are not links for now.
+
+**Where.** `packages/shared/src/seller-dashboard.ts`, `apps/api/src/dashboard`,
+`apps/web/src/components/seller-dashboard-screen.tsx`.
 ---
 
 ## Money

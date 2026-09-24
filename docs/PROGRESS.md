@@ -114,8 +114,8 @@ only, no HTTP endpoint (D-22).
 
 Plan approved 2026-09-24; answers recorded as D-32 to D-41. Built and
 committed in steps, each reported before the next. Steps 1 to 6 are done
-and approved; **step 7 (Tableau de bord) is next**, then step 8
-(Playwright), then the merge into `main`.
+and approved; step 7 (Tableau de bord) is built and waits for review;
+**step 8 (Playwright) is next**, then the merge into `main`.
 
 - [x] Seller accounts created by admin (statut, documents in private storage,
       encrypted, D-32, D-33, D-34) — step 1, API and web:
@@ -213,9 +213,18 @@ and approved; **step 7 (Tableau de bord) is next**, then step 8
 - [x] Profil (Vendeur 4.14) — step 6, built with the pickup addresses.
       `GET /profile`: shop, contact, statut with the retenue note, rates;
       the pickup addresses managed on the same page — 1 API e2e, 5 web tests
-- [ ] **Next — step 7:** Tableau de bord: Aujourd'hui counts and quick
-      actions (D-39)
-- [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
+- [x] Tableau de bord (D-39, D-48) — step 7, API and web. What happened
+      to the seller's parcels over a period: Créés, Ramassés, En livraison,
+      Livrés, Échecs, Reportés (D-9 postponements, apart from Échecs);
+      distinct parcels per tile, a cancelled scan taken back, a status
+      correction counted nowhere, a scan filed under its phone's Tunis day
+      (A-12). Period: Aujourd'hui, Hier, 7 derniers jours, Ce mois or a
+      custom range of 366 days at most, kept in the address.
+      `GET /dashboard?from=&to=` (VENDEUR, Voir comme le vendeur reads).
+      Quick actions Créer un colis and Demander un ramassage, hidden when
+      suspended or read-only. No migration — 16 shared, 13 API e2e, 11 web
+      tests
+- [ ] **Next — step 8:** Playwright end-to-end tests, once a full flow exists: create a seller →
       the seller logs in → creates a parcel. Covers the phase 1 screens too
       (logins, Copier les identifiants, Voir comme le vendeur)
 
@@ -254,6 +263,10 @@ and approved; **step 7 (Tableau de bord) is next**, then step 8
 
 - [ ] Caisse sessions (attendu / compté / écart), courier debts
 - [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
+- [ ] Tableau de bord, money part (D-39): À recevoir, and Taux de livraison
+      with **the same period selector as the Aujourd'hui counts** (D-48:
+      Aujourd'hui, Hier, 7 derniers jours, Ce mois, custom range up to 366
+      days, Tunis days)
 - [ ] Bons de retour
 - [ ] Retenue à la source certificates + monthly report
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
@@ -650,6 +663,21 @@ and approved; **step 7 (Tableau de bord) is next**, then step 8
   pickup addresses live there. D-47 also settles, for phase 6, the extra
   parcels scanned at a pickup.
 
+- 2026-09-24 — **Phase 4, step 7 (Tableau de bord).** Plan approved with
+  option A and a period selector, recorded as **D-48**. Also:
+  - **Which day an event belongs to**: the phone's clock for a scan (as
+    A-12 does for the Caisse), the server's clock otherwise. The Détail du
+    colis timeline still shows the server time; see Open questions.
+  - **Indexes**: none added. The query goes through the seller's parcels
+    and the `parcelId` part of `parcel_events (parcelId, serverTime)`. If long periods get slow
+    for a large seller, the index to propose is on `parcel_events`
+    `(parcelId, COALESCE(deviceTime, serverTime))` or a per-seller rollup;
+    to measure on real volumes first.
+  - The Mes colis date filter now uses the same shared Tunis-day helpers
+    (`tunisDayStart`, `addTunisDays`).
+  - The placeholder "Bienvenue, {boutique}." is gone: the shop name is in
+    the header.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -672,6 +700,10 @@ and approved; **step 7 (Tableau de bord) is next**, then step 8
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
+- **Scan time on the timeline**: Détail du colis shows each event at the
+  server time, so a scan synced the next morning reads as made then, while
+  the Tableau de bord files it under the day the phone made it (D-48, A-12).
+  Show the phone's time on the timeline too? To decide before phase 6.
 - **Suggestion (not in the specs): a downloadable list of localités** beside
   the délégation list, for sellers filling the `localite` column. Q5 offers
   the délégation list only.

@@ -4,6 +4,7 @@ import type {
   CourierBlocker,
   CsvRowProblem,
   CsvRowVerdict,
+  DashboardTile,
   FailureReason,
   ParcelCashStatus,
   ParcelEventType,
@@ -277,4 +278,11 @@ export interface SellerProfile {
     pickupFreeThreshold: number;
     retenueRateBps: number;
   };
+}
+
+/** GET /dashboard (Vendeur 4.1, D-48): distinct parcels per tile over Tunis days. */
+export interface SellerDashboard {
+  from: string;
+  to: string;
+  counts: Record<DashboardTile, number>;
 }

@@ -5,6 +5,7 @@ import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { ClockModule } from './common/clock.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -40,6 +41,7 @@ import { StorageModule } from './storage/storage.module';
     LabelsModule,
     ParcelsModule,
     PickupsModule,
+    DashboardModule,
   ],
 })
 export class AppModule {}

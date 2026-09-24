@@ -11,8 +11,10 @@ import {
   ParcelGroup,
   Role,
   TUNISIA_UTC_OFFSET_MINUTES,
+  addTunisDays,
   csvLine,
   formatDT,
+  tunisDayStart,
   type FailureReason,
   type ParcelEventType,
   type ParcelListQuery,
@@ -68,12 +70,6 @@ export interface SellerParcelDetail extends SellerParcelView {
 }
 
 const COURIER_ROLES: readonly Role[] = [Role.LIVREUR, Role.RAMASSEUR];
-
-/** The UTC instant local midnight starts a Tunisian calendar day. */
-function localDayStart(key: string): Date {
-  const [year, month, day] = key.split('-').map(Number) as [number, number, number];
-  return new Date(Date.UTC(year, month - 1, day) - TUNISIA_UTC_OFFSET_MINUTES * 60_000);
-}
 
 function localDateTime(date: Date): string {
   const local = new Date(date.getTime() + TUNISIA_UTC_OFFSET_MINUTES * 60_000);
@@ -278,11 +274,9 @@ export class ParcelQueriesService {
     }
     if (query.from || query.to) {
       where.createdAt = {
-        ...(query.from ? { gte: localDayStart(query.from) } : {}),
+        ...(query.from ? { gte: tunisDayStart(query.from) } : {}),
         // The whole of the last day: up to the next day's local midnight.
-        ...(query.to
-          ? { lt: new Date(localDayStart(query.to).getTime() + 24 * 60 * 60 * 1000) }
-          : {}),
+        ...(query.to ? { lt: tunisDayStart(addTunisDays(query.to, 1)) } : {}),
       };
     }
     return where;
