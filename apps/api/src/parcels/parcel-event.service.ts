@@ -381,6 +381,54 @@ export class ParcelEventService {
     return parcel;
   }
 
+  /**
+   * Forcer un statut (D-56): the admin's correction of a scanning mistake.
+   * The caller has checked the move is one phase 5 allows; no effect runs —
+   * no charge, no 48-hour clock, the attempt count unchanged. Put with a
+   * livreur, the parcel is his; taken from En livraison, it is nobody's.
+   */
+  async forceStatus(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      target: { status: ParcelStatus; location: ParcelLocation };
+      livreurCourierId: string | null;
+      reason: string;
+    },
+  ): Promise<Parcel> {
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const current = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    const data: Prisma.ParcelUncheckedUpdateInput = {
+      status: input.target.status,
+      location: input.target.location,
+    };
+    if (input.target.location === ParcelLocation.AVEC_LE_LIVREUR) {
+      data.currentLivreurId = input.livreurCourierId;
+    } else if (current.status === ParcelStatus.EN_LIVRAISON) {
+      data.currentLivreurId = null;
+    }
+    // Out with a livreur: the plan of Tournées has been acted on (D-55).
+    if (input.target.status === ParcelStatus.EN_LIVRAISON) data.plannedLivreurId = null;
+
+    const updated = await tx.parcel.update({ where: { id: current.id }, data });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: current.id,
+        type: ParcelEventType.FORCAGE_STATUT,
+        previousStatus: current.status,
+        newStatus: updated.status,
+        previousLocation: current.location,
+        newLocation: updated.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        reasonText: input.reason,
+        serverTime: this.clock.now(),
+      },
+    });
+    return updated;
+  }
+
   /** Why, when the type alone does not say: a cancellation after pickup, a planned date (D-9). */
   private metadataOf(
     step: ParcelTransitionEvent,

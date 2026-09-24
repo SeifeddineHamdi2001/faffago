@@ -430,6 +430,18 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | web `colis-screen`, `tournees-screen`, `scan-station` | Étiquette à réimprimer · Étiquette à réimprimer : une modification a changé ce qui est imprimé.                                                                                                                                                                      |
 | web `parcel-screen` (vendeur)                         | Raison du refus : {raison}                                                                                                                                                                                                                                           |
 
+## Forcer un statut (Colis, D-56)
+
+"Forcer un statut" is the spec's label.
+
+| Key                                           | Français                                                                                                                                                                                                                                  |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `forcage` — dialogue                      | Seulement pour corriger une erreur de scan. La correction et sa raison sont enregistrées dans le journal d’audit. · Nouvel état · Choisir… · {statut} · {lieu} · Livreur · Raison · Fermer · Corriger · Choisissez le nouvel état         |
+| web `forcage` — aucun choix                   | Aucune correction de statut possible pour ce colis.                                                                                                                                                                                       |
+| web `forcage` — scan                          | Annuler ce scan · Le colis revient à son état d’avant le scan. La raison est enregistrée dans le journal d’audit. · Annuler le scan                                                                                                       |
+| `FORCAGE_MESSAGES_FR`                         | Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, ou le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, se corrigent. · Le colis est déjà dans cet état. · Choisissez le livreur qui a le colis. |
+| `forcerStatutSchema`, `adminScanCancelSchema` | Indiquez la raison de la correction                                                                                                                                                                                                       |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

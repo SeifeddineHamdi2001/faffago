@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import {
   BYTE_ORDER_MARK,
   CANCELLATION_AFTER_PICKUP,
+  DEPOT_SCAN_MODES,
   MAX_EXPORT_ROWS,
   PARCELS_PAGE_SIZE,
   PARCEL_CASH_STATUS_LABELS_FR,
@@ -65,8 +66,18 @@ export interface StaffEvent {
   reasonCode: string | null;
   reasonText: string | null;
   gps: { lat: number; lng: number; accuracyM: number | null } | null;
-  /** The scan behind the event: typed by hand, cancelled, a device clock off. */
-  scan: { manualEntry: boolean; cancelled: boolean; clockSkewFlagged: boolean } | null;
+  /**
+   * The scan behind the event: typed by hand, cancelled, a device clock off;
+   * and, for a depot scan still the parcel's last, the admin can cancel it
+   * with a reason (D-56).
+   */
+  scan: {
+    id: string;
+    manualEntry: boolean;
+    cancelled: boolean;
+    clockSkewFlagged: boolean;
+    adminCancellable: boolean;
+  } | null;
   /** Tournées: the livreur the parcel was planned for (D-55). */
   plannedFor: string | null;
   cancelledAfterPickup: boolean;
@@ -104,6 +115,8 @@ function rowOf(parcel: Row): StaffParcelRow {
 function fullName(person: PersonName): string {
   return `${person.firstName} ${person.lastName}`;
 }
+
+const DEPOT_ACTIONS: readonly string[] = DEPOT_SCAN_MODES;
 
 const colisIntrouvable = () =>
   apiError(404, ParcelErrorCode.COLIS_INTROUVABLE, PARCEL_MESSAGES.COLIS_INTROUVABLE);
@@ -254,7 +267,14 @@ export class ColisService {
       }),
       this.prisma.scan.findMany({
         where: { id: { in: scanIds } },
-        select: { id: true, manualEntry: true, cancelledAt: true, clockSkewFlagged: true },
+        select: {
+          id: true,
+          action: true,
+          accepted: true,
+          manualEntry: true,
+          cancelledAt: true,
+          clockSkewFlagged: true,
+        },
       }),
       this.prisma.courier.findMany({
         where: { id: { in: plannedIds } },
@@ -265,6 +285,7 @@ export class ColisService {
     const scanOf = new Map(scans.map((s) => [s.id, s]));
     const plannedName = new Map(planned.map((c) => [c.id, fullName(c.user)]));
 
+    const lastScanId = parcel.events.at(-1)?.scanId ?? null;
     const events: StaffEvent[] = parcel.events.map((event) => {
       const scan = event.scanId ? scanOf.get(event.scanId) : undefined;
       const plannedFor = this.plannedCourierOf(event.metadata);
@@ -292,9 +313,15 @@ export class ColisService {
             : null,
         scan: scan
           ? {
+              id: scan.id,
               manualEntry: scan.manualEntry,
               cancelled: scan.cancelledAt !== null,
               clockSkewFlagged: scan.clockSkewFlagged,
+              adminCancellable:
+                scan.accepted &&
+                scan.cancelledAt === null &&
+                DEPOT_ACTIONS.includes(scan.action) &&
+                scan.id === lastScanId,
             }
           : null,
         plannedFor: plannedFor ? (plannedName.get(plannedFor) ?? null) : null,

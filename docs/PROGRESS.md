@@ -345,7 +345,18 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       Web: the requests on the parcel's Colis page with Appliquer / Refuser,
       the badges, the station's warning, "Raison du refus" for the seller —
       8 shared, 16 API e2e, 12 web tests
-- [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
+- [x] Forcer un statut, scan cancellation after the window (D-56) — step
+      8, API and web. `POST /colis/:code/forcer-statut` (admin only): a
+      reason required; between Ramassé, Au dépôt and En livraison (the
+      livreur named), or the place of an À vérifier, Relancé or Retour au
+      dépôt parcel; nothing touching Livré, Annulé, a return or money; no
+      effect runs (`forcedStatusRefusal`, `ParcelEventService.forceStatus`).
+      One FORCAGE_STATUT event with the reason, and an `audit_log` entry
+      before and after. `POST /scans/depot/:scanId/cancel-admin`: any depot
+      scan, after its window, with a reason, audited, while its event is the
+      parcel's last. Web: Forcer un statut on the parcel's Colis page with
+      only the moves allowed, Annuler ce scan on the log — 8 shared, 13 API
+      e2e, 8 web tests
 - [ ] Exceptions, first rows (D-50) — step 9
 - [ ] Demo data, Playwright, merge — step 10. The demo seed (development
       only, D-16, D-50) adds about 10 demo parcels in Ramassé across several
@@ -983,6 +994,26 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     like every change to a parcel.
   - **`refusalReason`** is a new column the seller reads; `staffNote` stays
     internal.
+
+- 2026-09-24 — **Phase 5, step 8 (Forcer un statut).** Choices made while
+  building:
+  - **The screen offers only the moves allowed** (`forcedTargets` in
+    shared); the API checks them again. A parcel with none reads "Aucune
+    correction de statut possible pour ce colis."
+  - **The livreur named** must be a livreur's account, whatever its state:
+    the admin records where the parcel really is.
+  - **Columns that follow**: put with a livreur, the parcel is his; taken
+    from En livraison, it is nobody's (as A-8); out with a livreur, the
+    Tournées move is cleared. A place-only fix keeps the livreur, as
+    Retour de tournée does.
+  - **The admin's late cancellation** takes any scanner's depot scan, at
+    any time, while its event is still the parcel's last; beyond that,
+    Forcer un statut. Asked again, it answers the same.
+  - **Audit**: `FORCAGE_STATUT` (status, place and livreur before and
+    after) and `ANNULATION_SCAN_ADMIN`, each with the reason. The event
+    carries the reason too; the seller reads "Statut corrigé par Faffa Go"
+    or "Scan annulé", never the reason.
+  - Phase 6 adds the courier's scans and phase 8 the moves touching money.
 
 ## Open questions
 

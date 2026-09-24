@@ -506,7 +506,14 @@ export interface StaffEventRow {
   reasonCode: string | null;
   reasonText: string | null;
   gps: { lat: number; lng: number; accuracyM: number | null } | null;
-  scan: { manualEntry: boolean; cancelled: boolean; clockSkewFlagged: boolean } | null;
+  scan: {
+    id: string;
+    manualEntry: boolean;
+    cancelled: boolean;
+    clockSkewFlagged: boolean;
+    /** A depot scan still the parcel's last: the admin can cancel it (D-56). */
+    adminCancellable: boolean;
+  } | null;
   plannedFor: string | null;
   cancelledAfterPickup: boolean;
 }

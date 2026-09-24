@@ -36,6 +36,7 @@ import type {
   StaffParcelList,
 } from '@/lib/types';
 import { ChangeRequestsPanel } from './change-requests-panel';
+import { AdminScanCancel, ForcerStatut } from './forcage';
 import { PrintLabels } from './print-labels';
 import { TrackLine } from './track-line';
 
@@ -353,9 +354,12 @@ function actorText(event: StaffEventRow): string {
 export function ColisDetailScreen({
   parcel,
   permissions,
+  livreurs = [],
 }: {
   parcel: StaffParcelDetail;
   permissions: Permission[];
+  /** For Forcer un statut, when the parcel is put with a livreur. */
+  livreurs?: ColisFilters['livreurs'];
 }) {
   const canReprint = permissions.includes(Permission.REIMPRIMER_ETIQUETTE);
   const status = parcel.status as ParcelStatus;
@@ -385,6 +389,16 @@ export function ColisDetailScreen({
       {canReprint && (
         <div className="card mb-4">
           <PrintLabels path={`colis/${parcel.code}/label`} title="Réimprimer l’étiquette" />
+        </div>
+      )}
+      {permissions.includes(Permission.FORCER_STATUT) && (
+        <div className="mb-4">
+          <ForcerStatut
+            code={parcel.code}
+            current={{ status: parcel.status, location: parcel.location }}
+            livreurs={livreurs}
+            permissions={permissions}
+          />
         </div>
       )}
 
@@ -546,6 +560,9 @@ export function ColisDetailScreen({
                 {event.scan.cancelled && <span className="badge-muted">Scan annulé</span>}
                 {event.scan.clockSkewFlagged && <span className="badge-warn">Horloge décalée</span>}
               </p>
+            )}
+            {event.scan?.adminCancellable && (
+              <AdminScanCancel scanId={event.scan.id} permissions={permissions} />
             )}
           </li>
         ))}

@@ -175,7 +175,13 @@ const detail: StaffParcelDetail = {
       reasonCode: 'NE_REPOND_PAS',
       reasonText: 'Sonné trois fois',
       gps: { lat: 36.8765, lng: 10.3245, accuracyM: 12 },
-      scan: { manualEntry: true, cancelled: true, clockSkewFlagged: true },
+      scan: {
+        id: 's1',
+        manualEntry: true,
+        cancelled: true,
+        clockSkewFlagged: true,
+        adminCancellable: false,
+      },
       plannedFor: null,
       cancelledAfterPickup: false,
     },
@@ -293,6 +299,36 @@ describe('ColisDetailScreen (Admin 4.3)', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Étiquette à réimprimer');
     expect(screen.getByRole('heading', { name: 'Demandes de modification' })).toBeInTheDocument();
     expect(screen.getByText('Adresse : 9 rue du Lac')).toBeInTheDocument();
+  });
+
+  it('gives the admin Forcer un statut and Annuler ce scan, nobody else (D-56)', () => {
+    const scanned: StaffParcelDetail = {
+      ...detail,
+      status: 'AU_DEPOT',
+      location: 'AU_DEPOT',
+      events: [
+        {
+          ...detail.events[0]!,
+          type: 'ENTREE_DEPOT',
+          scan: {
+            id: 's9',
+            manualEntry: false,
+            cancelled: false,
+            clockSkewFlagged: false,
+            adminCancellable: true,
+          },
+        },
+      ],
+    };
+    const { unmount } = render(
+      <ColisDetailScreen parcel={scanned} permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />,
+    );
+    expect(screen.getByRole('button', { name: 'Forcer un statut' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Annuler ce scan' })).toBeInTheDocument();
+    unmount();
+    render(<ColisDetailScreen parcel={scanned} permissions={[...PERMISSIONS_BY_ROLE.DEPOT]} />);
+    expect(screen.queryByRole('button', { name: 'Forcer un statut' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Annuler ce scan' })).toBeNull();
   });
 
   it('offers Réimprimer l’étiquette to the depot and the admin, not to the service client', () => {

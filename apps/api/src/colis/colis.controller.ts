@@ -1,9 +1,28 @@
-import { Controller, Get, Param, Query, Res, StreamableFile } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import type { Response } from 'express';
-import { Permission, staffParcelQuerySchema, type StaffParcelQuery } from '@faffago/shared';
-import { RequirePermission } from '../auth/decorators';
+import {
+  Permission,
+  forcerStatutSchema,
+  staffParcelQuerySchema,
+  type ForcerStatutValues,
+  type StaffParcelQuery,
+} from '@faffago/shared';
+import { CurrentPrincipal, Meta, RequirePermission } from '../auth/decorators';
+import type { Principal, UserPrincipal } from '../auth/principal';
+import type { RequestMeta } from '../auth/sessions.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { ColisService } from './colis.service';
+import { ForcageService } from './forcage.service';
 
 /**
  * Colis (Admin 4.3, D-11): Admin, Dépôt and Service client read. Réimprimer
@@ -12,7 +31,10 @@ import { ColisService } from './colis.service';
  */
 @Controller('colis')
 export class ColisController {
-  constructor(private readonly colis: ColisService) {}
+  constructor(
+    private readonly colis: ColisService,
+    private readonly forcage: ForcageService,
+  ) {}
 
   @Get()
   @RequirePermission(Permission.COLIS_LECTURE)
@@ -47,5 +69,18 @@ export class ColisController {
   @RequirePermission(Permission.COLIS_LECTURE)
   detail(@Param('code') code: string) {
     return this.colis.detail(code);
+  }
+
+  /** Forcer un statut (Admin 4.3, D-56): the admin's alone, with a reason. */
+  @Post(':code/forcer-statut')
+  @RequirePermission(Permission.FORCER_STATUT)
+  @HttpCode(200)
+  force(
+    @Param('code') code: string,
+    @Body(new ZodValidationPipe(forcerStatutSchema)) body: ForcerStatutValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.forcage.force(principal as UserPrincipal, code, body, meta);
   }
 }

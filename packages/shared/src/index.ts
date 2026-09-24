@@ -32,3 +32,4 @@ export * from './zones.js';
 export * from './scans.js';
 export * from './tournees.js';
 export * from './colis.js';
+export * from './forcage.js';

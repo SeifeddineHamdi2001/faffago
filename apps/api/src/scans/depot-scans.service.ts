@@ -25,7 +25,9 @@ import {
   type ParcelBefore,
   type ParcelStatus,
 } from '@faffago/shared';
+import { AuditAction, AuditService } from '../audit/audit.service';
 import type { UserPrincipal } from '../auth/principal';
+import type { RequestMeta } from '../auth/sessions.service';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -145,6 +147,7 @@ export class DepotScansService {
     private readonly events: ParcelEventService,
     private readonly settings: SettingsService,
     private readonly coverage: ZoneCoverageService,
+    private readonly audit: AuditService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -403,6 +406,68 @@ export class DepotScansService {
       await tx.scan.update({
         where: { id: scan.id },
         data: { cancelledAt: now, cancelledByUserId: actor.userId },
+      });
+      return this.cancelResultOf(tx, scan.id);
+    });
+  }
+
+  /**
+   * Cancelling a depot scan after its window (A-11, D-56): the admin's, any
+   * scanner's scan, with a reason, audited; still only while the scan's event
+   * is the parcel's last. Beyond that, Forcer un statut.
+   */
+  async cancelByAdmin(
+    actor: UserPrincipal,
+    scanId: string,
+    reason: string,
+    meta: RequestMeta,
+  ): Promise<ScanCancelResult> {
+    return this.prisma.$transaction(async (tx) => {
+      const found = await tx.scan.findUnique({ where: { id: scanId } });
+      if (!found || !DEPOT_ACTIONS.includes(found.action)) {
+        throw cancelRefused(ScanCancelRefusal.SCAN_INTROUVABLE);
+      }
+      if (found.parcelId) {
+        await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${found.parcelId}::uuid FOR UPDATE`;
+      }
+      const scan = await tx.scan.findUniqueOrThrow({ where: { id: scanId } });
+      if (scan.cancelledAt) return this.cancelResultOf(tx, scan.id);
+      if (!scan.accepted || !scan.parcelId) {
+        throw cancelRefused(ScanCancelRefusal.ANNULATION_SCAN_REFUSE);
+      }
+      const last = await tx.parcelEvent.findFirst({
+        where: { parcelId: scan.parcelId },
+        orderBy: { sequence: 'desc' },
+      });
+      if (last?.scanId !== scan.id) throw cancelRefused(ScanCancelRefusal.ANNULATION_COLIS_MODIFIE);
+
+      const before = await tx.parcel.findUniqueOrThrow({ where: { id: scan.parcelId } });
+      const restored = await this.events.restoreBeforeScan(tx, {
+        parcelId: scan.parcelId,
+        actor,
+        scanId: scan.id,
+        scanAction: scan.action,
+        before: scan.parcelBefore as unknown as ParcelBefore,
+        reason,
+      });
+      await tx.scan.update({
+        where: { id: scan.id },
+        data: {
+          cancelledAt: this.clock.now(),
+          cancelledByUserId: actor.userId,
+          cancelReason: reason,
+        },
+      });
+      await this.audit.record(tx, {
+        actor: { userId: actor.userId, role: actor.role },
+        action: AuditAction.ANNULATION_SCAN_ADMIN,
+        entityType: 'scan',
+        entityId: scan.id,
+        before: { status: before.status, location: before.location },
+        after: { status: restored.status, location: restored.location },
+        reason,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
       });
       return this.cancelResultOf(tx, scan.id);
     });

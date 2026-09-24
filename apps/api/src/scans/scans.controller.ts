@@ -1,8 +1,15 @@
 import { Body, Controller, HttpCode, Param, ParseUUIDPipe, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { Permission, depotScanSchema, type DepotScanValues } from '@faffago/shared';
-import { CurrentPrincipal, RequirePermission } from '../auth/decorators';
+import {
+  Permission,
+  adminScanCancelSchema,
+  depotScanSchema,
+  type AdminScanCancelValues,
+  type DepotScanValues,
+} from '@faffago/shared';
+import { CurrentPrincipal, Meta, RequirePermission } from '../auth/decorators';
 import type { Principal, UserPrincipal } from '../auth/principal';
+import type { RequestMeta } from '../auth/sessions.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { DepotScansService } from './depot-scans.service';
 
@@ -39,5 +46,18 @@ export class ScansController {
   @HttpCode(200)
   cancel(@Param('scanId', ParseUUIDPipe) scanId: string, @CurrentPrincipal() principal: Principal) {
     return this.depotScans.cancel(principal as UserPrincipal, scanId);
+  }
+
+  /** After the window, the admin cancels any depot scan, with a reason (A-11, D-56). */
+  @Post('depot/:scanId/cancel-admin')
+  @RequirePermission(Permission.FORCER_STATUT)
+  @HttpCode(200)
+  cancelByAdmin(
+    @Param('scanId', ParseUUIDPipe) scanId: string,
+    @Body(new ZodValidationPipe(adminScanCancelSchema)) body: AdminScanCancelValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.depotScans.cancelByAdmin(principal as UserPrincipal, scanId, body.reason, meta);
   }
 }
