@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-45** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-45 are rules |
+| **D-1 … D-46** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-46 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-45**
+**Rules decided during the build — D-4 to D-46**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -74,6 +74,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-43 · The site's domain is an environment variable](#d-43--the-sites-domain-is-an-environment-variable)
 - [D-44 · Demander une modification](#d-44--demander-une-modification)
 - [D-45 · What a label prints, Arabic included](#d-45--what-a-label-prints-arabic-included)
+- [D-46 · Mes colis and Détail du colis](#d-46--mes-colis-and-détail-du-colis)
 
 **Money — A-1 to A-5**
 
@@ -890,6 +891,36 @@ D-36.
 - **The landmark** is printed under the address, captioned "Repère", when
   there is one. **The courier note stays off the label.**
 - A character neither font can draw (an emoji, say) prints as "?".
+
+### D-46 · Mes colis and Détail du colis
+
+Decided 2026-09-24, with the phase 4 step 5 review (Vendeur 4.7, 4.8).
+
+**The status groups of Mes colis**, in this order, each with the seller's
+own count (under the same search and dates):
+
+| Group      | Holds                                                                                                       |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| Tous       | Every parcel. The only group that holds **Annulé**                                                          |
+| À vérifier | À vérifier. **Highlighted** while its count is above 0: the seller has 48 hours to decide (D-9 excepted)    |
+| En cours   | Créé, Ramassé, Au dépôt, En livraison, Relancé                                                              |
+| Livrés     | Livré, with two sub-groups: **Payés** (cash Payé) and **Non payés** (cash with the courier or at the depot) |
+| Retours    | Retour au dépôt, Retour en route, Retour reçu                                                               |
+
+**The track line**: the delivery flow of Vendeur 4.8; À vérifier and
+Relancé stop at En livraison, marked; a return switches to the return flow
+of 4.12; Annulé is struck through.
+
+**The history**: the seller's own actions read "Vous", the team and the
+automatic rules "Faffa Go", a courier his first name only (D-38); the
+place is a label, never GPS. The failure reason is shown. **The courier's
+free-text note is hidden** until phase 7 (À vérifier) decides what the
+seller reads of it. Status corrections and cancelled scans are shown.
+
+**Exporter**: the table's columns plus phone 2 and the address,
+`;`-separated with a byte-order mark, at most 10 000 rows.
+
+**Where.** `packages/shared/src/seller-parcels.ts`.
 
 ---
 

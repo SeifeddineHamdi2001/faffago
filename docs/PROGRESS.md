@@ -607,29 +607,17 @@ committed in steps, each reported before the next.
     label, the mixed address, a long Arabic address ending in "…", a French
     label with its landmark.
 
-- 2026-09-24 — **Phase 4, step 5 (Mes colis, Détail du colis).** Choices
-  to confirm, all in `packages/shared/src/seller-parcels.ts`:
-  - **Status groups** (Vendeur 4.7 names them, not their content): En cours
-    = Créé, Ramassé, Au dépôt, En livraison, Relancé; Livrés = Livré; À
-    vérifier; Payés = Livré and paid; Non payés = Livré, cash with the
-    courier or at the depot; Retours = the three return statuses. Annulé is
-    under Tous only. Counts follow the search and the dates.
-  - **The track line**: the delivery flow of 4.8; À vérifier and Relancé
-    stop at En livraison, marked; a return switches to the return flow of
-    4.12; Annulé is struck through.
-  - **The timeline**: the seller's own actions read "Vous", the team and
-    the automatic rules "Faffa Go", couriers their first name (D-38). The
-    failure reason is shown; the courier's free-text note is not (À
-    vérifier, phase 7, decides what the seller reads of it). Status
-    corrections and cancelled scans are shown too.
-  - **Exporter** holds the table's columns plus phone 2 and the address,
-    `;`-separated with a byte-order mark, like the CSV template.
-  - Appels Faffa Go (phase 7) and the chat (phase 10) join the parcel page
-    with their phases.
+- 2026-09-24 — **Phase 4, step 5 (Mes colis, Détail du colis).** The
+  choices made while building were approved and recorded as **D-46**, with
+  one change: À vérifier comes first after Tous and is highlighted while
+  its count is above 0; Payés and Non payés are the two sub-groups of
+  Livrés. The courier's free-text note stays hidden until phase 7. Also:
   - **`parcel_events.sequence`** (new migration): events written by one
     action share their server time, and the timeline needs their order.
   - Dates on these screens are drawn in Tunis time (`Africa/Tunis`), also
     when the page is rendered on the server.
+  - Appels Faffa Go (phase 7) and the chat (phase 10) join the parcel page
+    with their phases.
 
 ## Open questions
 

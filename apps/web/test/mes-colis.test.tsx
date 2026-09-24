@@ -54,21 +54,66 @@ const list: ParcelList = {
 };
 
 describe('Mes colis (Vendeur 4.7)', () => {
-  it('shows each group with the seller’s own count', () => {
+  it('shows Tous, À vérifier, En cours, Livrés, Retours, with the seller’s own counts (D-46)', () => {
     render(<MesColisScreen list={list} filters={filters} readOnly={false} invalidFilter={false} />);
     const tabs = within(screen.getByRole('navigation', { name: 'Filtrer par statut' }));
     expect(tabs.getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Tous (120)',
+      'À vérifier (5)',
       'En cours (60)',
       'Livrés (40)',
-      'À vérifier (5)',
-      'Payés (30)',
-      'Non payés (10)',
       'Retours (15)',
     ]);
     expect(tabs.getByRole('link', { name: 'Tous (120)' }).getAttribute('aria-current')).toBe(
       'page',
     );
+    // Payés and Non payés appear under Livrés only.
+    expect(screen.queryByRole('navigation', { name: 'Livrés : paiement' })).toBeNull();
+  });
+
+  it('highlights À vérifier while a parcel waits for a decision, not when none does', () => {
+    const { unmount } = render(
+      <MesColisScreen list={list} filters={filters} readOnly={false} invalidFilter={false} />,
+    );
+    expect(
+      screen.getByRole('link', { name: 'À vérifier (5)' }).getAttribute('data-attention'),
+    ).toBe('true');
+    expect(
+      screen.getByRole('link', { name: 'En cours (60)' }).getAttribute('data-attention'),
+    ).toBeNull();
+    unmount();
+    render(
+      <MesColisScreen
+        list={{ ...list, counts: { ...list.counts, A_VERIFIER: 0 } }}
+        filters={filters}
+        readOnly={false}
+        invalidFilter={false}
+      />,
+    );
+    expect(
+      screen.getByRole('link', { name: 'À vérifier (0)' }).getAttribute('data-attention'),
+    ).toBeNull();
+  });
+
+  it('shows Payés and Non payés as the two halves of Livrés', () => {
+    render(
+      <MesColisScreen
+        list={list}
+        filters={{ ...filters, group: 'NON_PAYES' }}
+        readOnly={false}
+        invalidFilter={false}
+      />,
+    );
+    const sub = within(screen.getByRole('navigation', { name: 'Livrés : paiement' }));
+    expect(sub.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['Payés (30)', '/vendeur/colis?groupe=PAYES'],
+      ['Non payés (10)', '/vendeur/colis?groupe=NON_PAYES'],
+    ]);
+    expect(sub.getByRole('link', { name: 'Non payés (10)' }).getAttribute('aria-current')).toBe(
+      'page',
+    );
+    // Livrés stays marked in the first row while one of its halves is shown.
+    expect(screen.getByRole('link', { name: 'Livrés (40)' }).className).toContain('bg-orange');
   });
 
   it('shows a row per parcel: code, status, cash status, COD, and the date in Tunis time', () => {

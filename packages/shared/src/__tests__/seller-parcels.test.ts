@@ -2,15 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { ParcelEventType } from '../parcel-state-machine.js';
 import {
   PARCEL_EVENT_LABELS_FR,
+  PARCEL_GROUP_LABELS_FR,
+  PARCEL_SUB_GROUPS,
+  PARCEL_TOP_GROUPS,
   ParcelGroup,
+  groupNeedsAttention,
   isInGroup,
+  topGroupOf,
   parcelListQuerySchema,
   parcelMoneyFor,
   timelineActorLabel,
   trackLineFor,
 } from '../seller-parcels.js';
-import type { ParcelCashStatus } from '../statuses.js';
-import { ParcelStatus } from '../statuses.js';
+import { ParcelCashStatus, ParcelStatus } from '../statuses.js';
 
 describe('status groups (Vendeur 4.7)', () => {
   const every = Object.values(ParcelStatus);
@@ -18,14 +22,43 @@ describe('status groups (Vendeur 4.7)', () => {
   it('puts each status in its group, Annulé under Tous only', () => {
     const groupsOf = (status: ParcelStatus, cash: ParcelCashStatus | null = null) =>
       Object.values(ParcelGroup).filter((g) => isInGroup(g, { status, cashStatus: cash }));
+    expect(groupsOf('A_VERIFIER')).toEqual(['TOUS', 'A_VERIFIER']);
     expect(groupsOf('CREE')).toEqual(['TOUS', 'EN_COURS']);
     expect(groupsOf('RELANCE')).toEqual(['TOUS', 'EN_COURS']);
-    expect(groupsOf('A_VERIFIER')).toEqual(['TOUS', 'A_VERIFIER']);
     expect(groupsOf('LIVRE', 'CHEZ_LE_COURSIER')).toEqual(['TOUS', 'LIVRES', 'NON_PAYES']);
     expect(groupsOf('LIVRE', 'AU_DEPOT')).toEqual(['TOUS', 'LIVRES', 'NON_PAYES']);
     expect(groupsOf('LIVRE', 'PAYE')).toEqual(['TOUS', 'LIVRES', 'PAYES']);
     expect(groupsOf('RETOUR_EN_ROUTE')).toEqual(['TOUS', 'RETOURS']);
     expect(groupsOf('ANNULE')).toEqual(['TOUS']);
+  });
+
+  it('shows Tous, À vérifier, En cours, Livrés, Retours, in that order (D-46)', () => {
+    expect(PARCEL_TOP_GROUPS.map((g) => PARCEL_GROUP_LABELS_FR[g])).toEqual([
+      'Tous',
+      'À vérifier',
+      'En cours',
+      'Livrés',
+      'Retours',
+    ]);
+  });
+
+  it('splits Livrés into Payés and Non payés, which together make all of it', () => {
+    expect(PARCEL_SUB_GROUPS.LIVRES).toEqual(['PAYES', 'NON_PAYES']);
+    expect(topGroupOf('PAYES')).toBe('LIVRES');
+    expect(topGroupOf('NON_PAYES')).toBe('LIVRES');
+    expect(topGroupOf('RETOURS')).toBe('RETOURS');
+    for (const cash of Object.values(ParcelCashStatus)) {
+      const inSubs = PARCEL_SUB_GROUPS.LIVRES!.filter((g) =>
+        isInGroup(g, { status: 'LIVRE', cashStatus: cash }),
+      );
+      expect(inSubs).toHaveLength(1);
+    }
+  });
+
+  it('highlights À vérifier only when a parcel waits for a decision', () => {
+    expect(groupNeedsAttention('A_VERIFIER', 2)).toBe(true);
+    expect(groupNeedsAttention('A_VERIFIER', 0)).toBe(false);
+    expect(groupNeedsAttention('EN_COURS', 5)).toBe(false);
   });
 
   it('leaves no status out of Tous', () => {

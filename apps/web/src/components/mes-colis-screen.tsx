@@ -7,7 +7,11 @@ import {
   PARCEL_CASH_STATUS_LABELS_FR,
   PARCEL_GROUP_LABELS_FR,
   PARCEL_STATUS_LABELS_FR,
+  PARCEL_SUB_GROUPS,
+  PARCEL_TOP_GROUPS,
   ParcelGroup,
+  groupNeedsAttention,
+  topGroupOf,
   formatDT,
   millimesFromJson,
 } from '@faffago/shared';
@@ -87,20 +91,49 @@ export function MesColisScreen({
         )}
       </div>
 
-      <nav aria-label="Filtrer par statut" className="mb-4 flex flex-wrap gap-2">
-        {Object.values(ParcelGroup).map((group) => (
-          <Link
-            key={group}
-            href={mesColisHref(filters, { group, page: 1 })}
-            aria-current={filters.group === group ? 'page' : undefined}
-            className={`rounded-full px-3 py-1 text-sm font-semibold ${
-              filters.group === group ? 'bg-orange text-navy' : 'bg-navy/5 text-navy'
-            }`}
-          >
-            {PARCEL_GROUP_LABELS_FR[group]} ({list.counts[group]})
-          </Link>
-        ))}
+      <nav aria-label="Filtrer par statut" className="mb-2 flex flex-wrap gap-2">
+        {PARCEL_TOP_GROUPS.map((group) => {
+          const active = topGroupOf(filters.group) === group;
+          // À vérifier stands out while a parcel waits: 48 hours to decide (D-9 excepted).
+          const attention = groupNeedsAttention(group, list.counts[group]);
+          return (
+            <Link
+              key={group}
+              href={mesColisHref(filters, { group, page: 1 })}
+              aria-current={filters.group === group ? 'page' : undefined}
+              data-attention={attention || undefined}
+              className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                active
+                  ? 'bg-orange text-navy'
+                  : attention
+                    ? 'bg-orange/25 text-navy'
+                    : 'bg-navy/5 text-navy'
+              } ${attention ? 'ring-2 ring-orange' : ''}`}
+            >
+              {PARCEL_GROUP_LABELS_FR[group]} ({list.counts[group]})
+            </Link>
+          );
+        })}
       </nav>
+      {PARCEL_SUB_GROUPS[topGroupOf(filters.group)] && (
+        <nav aria-label="Livrés : paiement" className="mb-4 ml-4 flex flex-wrap gap-2">
+          {PARCEL_SUB_GROUPS[topGroupOf(filters.group)]!.map((group) => (
+            <Link
+              key={group}
+              href={mesColisHref(filters, { group, page: 1 })}
+              aria-current={filters.group === group ? 'page' : undefined}
+              className={`rounded-full border px-3 py-1 text-sm font-semibold ${
+                filters.group === group
+                  ? 'border-navy bg-navy text-white'
+                  : 'border-navy/20 text-navy'
+              }`}
+            >
+              {PARCEL_GROUP_LABELS_FR[group]} ({list.counts[group]})
+            </Link>
+          ))}
+        </nav>
+      )}
+      {!PARCEL_SUB_GROUPS[topGroupOf(filters.group)] && <div className="mb-2" />}
 
       <form method="get" action="/vendeur/colis" className="card mb-4 grid gap-3 sm:grid-cols-4">
         {filters.group !== ParcelGroup.TOUS && (

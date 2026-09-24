@@ -11,11 +11,12 @@ import type { Millimes } from './money.js';
 
 // ── Status groups (Vendeur 4.7) ─────────────────────────────
 
+/** In the order Mes colis shows them (D-46). */
 export const ParcelGroup = {
   TOUS: 'TOUS',
+  A_VERIFIER: 'A_VERIFIER',
   EN_COURS: 'EN_COURS',
   LIVRES: 'LIVRES',
-  A_VERIFIER: 'A_VERIFIER',
   PAYES: 'PAYES',
   NON_PAYES: 'NON_PAYES',
   RETOURS: 'RETOURS',
@@ -24,13 +25,43 @@ export type ParcelGroup = (typeof ParcelGroup)[keyof typeof ParcelGroup];
 
 export const PARCEL_GROUP_LABELS_FR: Record<ParcelGroup, string> = {
   TOUS: 'Tous',
+  A_VERIFIER: 'À vérifier',
   EN_COURS: 'En cours',
   LIVRES: 'Livrés',
-  A_VERIFIER: 'À vérifier',
   PAYES: 'Payés',
   NON_PAYES: 'Non payés',
   RETOURS: 'Retours',
 };
+
+/**
+ * The groups of the first row (D-46). À vérifier comes first after Tous: the
+ * seller has 48 hours to decide (D-9 excepted).
+ */
+export const PARCEL_TOP_GROUPS: readonly ParcelGroup[] = [
+  ParcelGroup.TOUS,
+  ParcelGroup.A_VERIFIER,
+  ParcelGroup.EN_COURS,
+  ParcelGroup.LIVRES,
+  ParcelGroup.RETOURS,
+];
+
+/** Payés and Non payés are the two halves of Livrés (D-46). */
+export const PARCEL_SUB_GROUPS: Partial<Record<ParcelGroup, readonly ParcelGroup[]>> = {
+  LIVRES: [ParcelGroup.PAYES, ParcelGroup.NON_PAYES],
+};
+
+/** The first-row group a group belongs to: Livrés for Payés and Non payés. */
+export function topGroupOf(group: ParcelGroup): ParcelGroup {
+  for (const [top, subs] of Object.entries(PARCEL_SUB_GROUPS)) {
+    if (subs?.includes(group)) return top as ParcelGroup;
+  }
+  return group;
+}
+
+/** À vérifier is highlighted as soon as a parcel waits for the seller's decision. */
+export function groupNeedsAttention(group: ParcelGroup, count: number): boolean {
+  return group === ParcelGroup.A_VERIFIER && count > 0;
+}
 
 /** Which parcels each group holds. Annulé is only under Tous. */
 export const PARCEL_GROUP_FILTERS: Record<
@@ -38,6 +69,7 @@ export const PARCEL_GROUP_FILTERS: Record<
   { statuses?: readonly ParcelStatus[]; cashStatuses?: readonly ParcelCashStatus[] }
 > = {
   TOUS: {},
+  A_VERIFIER: { statuses: [ParcelStatus.A_VERIFIER] },
   EN_COURS: {
     statuses: [
       ParcelStatus.CREE,
@@ -48,7 +80,6 @@ export const PARCEL_GROUP_FILTERS: Record<
     ],
   },
   LIVRES: { statuses: [ParcelStatus.LIVRE] },
-  A_VERIFIER: { statuses: [ParcelStatus.A_VERIFIER] },
   PAYES: { statuses: [ParcelStatus.LIVRE], cashStatuses: [ParcelCashStatus.PAYE] },
   NON_PAYES: {
     statuses: [ParcelStatus.LIVRE],
