@@ -62,6 +62,7 @@ const accepted = {
   plannedFor: null,
   cancellableUntil: '2026-09-25T08:01:00.000Z',
   serverTime: '2026-09-25T08:00:00.000Z',
+  labelReprintNeeded: false,
 };
 
 beforeEach(() => {
@@ -169,6 +170,15 @@ describe('ScanStation (Admin 4.2, D-50)', () => {
     );
     expect(await screen.findByRole('status', { name: 'Résultat du scan' })).toHaveTextContent(
       'Saisie manuelle signalée',
+    );
+  });
+
+  it('warns that the label must be reprinted (D-53, D-57)', async () => {
+    bff.mockResolvedValueOnce({ ok: true, data: { ...accepted, labelReprintNeeded: true } });
+    render(<ScanStation couriers={couriers} now={clockOf(5)} />);
+    await typeCode('FG-8K2QX7AB');
+    expect(await screen.findByRole('status', { name: 'Résultat du scan' })).toHaveTextContent(
+      'Étiquette à réimprimer',
     );
   });
 

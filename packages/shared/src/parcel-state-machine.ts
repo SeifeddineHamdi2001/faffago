@@ -50,6 +50,8 @@ export const ParcelEventType = {
   ARTICLE_ECHANGE_RECUPERE: 'ARTICLE_ECHANGE_RECUPERE',
   FORCAGE_STATUT: 'FORCAGE_STATUT',
   ANNULATION_SCAN: 'ANNULATION_SCAN',
+  /** A seller's change request applied by Faffa Go (D-57). */
+  MODIFICATION_APPLIQUEE: 'MODIFICATION_APPLIQUEE',
 } as const;
 export type ParcelEventType = (typeof ParcelEventType)[keyof typeof ParcelEventType];
 

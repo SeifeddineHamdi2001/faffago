@@ -329,7 +329,22 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       code (A-9). Web: Colis in the menu, the filters in the address, the
       pages, Exporter, the detail; "Voir ses colis" on the seller's page. No
       migration — 5 shared, 19 API e2e, 10 web tests
-- [ ] Applying seller change requests (D-57) — step 7
+- [x] Applying seller change requests (D-57) — step 7, API and web.
+      `GET /demandes-modification` (Service client, Admin): the waiting
+      requests, each field now and asked, and why one cannot apply yet.
+      `POST /demandes-modification/:id/apply`: as a whole, from Ramassé to
+      Relancé, a new localité only while the parcel is at the depot (its
+      délégation follows, a Tournées move to another zone is undone), one
+      `MODIFICATION_APPLIQUEE` event with each field before and after
+      (`ParcelEventService.recordAppliedChange`), read by the seller as
+      "Faffa Go". `POST /demandes-modification/:id/refuse`: a reason the
+      seller reads. The parcel is locked as the seller's own routes lock it.
+      `parcels.labelReprintNeeded`: set when a printed field changed; badge
+      in Colis and Tournées, warning on the next depot scan, cleared by the
+      team's reprint. Migration `20261006000000_change_requests_applied`.
+      Web: the requests on the parcel's Colis page with Appliquer / Refuser,
+      the badges, the station's warning, "Raison du refus" for the seller —
+      8 shared, 16 API e2e, 12 web tests
 - [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
 - [ ] Exceptions, first rows (D-50) — step 9
 - [ ] Demo data, Playwright, merge — step 10. The demo seed (development
@@ -945,6 +960,29 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     Forcer un statut (step 8); the calls (phase 7) and the chat (phase 10).
   - Labels added to shared: `CHARGE_STATUS_LABELS_FR`,
     `SCAN_SOURCE_LABELS_FR` (in `docs/ui-texts.md`).
+
+- 2026-09-24 — **Phase 5, step 7 (change requests).** Choices made while
+  building:
+  - **Where the team acts**: on the parcel's Colis page (every staff role
+    reads the requests there; Service client and Admin act). The list of
+    waiting requests reaches the screen with Exceptions (step 9); no new
+    menu item.
+  - **A request applies as a whole**; a field already equal to the parcel's
+    value is not a change. A request that changes nothing is still marked
+    Appliquée, with its event.
+  - **A localité deactivated since the request** refuses the apply; the
+    team refuses the request with a reason.
+  - **The label fields corrected (D-45)**: phone 2 and the landmark are
+    printed, so changing them now asks for a reprint, here and after the
+    seller's own Modifier. The phase 4 test that said the landmark was not
+    printed was updated.
+  - **The reprint flag is cleared only by the team's reprint**
+    (`GET /colis/:code/label`), never by the seller printing his own copy:
+    the depot holds the parcel whose label is wrong.
+  - **No `audit_log` entry**: the MODIFICATION_APPLIQUEE event is the record,
+    like every change to a parcel.
+  - **`refusalReason`** is a new column the seller reads; `staffNote` stays
+    internal.
 
 ## Open questions
 

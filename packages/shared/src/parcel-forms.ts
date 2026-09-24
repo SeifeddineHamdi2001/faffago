@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { createParcelSchema, tunisianPhone, type CreateParcelValues } from './schemas.js';
-import { ParcelStatus } from './statuses.js';
+import { ParcelLocation, ParcelStatus } from './statuses.js';
 
 /**
  * The seller's parcel forms beyond Créer un colis itself (Vendeur 4.2, 4.6):
@@ -40,6 +40,9 @@ export const PARCEL_LABEL_FIELDS = [
   'codAmountMillimes',
   'isExchange',
   'openingAllowed',
+  // Printed when the parcel has them (D-45).
+  'recipientPhone2',
+  'landmark',
 ] as const satisfies readonly (keyof CreateParcelValues)[];
 
 export function labelNeedsReprint(changedFields: readonly string[]): boolean {
@@ -117,6 +120,48 @@ const CHANGE_REQUEST_STATUSES: readonly ParcelStatus[] = [
 export function canRequestChange(status: ParcelStatus): boolean {
   return CHANGE_REQUEST_STATUSES.includes(status);
 }
+
+// ── Applying or refusing it (D-57) ──────────────────────────
+
+export const ChangeRequestApplyRefusal = {
+  DEMANDE_TRAITEE: 'DEMANDE_TRAITEE',
+  COLIS_HORS_DELAI: 'COLIS_HORS_DELAI',
+  LOCALITE_HORS_DEPOT: 'LOCALITE_HORS_DEPOT',
+  LOCALITE_INACTIVE: 'LOCALITE_INACTIVE',
+} as const;
+export type ChangeRequestApplyRefusal =
+  (typeof ChangeRequestApplyRefusal)[keyof typeof ChangeRequestApplyRefusal];
+
+export const CHANGE_REQUEST_APPLY_MESSAGES_FR: Record<ChangeRequestApplyRefusal, string> = {
+  DEMANDE_TRAITEE: 'Cette demande a déjà été traitée.',
+  COLIS_HORS_DELAI:
+    'Le colis n’accepte plus de modification : livré, annulé ou en retour. Refusez la demande.',
+  LOCALITE_HORS_DEPOT: 'Nouvelle localité : la demande s’applique quand le colis est au dépôt.',
+  LOCALITE_INACTIVE: 'La localité demandée a été désactivée : refusez la demande.',
+};
+
+/**
+ * Whether a waiting request can be applied now (D-44, D-57): as a whole,
+ * while the parcel is between Ramassé and Relancé; one carrying a localité
+ * only while the parcel's location is the depot, whatever its status.
+ */
+export function changeRequestApplyRefusal(input: {
+  status: ParcelStatus;
+  location: ParcelLocation;
+  fields: Partial<Record<ChangeRequestField, string>>;
+}): ChangeRequestApplyRefusal | null {
+  if (!canRequestChange(input.status)) return ChangeRequestApplyRefusal.COLIS_HORS_DELAI;
+  if (input.fields.localiteId && input.location !== ParcelLocation.AU_DEPOT) {
+    return ChangeRequestApplyRefusal.LOCALITE_HORS_DEPOT;
+  }
+  return null;
+}
+
+/** Refusing needs a reason, and the seller reads it (D-57). */
+export const refuseChangeRequestSchema = z
+  .object({ reason: z.string().trim().min(3, 'Indiquez la raison').max(300) })
+  .strict();
+export type RefuseChangeRequestValues = z.output<typeof refuseChangeRequestSchema>;
 
 // ── Refusals the seller reads ───────────────────────────────
 

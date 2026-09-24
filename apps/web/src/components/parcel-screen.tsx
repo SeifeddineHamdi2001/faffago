@@ -223,6 +223,9 @@ export function ParcelScreen({
                 </p>
                 <RequestedFields request={request} />
                 {request.sellerNote && <p className="mt-1 text-navy/70">{request.sellerNote}</p>}
+                {request.refusalReason && (
+                  <p className="mt-1 text-navy">Raison du refus : {request.refusalReason}</p>
+                )}
                 {request === waiting && !readOnly && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {canRequestChange(status) && (

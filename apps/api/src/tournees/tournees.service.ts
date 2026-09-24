@@ -39,6 +39,8 @@ export interface TourParcel {
   plannedLivreur: CourierRef | null;
   /** Moved by the team to another courier than the zone's livreur (D-55). */
   moved: boolean;
+  /** Reprint the label before it goes out (D-57). */
+  labelReprintNeeded: boolean;
 }
 
 export interface TourneesView {
@@ -149,6 +151,7 @@ export class TourneesService {
       shopName: row.seller.shopName,
       plannedLivreur: ref(planned[index]!.courierId),
       moved: planned[index]!.moved,
+      labelReprintNeeded: row.labelReprintNeeded,
     });
 
     const byZone = new Map<string, TourParcel[]>();

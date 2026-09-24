@@ -266,6 +266,9 @@ function Column({
                   {` · tentative ${p.attemptCount + 1}`}
                 </p>
               )}
+              {p.labelReprintNeeded && (
+                <span className="badge-warn mt-1 inline-block">Étiquette à réimprimer</span>
+              )}
               {p.moved && p.plannedLivreur && (
                 <p className="font-semibold text-orange-dark">→ {fullName(p.plannedLivreur)}</p>
               )}

@@ -230,6 +230,7 @@ export const PARCEL_EVENT_LABELS_FR: Record<ParcelEventType, string> = {
   ARTICLE_ECHANGE_RECUPERE: 'Ancien article récupéré',
   FORCAGE_STATUT: 'Statut corrigé par Faffa Go',
   ANNULATION_SCAN: 'Scan annulé',
+  MODIFICATION_APPLIQUEE: 'Modification appliquée',
 };
 
 /**

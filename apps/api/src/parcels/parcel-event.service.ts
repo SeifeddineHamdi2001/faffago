@@ -349,6 +349,38 @@ export class ParcelEventService {
     return parcel;
   }
 
+  /**
+   * A seller's change request applied by Faffa Go (D-57): the columns it
+   * changes, never the status or the location, and one MODIFICATION_APPLIQUEE
+   * event with each field before and after. The caller has locked the parcel.
+   */
+  async recordAppliedChange(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      data: Prisma.ParcelUncheckedUpdateInput;
+      metadata: Prisma.InputJsonObject;
+    },
+  ): Promise<Parcel> {
+    const parcel = await tx.parcel.update({ where: { id: input.parcelId }, data: input.data });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: parcel.id,
+        type: ParcelEventType.MODIFICATION_APPLIQUEE,
+        previousStatus: parcel.status,
+        newStatus: parcel.status,
+        previousLocation: parcel.location,
+        newLocation: parcel.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        serverTime: this.clock.now(),
+        metadata: input.metadata,
+      },
+    });
+    return parcel;
+  }
+
   /** Why, when the type alone does not say: a cancellation after pickup, a planned date (D-9). */
   private metadataOf(
     step: ParcelTransitionEvent,

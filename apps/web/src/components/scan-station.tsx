@@ -34,6 +34,8 @@ interface Shown {
   courier: string | null;
   plannedFor: string | null;
   manualEntry: boolean;
+  /** A printed field changed: reprint the label (D-57). */
+  labelReprintNeeded: boolean;
 }
 
 const HISTORY_SIZE = 20;
@@ -132,6 +134,7 @@ export function ScanStation({
         courier: null,
         plannedFor: null,
         manualEntry: false,
+        labelReprintNeeded: false,
       });
       return;
     }
@@ -156,6 +159,7 @@ export function ScanStation({
         courier: null,
         plannedFor: null,
         manualEntry: false,
+        labelReprintNeeded: false,
       });
       return;
     }
@@ -176,6 +180,7 @@ export function ScanStation({
       courier: fullName(result.courier),
       plannedFor: fullName(result.plannedFor),
       manualEntry: result.manualEntry,
+      labelReprintNeeded: result.labelReprintNeeded,
     });
   }
 
@@ -201,6 +206,7 @@ export function ScanStation({
       courier: null,
       plannedFor: null,
       manualEntry: false,
+      labelReprintNeeded: false,
     };
     if (response.ok) {
       setHistory((h) => h.map((l) => (l.key === line.key ? { ...l, cancelled: true } : l)));
@@ -383,6 +389,11 @@ function ResultOverlay({ line, onClose }: { line: Shown; onClose: () => void }) 
       {line.plannedFor && (
         <p className="rounded-lg bg-white px-4 py-2 text-xl font-bold text-navy">
           Prévu pour {line.plannedFor}
+        </p>
+      )}
+      {line.labelReprintNeeded && (
+        <p className="rounded-lg bg-amber-300 px-4 py-2 text-xl font-bold text-navy">
+          Étiquette à réimprimer
         </p>
       )}
       {line.manualEntry && (

@@ -1,8 +1,10 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_BY_ROLE } from '@faffago/shared';
 import { ColisDetailScreen, ColisScreen } from '@/components/colis-screen';
 import type { StaffParcelDetail, StaffParcelList } from '@/lib/types';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const filters = {
   zones: [{ id: 'z1', name: 'Tunis Nord' }],
@@ -27,6 +29,7 @@ const list: StaffParcelList = {
       cashStatus: null,
       codAmountMillimes: '85000',
       courier: { firstName: 'Ali', lastName: 'Ben Salah' },
+      labelReprintNeeded: false,
     },
   ],
   total: 60,
@@ -94,6 +97,19 @@ describe('ColisScreen (Admin 4.3)', () => {
     );
   });
 
+  it('marks a parcel whose label must be reprinted (D-57)', () => {
+    render(
+      <ColisScreen
+        list={{ ...list, items: [{ ...list.items[0]!, labelReprintNeeded: true }] }}
+        query={{}}
+        filters={filters}
+      />,
+    );
+    expect(screen.getByRole('row', { name: /FG-AAAAAAAA/ })).toHaveTextContent(
+      'Étiquette à réimprimer',
+    );
+  });
+
   it('says so when nothing matches', () => {
     render(
       <ColisScreen
@@ -125,6 +141,7 @@ const detail: StaffParcelDetail = {
   courierNote: null,
   status: 'A_VERIFIER',
   location: 'AVEC_LE_LIVREUR',
+  labelReprintNeeded: false,
   attemptCount: 1,
   lastFailureReason: 'NE_REPOND_PAS',
   lastFailureNote: 'Sonné trois fois',
@@ -143,6 +160,7 @@ const detail: StaffParcelDetail = {
     bonNumber: null,
     charges: [{ type: 'LIVRAISON', amountMillimes: '7000', status: 'EN_ATTENTE' }],
   },
+  changeRequests: [],
   events: [
     {
       type: 'ECHEC_LIVRAISON',
@@ -240,6 +258,41 @@ describe('ColisDetailScreen (Admin 4.3)', () => {
     expect(failure).toHaveTextContent('Horloge décalée');
     expect(move).toHaveTextContent('Prévu pour Ali Ben Salah');
     expect(auto).toHaveTextContent('Règle automatique');
+  });
+
+  it('warns that the label must be reprinted, and lists the change requests (D-57)', () => {
+    render(
+      <ColisDetailScreen
+        parcel={{
+          ...detail,
+          labelReprintNeeded: true,
+          changeRequests: [
+            {
+              id: 'r1',
+              status: 'APPLIQUEE',
+              createdAt: '2026-09-25T08:00:00.000Z',
+              editedAt: null,
+              handledAt: '2026-09-25T09:00:00.000Z',
+              sellerNote: null,
+              refusalReason: null,
+              parcel: {
+                code: 'FG-AAAAAAAA',
+                status: 'AU_DEPOT',
+                location: 'AU_DEPOT',
+                shopName: 'Boutique Yasmine',
+              },
+              fields: [{ field: 'address', before: null, after: '9 rue du Lac' }],
+              applyRefusal: null,
+              applyRefusalMessage: null,
+            },
+          ],
+        }}
+        permissions={[...PERMISSIONS_BY_ROLE.DEPOT]}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Étiquette à réimprimer');
+    expect(screen.getByRole('heading', { name: 'Demandes de modification' })).toBeInTheDocument();
+    expect(screen.getByText('Adresse : 9 rue du Lac')).toBeInTheDocument();
   });
 
   it('offers Réimprimer l’étiquette to the depot and the admin, not to the service client', () => {

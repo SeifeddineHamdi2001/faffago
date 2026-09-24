@@ -264,6 +264,7 @@ describe('one waiting request, edited or withdrawn (D-44)', () => {
     createdAt: '2026-09-24T10:00:00.000Z',
     editedAt: null,
     handledAt: null,
+    refusalReason: null,
   };
   const atDepot = { ...parcel, status: 'AU_DEPOT' as const, changeRequests: [waiting] };
 
@@ -305,6 +306,22 @@ describe('one waiting request, edited or withdrawn (D-44)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Retirer la demande' }));
     expect(bff).toHaveBeenCalledWith('POST', 'parcels/FG-8K2QX7AB/change-requests/r1/withdraw');
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it('shows why Faffa Go refused a request (D-57)', () => {
+    render(
+      <ParcelScreen
+        parcel={{
+          ...atDepot,
+          changeRequests: [
+            { ...waiting, status: 'REFUSEE', refusalReason: 'Numéro déjà vérifié par téléphone' },
+          ],
+        }}
+        tree={tree}
+        readOnly={false}
+      />,
+    );
+    expect(screen.getByText('Raison du refus : Numéro déjà vérifié par téléphone')).toBeTruthy();
   });
 
   it('offers a new request once the waiting one is withdrawn', () => {

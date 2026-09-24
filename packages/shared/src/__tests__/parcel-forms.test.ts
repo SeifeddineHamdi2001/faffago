@@ -52,7 +52,12 @@ describe('Modifier (Vendeur 4.6, D-41)', () => {
   it('asks for a reprint when a printed field changes, not otherwise', () => {
     expect(labelNeedsReprint(['codAmountMillimes'])).toBe(true);
     expect(labelNeedsReprint(['localiteId', 'courierNote'])).toBe(true);
-    expect(labelNeedsReprint(['courierNote', 'productDescription', 'landmark'])).toBe(false);
+    expect(labelNeedsReprint(['courierNote', 'productDescription'])).toBe(false);
+  });
+
+  it('counts phone 2 and the landmark as printed: the label shows both (D-45)', () => {
+    expect(labelNeedsReprint(['recipientPhone2'])).toBe(true);
+    expect(labelNeedsReprint(['landmark'])).toBe(true);
   });
 });
 

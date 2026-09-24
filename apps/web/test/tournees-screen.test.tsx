@@ -26,6 +26,7 @@ function row(code: string, extra: Partial<TourParcelRow> = {}): TourParcelRow {
     shopName: 'Boutique Yasmine',
     plannedLivreur: ali,
     moved: false,
+    labelReprintNeeded: false,
     ...extra,
   };
 }
@@ -111,6 +112,21 @@ describe('TourneesScreen (Admin 4.5, D-55)', () => {
     expect(within(sud).getByText('Sans coursier')).toHaveClass('badge-warn');
     const sansZone = screen.getByRole('region', { name: 'Sans zone' });
     expect(sansZone).toHaveTextContent('FG-EEEEEEEE');
+  });
+
+  it('marks a parcel whose label must be reprinted before it goes out (D-57)', () => {
+    show({
+      ...plan,
+      zones: [
+        {
+          ...plan.zones[0]!,
+          parcels: [row('FG-FFFFFFFF', { labelReprintNeeded: true })],
+        },
+      ],
+    });
+    expect(screen.getByRole('region', { name: 'Tunis Nord' })).toHaveTextContent(
+      'Étiquette à réimprimer',
+    );
   });
 
   it('gives each courier’s load, and how many have nobody', () => {

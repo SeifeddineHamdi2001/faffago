@@ -35,6 +35,7 @@ import type {
   StaffParcelDetail,
   StaffParcelList,
 } from '@/lib/types';
+import { ChangeRequestsPanel } from './change-requests-panel';
 import { PrintLabels } from './print-labels';
 import { TrackLine } from './track-line';
 
@@ -230,6 +231,9 @@ export function ColisScreen({
                       >
                         {item.code}
                       </Link>
+                      {item.labelReprintNeeded && (
+                        <span className="badge-warn mt-1 block w-fit">Étiquette à réimprimer</span>
+                      )}
                       <span className="block text-xs text-navy/60">
                         {dateTime.format(new Date(item.createdAt))}
                       </span>
@@ -372,6 +376,11 @@ export function ColisDetailScreen({
       <div className="mb-4">
         <TrackLine status={status} />
       </div>
+      {parcel.labelReprintNeeded && (
+        <p role="status" className="mb-4 rounded-lg bg-amber-100 p-3 font-semibold text-amber-900">
+          Étiquette à réimprimer : une modification a changé ce qui est imprimé.
+        </p>
+      )}
 
       {canReprint && (
         <div className="card mb-4">
@@ -474,6 +483,15 @@ export function ColisDetailScreen({
           )}
         </Section>
       </div>
+
+      {parcel.changeRequests.length > 0 && (
+        <>
+          <h2 className="mb-2 mt-6 font-display text-lg font-bold text-navy">
+            Demandes de modification
+          </h2>
+          <ChangeRequestsPanel requests={parcel.changeRequests} permissions={permissions} />
+        </>
+      )}
 
       <h2 className="mb-2 mt-6 font-display text-lg font-bold text-navy">Journal du colis</h2>
       <ol aria-label="Journal du colis" className="space-y-2">

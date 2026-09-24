@@ -81,6 +81,8 @@ export interface ChangeRequestView {
   createdAt: Date;
   editedAt: Date | null;
   handledAt: Date | null;
+  /** Why Faffa Go refused it: the seller reads it (D-57). */
+  refusalReason: string | null;
 }
 
 type NamedLocalite = Localite & { delegation: Delegation };
@@ -150,6 +152,7 @@ function changeRequestView(
     createdAt: request.createdAt,
     editedAt: request.editedAt,
     handledAt: request.handledAt,
+    refusalReason: request.refusalReason,
   };
 }
 

@@ -164,6 +164,7 @@ enum ParcelEventType {
   ARTICLE_ECHANGE_RECUPERE
   FORCAGE_STATUT
   ANNULATION_SCAN
+  MODIFICATION_APPLIQUEE
 }
 
 enum ScanAction {
@@ -732,6 +733,10 @@ model Parcel {
   /// what actually assigns the parcel (Admin 4.5).
   plannedLivreurId String? @db.Uuid
   currentLivreurId String? @db.Uuid
+
+  /// A printed field changed after the label was printed: the depot reprints
+  /// it with the same code (A-9, D-57). Cleared by the team's reprint.
+  labelReprintNeeded Boolean @default(false)
 
   /// Old item of an échange: same code, no new label, its own line in Retours
   /// and no return fee (A-10).
@@ -1421,6 +1426,8 @@ model SellerChangeRequest {
   handledByUserId String?             @db.Uuid
   handledAt       DateTime?
   staffNote       String?
+  /// Required to refuse, and the seller reads it (D-57).
+  refusalReason   String?
   createdAt       DateTime            @default(now())
   /// Set when the seller edits it while it waits.
   editedAt        DateTime?

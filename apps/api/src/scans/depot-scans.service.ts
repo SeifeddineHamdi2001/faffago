@@ -68,6 +68,8 @@ export interface DepotScanResult {
    * enforces it.
    */
   cancellableUntil: string | null;
+  /** The label must be reprinted before the parcel goes further (D-53, D-57). */
+  labelReprintNeeded: boolean;
   /** The server clock when answering, so the page counts down without trusting its own. */
   serverTime: string;
 }
@@ -456,6 +458,7 @@ export class DepotScansService {
           plannedFor: null,
           cancellableUntil: null,
           serverTime: this.clock.now().toISOString(),
+          labelReprintNeeded: false,
         },
       };
     }
@@ -510,14 +513,17 @@ export class DepotScansService {
     const { settings } = await this.settings.current(db);
 
     let parcelView: DepotScanResult['parcel'] = null;
+    let labelReprintNeeded = false;
     if (facts.parcel) {
       const extra = await db.parcel.findUniqueOrThrow({
         where: { id: facts.parcel.id },
         select: {
+          labelReprintNeeded: true,
           seller: { select: { shopName: true } },
           delegation: { select: { nameFr: true } },
         },
       });
+      labelReprintNeeded = extra.labelReprintNeeded;
       // A refused scan shows the parcel as it was when refused.
       const state = accepted ? facts.parcel : (facts.before ?? facts.parcel);
       parcelView = {
@@ -559,6 +565,7 @@ export class DepotScansService {
             ).toISOString()
           : null,
       serverTime: this.clock.now().toISOString(),
+      labelReprintNeeded,
     };
   }
 }

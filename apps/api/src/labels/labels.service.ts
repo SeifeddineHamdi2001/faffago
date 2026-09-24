@@ -47,7 +47,13 @@ export class LabelsService {
     if (!isValidParcelCode(code)) throw colisIntrouvable();
     const parcels = await this.load(null, { code: { in: [code] } });
     if (parcels.length === 0) throw colisIntrouvable();
-    return this.render(parcels, format);
+    const pdf = await this.render(parcels, format);
+    // The new label carries what was changed: nothing left to reprint (D-57).
+    await this.prisma.parcel.updateMany({
+      where: { code, labelReprintNeeded: true },
+      data: { labelReprintNeeded: false },
+    });
+    return pdf;
   }
 
   /** "Imprimer toutes les étiquettes" after an Import CSV, in file order. */

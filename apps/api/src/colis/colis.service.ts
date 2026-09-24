@@ -21,6 +21,7 @@ import {
 } from '@faffago/shared';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { ChangeRequestsService } from '../demandes/change-requests.service';
 import { localDateTime } from '../parcels/parcel-queries.service';
 
 interface PersonName {
@@ -45,6 +46,8 @@ export interface StaffParcelRow {
   codAmountMillimes: bigint;
   /** The livreur the parcel was last given to. */
   courier: PersonName | null;
+  /** A printed field changed since the label was printed (D-57). */
+  labelReprintNeeded: boolean;
 }
 
 /** One line of the full event log, as the team reads it (Admin 4.3, 4.17). */
@@ -94,6 +97,7 @@ function rowOf(parcel: Row): StaffParcelRow {
     cashStatus: parcel.cashStatus,
     codAmountMillimes: parcel.codAmountMillimes,
     courier: parcel.currentLivreur?.user ?? null,
+    labelReprintNeeded: parcel.labelReprintNeeded,
   };
 }
 
@@ -112,7 +116,10 @@ const colisIntrouvable = () =>
  */
 @Injectable()
 export class ColisService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly changeRequests: ChangeRequestsService,
+  ) {}
 
   async list(query: StaffParcelQuery) {
     const where = this.where(query);
@@ -316,6 +323,7 @@ export class ColisService {
       courierNote: parcel.courierNote,
       status: parcel.status,
       location: parcel.location,
+      labelReprintNeeded: parcel.labelReprintNeeded,
       attemptCount: parcel.attemptCount,
       lastFailureReason: parcel.lastFailureReason,
       lastFailureNote: parcel.lastFailureNote,
@@ -334,6 +342,7 @@ export class ColisService {
         bonNumber: parcel.bonVersementLine?.bonVersement.number ?? null,
         charges: parcel.charges,
       },
+      changeRequests: await this.changeRequests.forParcel(parcel.id),
       events,
     };
   }

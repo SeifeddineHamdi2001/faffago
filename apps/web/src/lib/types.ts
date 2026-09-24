@@ -128,6 +128,8 @@ export interface ParcelChangeRequest {
   createdAt: string;
   editedAt: string | null;
   handledAt: string | null;
+  /** Why Faffa Go refused it (D-57). */
+  refusalReason: string | null;
 }
 
 /** GET /parcels/:code, for the seller. Money as digit strings of millimes. */
@@ -379,6 +381,8 @@ export interface DepotScanResult {
   /** Until when Annuler le dernier scan is possible, server clock (D-54). */
   cancellableUntil: string | null;
   serverTime: string;
+  /** Reprint the label before the parcel goes further (D-57). */
+  labelReprintNeeded: boolean;
 }
 
 /** GET /tournees (Admin 4.5, D-55). */
@@ -394,6 +398,7 @@ export interface TourParcelRow {
   shopName: string;
   plannedLivreur: ZoneCourierRef | null;
   moved: boolean;
+  labelReprintNeeded: boolean;
 }
 
 export interface TourneesView {
@@ -480,6 +485,7 @@ export interface StaffParcelList {
     cashStatus: string | null;
     codAmountMillimes: string;
     courier: { firstName: string; lastName: string } | null;
+    labelReprintNeeded: boolean;
   }[];
   total: number;
   page: number;
@@ -525,6 +531,7 @@ export interface StaffParcelDetail {
   courierNote: string | null;
   status: string;
   location: string;
+  labelReprintNeeded: boolean;
   attemptCount: number;
   lastFailureReason: string | null;
   lastFailureNote: string | null;
@@ -543,5 +550,21 @@ export interface StaffParcelDetail {
     bonNumber: string | null;
     charges: { type: string; amountMillimes: string; status: string }[];
   };
+  changeRequests: ChangeRequestRow[];
   events: StaffEventRow[];
+}
+
+/** A seller's change request as the team reads it (D-57). */
+export interface ChangeRequestRow {
+  id: string;
+  status: string;
+  createdAt: string;
+  editedAt: string | null;
+  handledAt: string | null;
+  sellerNote: string | null;
+  refusalReason: string | null;
+  parcel: { code: string; status: string; location: string; shopName: string };
+  fields: { field: string; before: string | null; after: string | null }[];
+  applyRefusal: string | null;
+  applyRefusalMessage: string | null;
 }
