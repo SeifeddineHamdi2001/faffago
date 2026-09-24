@@ -112,10 +112,10 @@ only, no HTTP endpoint (D-22).
 
 ## Phase 4 — Seller space
 
-Plan approved 2026-09-24; answers recorded as D-32 to D-41. Built and
-committed in steps, each reported before the next. Steps 1 to 7 are done
-and approved; step 8 (Playwright) is built and waits for review; **the
-merge into `main` is next**.
+Done. Merged into `main` on 2026-09-24 after `pnpm lint`, `pnpm typecheck`,
+`pnpm test` and `pnpm e2e` passed through turbo. Plan approved 2026-09-24;
+answers recorded as D-32 to D-41. Built and committed in steps 1 to 8, each
+reported and approved before the next.
 
 - [x] Seller accounts created by admin (statut, documents in private storage,
       encrypted, D-32, D-33, D-34) — step 1, API and web:
@@ -237,8 +237,6 @@ merge into `main` is next**.
       jours (Créés = 4), Voir comme le vendeur and Quitter, the Dépôt (shop
       only: no email, no documents, no action), the seller's logout.
       `pnpm e2e` from the root; a merge gate in CLAUDE.md
-- [ ] **Next:** merge phase 4 into `main` once `pnpm lint`, `pnpm typecheck`,
-      `pnpm test` and `pnpm e2e` pass
 
 ## Phase 5 — Back office operations
 
@@ -705,6 +703,9 @@ merge into `main` is next**.
     `pnpm dev` also uses: stop the web app's `pnpm dev` before `pnpm e2e`.
     A separate build folder was tried and dropped: Next.js then rewrites
     `next-env.d.ts` and `tsconfig.json` on every run.
+
+- 2026-09-24 — **Phase 4 merged into `main`** (fast-forward, as phase 3),
+  after lint, typecheck, test and the 14 browser tests passed.
 
 ## Open questions
 
