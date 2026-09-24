@@ -409,3 +409,36 @@ export interface TourneesView {
   loads: { courier: ZoneCourierRef; count: number }[];
   withoutCourier: number;
 }
+
+/** GET /ramassages (Admin 4.4, D-58). */
+export interface RamassageRow {
+  id: string;
+  status: string;
+  shopName: string;
+  contactPhone: string;
+  address: {
+    address: string;
+    landmark: string | null;
+    localiteNameFr: string;
+    delegationNameFr: string;
+    zone: { id: string; name: string } | null;
+  };
+  requestedSlot: string | null;
+  note: string | null;
+  expectedCount: number;
+  scannedCount: number;
+  plannedDate: string | null;
+  plannedSlot: string | null;
+  ramasseur: ZoneCourierRef | null;
+  createdAt: string;
+  suggestion: { ramasseur: ZoneCourierRef | null; kind: 'TITULAIRE' | 'BACKUP' | null } | null;
+}
+
+/** GET /ramassages/:id: the parcels announced and À emporter. */
+export interface RamassageDetail extends RamassageRow {
+  parcels: { code: string; recipientName: string; status: string; pickedUp: boolean }[];
+  aEmporter: {
+    bonsVersement: { number: string; netMillimes: string }[];
+    bonsRetour: { number: string; parcelCount: number }[];
+  };
+}

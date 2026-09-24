@@ -389,6 +389,19 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | API `COLIS_HORS_TOURNEE`            | Colis pas au dépôt en attente d’une tournée : {codes}.                                                                                       |
 | web `couriers-screen`               | Aujourd’hui : {n} en main · {n} prévus en tournée                                                                                            |
 
+## Ramassages, équipe (`/admin/ramassages`, Admin 4.4, D-58)
+
+| Key                                | Français                                                                                                                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `admin-nav`                    | Ramassages                                                                                                                                                                                                    |
+| web `ramassages-screen` — onglets  | Demandés · Planifiés · Effectués · Annulés                                                                                                                                                                    |
+| web `ramassages-screen` — carte    | {n} colis · créneau demandé : {créneau} · Planifié le {JJ/MM/AAAA} · {créneau} · {prénom nom} · Ramasseur de la zone aujourd’hui : {prénom nom} / aucun · Détail · Planifier · Replanifier · Aucun ramassage. |
+| web `ramassages-screen` — dialogue | Planifier le ramassage · Jour · Créneau · Ramasseur · Choisir… · Titulaire de la zone ce jour-là · Backup de la zone ce jour-là · Aucun ramasseur de la zone ce jour-là · Fermer                              |
+| web `ramassages-screen` — détail   | ← Ramassages · Colis annoncés · À ramasser · Ramassé · Le vendeur a indiqué {n} colis, sans les lister. · À emporter · {n} colis · Rien à emporter pour ce vendeur.                                           |
+| API `RAMASSAGE_NON_PLANIFIABLE`    | Ce ramassage est effectué ou annulé : il ne peut plus être planifié.                                                                                                                                          |
+| API `DATE_PASSEE`                  | Choisissez aujourd’hui ou un jour à venir.                                                                                                                                                                    |
+| `planPickupSchema`                 | Date invalide · Choisissez un créneau · Choisissez un ramasseur                                                                                                                                               |
+
 ## Libellés sans équivalent dans les specs (`packages/shared`)
 
 | Key                                 | Français                                                                                             |

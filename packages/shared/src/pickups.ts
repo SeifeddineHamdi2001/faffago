@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { formatDT, type Millimes } from './money.js';
+import { isTunisDayKey } from './seller-dashboard.js';
 import { PickupStatus } from './statuses.js';
 
 /**
@@ -85,6 +86,25 @@ export function pickupFeeRuleText(feeMillimes: Millimes, freeThreshold: number):
 
 /** The seller may cancel while Demandé or Planifié, at no cost (D-35, A-13). */
 export function canCancelPickup(status: PickupStatus): boolean {
+  return status === PickupStatus.DEMANDE || status === PickupStatus.PLANIFIE;
+}
+
+/**
+ * Planifier (Admin 4.4, D-58): the day, the window and the ramasseur, by his
+ * account id. The screen pre-fills the one covering the zone of the pickup's
+ * address that day (A-14, D-52).
+ */
+export const planPickupSchema = z
+  .object({
+    date: z.string().refine(isTunisDayKey, 'Date invalide'),
+    slot: z.nativeEnum(PickupSlot, { errorMap: () => ({ message: 'Choisissez un créneau' }) }),
+    ramasseurId: z.string().uuid('Choisissez un ramasseur'),
+  })
+  .strict();
+export type PlanPickupValues = z.output<typeof planPickupSchema>;
+
+/** A request is planned, and a planned pickup planned again, until it is done or cancelled. */
+export function canPlanPickup(status: PickupStatus): boolean {
   return status === PickupStatus.DEMANDE || status === PickupStatus.PLANIFIE;
 }
 

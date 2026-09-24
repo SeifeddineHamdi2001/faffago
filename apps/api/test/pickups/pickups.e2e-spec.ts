@@ -363,7 +363,16 @@ describe('Annuler un ramassage (D-35, A-13)', () => {
     expect(ready.body.map((p: { code: string }) => p.code)).toContain(code);
 
     const planned = await request({ pickupAddressId: await newAddress(), declaredCount: 1 });
-    await t.prisma.pickup.update({ where: { id: planned.body.id }, data: { status: 'PLANIFIE' } });
+    const ramasseur = await createUser(t.prisma, { role: 'RAMASSEUR' });
+    await t.prisma.pickup.update({
+      where: { id: planned.body.id },
+      data: {
+        status: 'PLANIFIE',
+        plannedDate: new Date('2026-09-26T00:00:00.000Z'),
+        plannedSlot: 'MATIN',
+        ramasseurId: ramasseur.courierId!,
+      },
+    });
     expect((await t.request('POST', `/pickups/${planned.body.id}/cancel`, { token })).status).toBe(
       200,
     );

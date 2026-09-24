@@ -300,7 +300,21 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       (in hand, planned). Web: Tournées in the menu (Admin, Dépôt), the
       columns, the loads, a selection moved from a bar at the bottom. No
       migration — 9 shared, 14 API e2e, 9 web tests
-- [ ] Ramassages planning + À emporter (D-58) — step 5
+- [x] Ramassages planning + À emporter (D-58) — step 5, API and web.
+      `GET /ramassages?status=` (Admin, Dépôt): the requests with the shop,
+      the contact phone, the place and its zone, the window asked, the
+      parcels, the note, and for a request the ramasseur covering its zone
+      today. `GET /ramassages/:id/suggestion?date=`: the one covering it on
+      the day chosen (A-14, D-52). `POST /ramassages/:id/plan`: day (today
+      or later), window, a ramasseur able to work that day; again while
+      Planifié. `GET /ramassages/:id`: the parcels announced, picked up or
+      not, and À emporter (the seller's bons de versement and de retour
+      Préparé; empty until phase 8). No cancel route for the team (D-58).
+      Migration `20261005000000_pickup_planning`: who planned and when, and
+      a CHECK that a planned pickup has its day, window and ramasseur. Web:
+      Ramassages in the menu (Admin, Dépôt), a tab per status, Planifier /
+      Replanifier with the ramasseur pre-filled, the detail with À emporter
+      — 2 shared, 16 API e2e, 10 web tests
 - [ ] Colis search, detail, Réimprimer l'étiquette (A-9) — step 6
 - [ ] Applying seller change requests (D-57) — step 7
 - [ ] Forcer un statut, scan cancellation after the window (D-56) — step 8
@@ -884,6 +898,23 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     parcels module in before the labels module, and `/parcels/labels` was
     taken for a parcel code (the labels tests caught it). `LabelsModule` now
     comes first in `AppModule`, with the reason beside it.
+
+- 2026-09-24 — **Phase 5, step 5 (Ramassages).** Choices made while
+  building:
+  - **The team's routes are `/ramassages`**; the seller keeps `/pickups`.
+    Admin and Dépôt only, like Tournées; Service client does not see them.
+  - **A day from today on, no upper bound**; the window defaults to the one
+    the seller asked for.
+  - **Re-planning** keeps only the last plan (who and when on the pickup);
+    no history, and no `audit_log` entry, as for the requests (D-47).
+  - **The pre-fill**: the list shows the ramasseur covering the zone today;
+    the dialog asks again for the day chosen and fills it in. Nobody able to
+    work that day reads "Aucun ramasseur de la zone ce jour-là".
+  - **A planned pickup always has its day, window and ramasseur**, now a
+    CHECK; three test fixtures that set Planifié without them were fixed.
+  - **À emporter** lists every bon Préparé of that seller, not cancelled.
+    Attaching a bon to one pickup comes with the bons (phase 8).
+  - **Done and cancelled pickups**: the 200 newest.
 
 ## Open questions
 

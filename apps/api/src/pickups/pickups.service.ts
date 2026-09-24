@@ -96,8 +96,8 @@ const ramassageEnCours = () =>
  * Demander un ramassage (Vendeur 4.5, D-35): the parcels ready or how many,
  * a window, a note, at an address saved or filled now. One open request per
  * address; a parcel in one open request at most. The seller cancels while
- * Demandé or Planifié, at no cost. Planning and the scans come with the back
- * office and the courier app (phases 5 and 6).
+ * Demandé or Planifié, at no cost. The team plans in RamassagesService
+ * (D-58); the scans come with the courier app (phase 6).
  */
 @Injectable()
 export class PickupsService {

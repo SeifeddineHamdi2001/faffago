@@ -944,6 +944,10 @@ model Pickup {
   note              String?
   plannedDate       DateTime?    @db.Date
   plannedSlot       PickupSlot?
+  /// Who planned it last, and when (D-58). A planned pickup always has its
+  /// day, window and ramasseur (CHECK pickups_planned_is_complete).
+  plannedByUserId   String?      @db.Uuid
+  plannedAt         DateTime?
   /// Pre-filled with the ramasseur of the zone of this pickup address (A-14).
   ramasseurId       String?      @db.Uuid
   completedAt       DateTime?

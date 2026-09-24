@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   PICKUP_SLOT_LABELS_FR,
   canCancelPickup,
+  canPlanPickup,
   pickupFeeRuleText,
+  planPickupSchema,
   pickupRequestSchema,
 } from '../pickups.js';
 import { PickupStatus } from '../statuses.js';
@@ -66,5 +68,24 @@ describe('the fee rule shown before confirming (Vendeur 4.5)', () => {
 describe('cancelling (D-35)', () => {
   it('is possible while Demandé or Planifié only', () => {
     expect(Object.values(PickupStatus).filter(canCancelPickup)).toEqual(['DEMANDE', 'PLANIFIE']);
+  });
+});
+
+describe('planning a pickup (Admin 4.4, D-58)', () => {
+  const RAMASSEUR = '5d0c2a8e-1f3b-4c6d-9e7f-0a1b2c3d4e5f';
+
+  it('takes the day, the window and the ramasseur', () => {
+    const plan = { date: '2026-09-26', slot: 'APRES_MIDI', ramasseurId: RAMASSEUR };
+    expect(planPickupSchema.parse(plan)).toEqual(plan);
+    expect(planPickupSchema.safeParse({ ...plan, date: '26/09/2026' }).success).toBe(false);
+    expect(planPickupSchema.safeParse({ ...plan, slot: 'SOIR' }).success).toBe(false);
+    expect(planPickupSchema.safeParse({ ...plan, ramasseurId: undefined }).success).toBe(false);
+  });
+
+  it('plans a request, or plans it again while it is planned', () => {
+    expect(canPlanPickup(PickupStatus.DEMANDE)).toBe(true);
+    expect(canPlanPickup(PickupStatus.PLANIFIE)).toBe(true);
+    expect(canPlanPickup(PickupStatus.EFFECTUE)).toBe(false);
+    expect(canPlanPickup(PickupStatus.ANNULE)).toBe(false);
   });
 });

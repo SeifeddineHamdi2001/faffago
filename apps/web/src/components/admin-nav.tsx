@@ -11,6 +11,11 @@ import { Permission } from '@faffago/shared';
 const ITEMS: { href: string; label: string; permission: Permission }[] = [
   { href: '/admin/scan', label: 'Scan', permission: Permission.SCAN_DEPOT },
   {
+    href: '/admin/ramassages',
+    label: 'Ramassages',
+    permission: Permission.PLANIFIER_RAMASSAGES_TOURNEES,
+  },
+  {
     href: '/admin/tournees',
     label: 'Tournées',
     permission: Permission.PLANIFIER_RAMASSAGES_TOURNEES,

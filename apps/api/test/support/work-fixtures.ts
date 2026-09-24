@@ -109,6 +109,8 @@ export async function createPickupWithParcel(
       pickupAddressId: address.id,
       status: 'PLANIFIE',
       ramasseurId: input.ramasseurId,
+      plannedDate: new Date('2026-09-25T00:00:00.000Z'),
+      plannedSlot: 'MATIN',
     },
   });
   await prisma.pickupParcel.create({
