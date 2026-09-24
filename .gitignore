@@ -24,6 +24,11 @@ uploads/
 apps/api/src/generated/
 coverage/
 
+# Browser tests (Playwright)
+test-results/
+playwright-report/
+blob-report/
+
 # Courier app
 apps/courier/.expo/
 apps/courier/android/

@@ -77,6 +77,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-46 · Mes colis and Détail du colis](#d-46--mes-colis-and-détail-du-colis)
 - [D-47 · Pickup requests and Profil](#d-47--pickup-requests-and-profil)
 - [D-48 · Tableau de bord: what happened over a period](#d-48--tableau-de-bord-what-happened-over-a-period)
+- [D-49 · Browser tests: Playwright on PGlite, a merge gate](#d-49--browser-tests-playwright-on-pglite-a-merge-gate)
 
 **Money — A-1 to A-5**
 
@@ -997,6 +998,33 @@ The tiles are not links for now.
 
 **Where.** `packages/shared/src/seller-dashboard.ts`, `apps/api/src/dashboard`,
 `apps/web/src/components/seller-dashboard-screen.tsx`.
+
+### D-49 · Browser tests: Playwright on PGlite, a merge gate
+
+Decided 2026-09-24, with the phase 4 step 8 plan.
+
+- **What the browser tests run against**: the real NestJS API on **PGlite**,
+  a fresh database in memory on every run. Every migration is applied and
+  the normal seed runs, with a test admin. Nothing to install or configure,
+  and the same on a CI runner. The connection to a real PostgreSQL stays
+  proved in phase 11, as before.
+- **How**: Playwright (`apps/web/e2e`, Chromium only) starts the API on port
+  **3101** (`pnpm --filter @faffago/api e2e:server`) and a **production build**
+  of the web app on port **3100** (`pnpm dev` uses 3000/3001). The build
+  replaces `apps/web/.next`: stop the web app's `pnpm dev` first. Secrets
+  are drawn on every run. One browser worker, the tests in order: each
+  starts where the previous one stopped. Each role has its own browser
+  context (its own cookies).
+- **A merge gate**: `pnpm e2e` must pass, beside `pnpm lint`,
+  `pnpm typecheck` and `pnpm test`, before a phase is merged into `main`
+  (CLAUDE.md, How to work). It is not part of `pnpm test` and not needed for
+  each commit: it builds the web app and takes about a minute.
+- **The API from TypeScript**: NestJS needs decorator metadata, which tsx does
+  not write, so `test/e2e/register-ts.cjs` compiles each file with
+  TypeScript itself (as ts-jest does). No new dependency.
+
+**Where.** `apps/web/playwright.config.ts`, `apps/web/e2e`,
+`apps/api/test/e2e/server.ts`, the `e2e` task in `turbo.json`.
 ---
 
 ## Money

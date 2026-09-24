@@ -12,6 +12,7 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
+    "e2e": "turbo run e2e",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,prisma,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,prisma,yml,yaml}\""
   },

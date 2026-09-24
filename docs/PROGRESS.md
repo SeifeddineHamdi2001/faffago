@@ -113,9 +113,9 @@ only, no HTTP endpoint (D-22).
 ## Phase 4 — Seller space
 
 Plan approved 2026-09-24; answers recorded as D-32 to D-41. Built and
-committed in steps, each reported before the next. Steps 1 to 6 are done
-and approved; step 7 (Tableau de bord) is built and waits for review;
-**step 8 (Playwright) is next**, then the merge into `main`.
+committed in steps, each reported before the next. Steps 1 to 7 are done
+and approved; step 8 (Playwright) is built and waits for review; **the
+merge into `main` is next**.
 
 - [x] Seller accounts created by admin (statut, documents in private storage,
       encrypted, D-32, D-33, D-34) — step 1, API and web:
@@ -224,9 +224,21 @@ and approved; step 7 (Tableau de bord) is built and waits for review;
       Quick actions Créer un colis and Demander un ramassage, hidden when
       suspended or read-only. No migration — 16 shared, 13 API e2e, 11 web
       tests
-- [ ] **Next — step 8:** Playwright end-to-end tests, once a full flow exists: create a seller →
-      the seller logs in → creates a parcel. Covers the phase 1 screens too
-      (logins, Copier les identifiants, Voir comme le vendeur)
+- [x] Playwright browser tests (D-49) — step 8. One flow, 14 tests in
+      order, on the API on PGlite (fresh database) and a production build:
+      the logins (a wrong password refused), Créer un coursier and Créer un
+      utilisateur (Dépôt) with Copier les identifiants, Créer un vendeur
+      with his documents; the seller's first login (Tableau de bord at 0),
+      Créer un colis, Import CSV of 3 rows (Arabic name and address, a
+      localité settled in the row's dropdown, a French row), Imprimer toutes
+      les étiquettes (both formats are PDFs), Mes colis (4 parcels, En cours,
+      search by phone), Demander un ramassage (new address, 2 parcels,
+      Matin) then Annuler le ramassage, the Tableau de bord over 7 derniers
+      jours (Créés = 4), Voir comme le vendeur and Quitter, the Dépôt (shop
+      only: no email, no documents, no action), the seller's logout.
+      `pnpm e2e` from the root; a merge gate in CLAUDE.md
+- [ ] **Next:** merge phase 4 into `main` once `pnpm lint`, `pnpm typecheck`,
+      `pnpm test` and `pnpm e2e` pass
 
 ## Phase 5 — Back office operations
 
@@ -677,6 +689,22 @@ and approved; step 7 (Tableau de bord) is built and waits for review;
     (`tunisDayStart`, `addTunisDays`).
   - The placeholder "Bienvenue, {boutique}." is gone: the shop name is in
     the header.
+
+- 2026-09-24 — **Phase 4, step 8 (Playwright).** Plan approved with
+  PGlite and `pnpm e2e` as a merge gate, recorded as **D-49**. Also:
+  - Chromium runs in its **new headless mode** (`channel: 'chromium'`,
+    installed with `--no-shell`), so only one browser is downloaded.
+  - On this machine Playwright's downloader timed out; the archives were
+    fetched with `curl` and installed through `PLAYWRIGHT_DOWNLOAD_HOST`
+    (README).
+  - The Windows clipboard gives "
+    " back for "
+    ": the test compares
+    the copied credentials line by line, ignoring that.
+  - The tests build the web app into `apps/web/.next`, the folder
+    `pnpm dev` also uses: stop the web app's `pnpm dev` before `pnpm e2e`.
+    A separate build folder was tried and dropped: Next.js then rewrites
+    `next-env.d.ts` and `tsconfig.json` on every run.
 
 ## Open questions
 

@@ -19,7 +19,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "admin:reset": "tsx scripts/admin-reset.ts",
-    "documents:verify": "tsx scripts/documents-verify.ts"
+    "documents:verify": "tsx scripts/documents-verify.ts",
+    "e2e:server": "node -r ./test/e2e/register-ts.cjs test/e2e/server.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

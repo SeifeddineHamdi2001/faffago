@@ -92,14 +92,27 @@ to everything. Auth is the next task.
 ## Tests
 
 ```bash
-pnpm test        # 175 tests
+pnpm test
 pnpm lint
 pnpm typecheck
+pnpm e2e         # browser tests, before merging a phase into main
 ```
 
 No database is needed. `packages/shared` runs under Vitest; the API schema tests
 run the real migration against PGlite, which is PostgreSQL compiled to
 WebAssembly, so the triggers and CHECK constraints are genuinely exercised.
+
+`pnpm e2e` runs the Playwright flow in `apps/web/e2e` (D-49). It starts the
+API on PGlite with a fresh database (port 3101) and a production build of the
+web app (port 3100). The build replaces `apps/web/.next`, so stop the web
+app's `pnpm dev` first. Chromium is needed once:
+
+```bash
+pnpm --filter @faffago/web exec playwright install --no-shell chromium
+```
+
+On a slow connection Playwright's own download can time out; fetching the
+archive with `curl` and serving it through `PLAYWRIGHT_DOWNLOAD_HOST` works.
 
 ## Layout
 

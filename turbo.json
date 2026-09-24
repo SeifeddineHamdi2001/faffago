@@ -21,6 +21,19 @@
     },
     "typecheck": {
       "dependsOn": ["^build"]
+    },
+    "e2e": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": [
+        "LOCALAPPDATA",
+        "APPDATA",
+        "USERPROFILE",
+        "TEMP",
+        "TMP",
+        "CI",
+        "PLAYWRIGHT_*"
+      ]
     }
   }
 }

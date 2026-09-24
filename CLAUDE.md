@@ -71,7 +71,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 4. Run the tests, lint and type checks before saying a task is done.
 5. At the end of each task, update `docs/PROGRESS.md` (what was done, decisions made, open questions).
 6. Database changes only through Prisma migrations. Never edit a migration that has already been applied.
-7. One branch per phase (`phase-1-auth`, `phase-2-…`). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck` and `pnpm test` pass through turbo from the root. After every merge into `main`, push `main` to `origin`.
+7. One branch per phase (`phase-1-auth`, `phase-2-…`). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm e2e` (the browser tests) pass through turbo from the root. After every merge into `main`, push `main` to `origin`.
 8. Never commit when lint, typecheck or tests fail. Commit only after the checks pass, chaining the commands with `&&` so that a failure stops the chain before `git commit`.
 
 ## Commands
@@ -84,6 +84,7 @@ Node 22+ and pnpm 9 (`corepack enable pnpm`). Run from the repository root.
 - Lint / types: `pnpm lint && pnpm typecheck`
 - Format: `pnpm format`
 - Build: `pnpm build`
+- Browser tests (Playwright, D-49): `pnpm e2e`. Needs Chromium once: `pnpm --filter @faffago/web exec playwright install --no-shell chromium`
 
 Per workspace:
 
@@ -100,4 +101,8 @@ Notes:
   that through `dependsOn: ["^build"]`.
 - The API tests need no Docker: the schema tests run against PGlite, which is
   PostgreSQL compiled to WebAssembly.
+- `pnpm e2e` needs no database either: Playwright starts the API on PGlite
+  (fresh, in memory) on port 3101 and a production build of the web app on
+  port 3100. The build replaces `apps/web/.next`: stop the web app's
+  `pnpm dev` first.
 - Database work needs `DATABASE_URL`; copy `.env.example` to `.env` first.

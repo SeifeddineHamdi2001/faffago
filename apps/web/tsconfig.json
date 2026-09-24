@@ -8,6 +8,14 @@
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "incremental": true
   },
-  "include": ["next-env.d.ts", "src/**/*", "test/**/*", ".next/types/**/*.ts", "vitest.config.ts"],
+  "include": [
+    "next-env.d.ts",
+    "src/**/*",
+    "test/**/*",
+    "e2e/**/*",
+    "playwright.config.ts",
+    ".next/types/**/*.ts",
+    "vitest.config.ts"
+  ],
   "exclude": ["node_modules", ".next"]
 }
