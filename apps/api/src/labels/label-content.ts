@@ -11,6 +11,7 @@ export interface LabelParcel {
   delegationNameFr: string;
   gouvernoratNameFr: string;
   address: string;
+  landmark: string | null;
   codAmountMillimes: bigint;
   isExchange: boolean;
   openingAllowed: boolean;
@@ -30,30 +31,19 @@ export interface LabelContent {
   phones: string;
   place: string;
   address: string;
+  /** Printed under the address when there is one (D-45). */
+  landmark: string | null;
 }
 
 export const LABEL_FLAG_ECHANGE = 'ÉCHANGE';
 export const LABEL_FLAG_OUVERTURE = 'OUVERTURE AUTORISÉE';
 
-/** "29876543" → "29 876 543", as a courier reads a number aloud. */
+/**
+ * Text is printed as typed, Arabic included: the fonts and the layout take
+ * care of it (D-45). "29876543" → "29 876 543", as a courier reads a number.
+ */
 function spacedPhone(phone: string): string {
   return phone.replace(/^(\d{2})(\d{3})(\d{3})$/, '$1 $2 $3');
-}
-
-/**
- * The characters the PDF's built-in fonts can draw (Windows-1252). Anything
- * else would print as a wrong glyph, so it prints as "?" instead.
- */
-const WIN_ANSI_EXTRA = new Set('€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ'.split(''));
-
-export function pdfSafe(text: string): string {
-  return Array.from(text.replace(/[\r\n\t]+/g, ' '))
-    .map((char) => {
-      const code = char.codePointAt(0)!;
-      if ((code >= 0x20 && code <= 0x7e) || (code >= 0xa0 && code <= 0xff)) return char;
-      return WIN_ANSI_EXTRA.has(char) ? char : '?';
-    })
-    .join('');
 }
 
 export function labelContent(parcel: LabelParcel, siteUrl: string): LabelContent {
@@ -64,18 +54,17 @@ export function labelContent(parcel: LabelParcel, siteUrl: string): LabelContent
     barcodeText: parcel.code,
     qrText: trackingUrl(siteUrl, parcel.code),
     code: parcel.code,
-    shop: pdfSafe(parcel.shopName),
+    shop: parcel.shopName,
     cod: formatDT(parcel.codAmountMillimes),
     flags,
-    recipientName: pdfSafe(parcel.recipientName),
+    recipientName: parcel.recipientName,
     phones: [parcel.recipientPhone, parcel.recipientPhone2]
       .filter((phone): phone is string => Boolean(phone))
       .map(spacedPhone)
       .join(' · '),
-    place: pdfSafe(
-      `${parcel.localiteNameFr} — ${parcel.delegationNameFr}, ${parcel.gouvernoratNameFr}`,
-    ),
-    address: pdfSafe(parcel.address),
+    place: `${parcel.localiteNameFr} — ${parcel.delegationNameFr}, ${parcel.gouvernoratNameFr}`,
+    address: parcel.address,
+    landmark: parcel.landmark?.trim() || null,
   };
 }
 

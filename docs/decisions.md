@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-44** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-44 are rules |
+| **D-1 … D-45** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-45 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-44**
+**Rules decided during the build — D-4 to D-45**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -73,6 +73,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-42 · Correcting the contact, or changing it](#d-42--correcting-the-contact-or-changing-it)
 - [D-43 · The site's domain is an environment variable](#d-43--the-sites-domain-is-an-environment-variable)
 - [D-44 · Demander une modification](#d-44--demander-une-modification)
+- [D-45 · What a label prints, Arabic included](#d-45--what-a-label-prints-arabic-included)
 
 **Money — A-1 to A-5**
 
@@ -777,6 +778,8 @@ it was computed with (phase 8); an existing bon is never recalculated.
 > Refined by **D-43**: that setting is the environment variable
 > `NEXT_PUBLIC_SITE_URL`, never a Paramètres value.
 
+> What else the label prints, Arabic included: **D-45**.
+
 ### D-37 · CSV import
 
 - Verdicts: a **localité** problem the seller can settle in the preview's
@@ -865,6 +868,28 @@ the seller asks, Faffa Go applies.
 - **The reprint warning** after Modifier shows when any field printed on the
   label changes (Vendeur 4.4), not only the COD. Refines D-41, which stands:
   the COD stays editable while Créé, only the fees stay frozen.
+
+### D-45 · What a label prints, Arabic included
+
+Decided 2026-09-24, with the phase 4 step 4 review. Refines Vendeur 4.4 and
+D-36.
+
+- **Arabic is required.** Names, addresses and landmarks typed by sellers
+  or imported from a CSV may be Arabic, often mixed with French and numbers.
+- **Fonts**: Noto Sans (Latin) and Noto Sans Arabic, both under the SIL Open
+  Font License, embedded in each PDF and subset to the characters used. Each
+  character is drawn in the font of its script; Arabic letters are shaped.
+- **Direction**: the Unicode bidirectional algorithm, per field. A field
+  takes the direction of its first strong letter and is aligned on that
+  side (an Arabic name on the right); French, numbers and Arabic in one line
+  keep their own order, e.g. `حي النصر، rue 12, imm. B`.
+- **Wrapping**: a field wraps within its box and never overflows the label.
+  Past its lines it ends with "…"; the address takes the lines the other
+  fields leave.
+- **The second phone** is printed only when the parcel has one.
+- **The landmark** is printed under the address, captioned "Repère", when
+  there is one. **The courier note stays off the label.**
+- A character neither font can draw (an emoji, say) prints as "?".
 
 ---
 

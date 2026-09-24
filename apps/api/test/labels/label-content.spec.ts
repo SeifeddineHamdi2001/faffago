@@ -3,7 +3,6 @@ import {
   LABEL_FLAG_ECHANGE,
   LABEL_FLAG_OUVERTURE,
   labelContent,
-  pdfSafe,
   siteUrlFrom,
   type LabelParcel,
 } from '../../src/labels/label-content';
@@ -20,6 +19,7 @@ const parcel: LabelParcel = {
   delegationNameFr: 'Ariana Ville',
   gouvernoratNameFr: 'Ariana',
   address: '12 rue de Marseille, 2e étage',
+  landmark: null,
   codAmountMillimes: 85000n,
   isExchange: false,
   openingAllowed: true,
@@ -52,16 +52,22 @@ describe('labelContent', () => {
     expect(none.flags).toEqual([]);
   });
 
+  it('prints the landmark when there is one (D-45), as typed, Arabic included', () => {
+    expect(labelContent(parcel, 'https://x.tn').landmark).toBeNull();
+    expect(labelContent({ ...parcel, landmark: '  ' }, 'https://x.tn').landmark).toBeNull();
+    expect(
+      labelContent({ ...parcel, landmark: 'قرب الجامع', recipientName: 'أمينة' }, 'https://x.tn'),
+    ).toMatchObject({ landmark: 'قرب الجامع', recipientName: 'أمينة' });
+  });
+
+  it('prints the second phone only when the parcel has one', () => {
+    expect(labelContent({ ...parcel, recipientPhone2: null }, 'https://x.tn').phones).toBe(
+      '29 876 543',
+    );
+  });
+
   it('prints a COD of zero as it is (already paid)', () => {
     expect(labelContent({ ...parcel, codAmountMillimes: 0n }, 'https://x.tn').cod).toBe('0,000 DT');
-  });
-});
-
-describe('what the PDF fonts can draw', () => {
-  it('keeps French, and replaces what the fonts cannot draw with "?"', () => {
-    expect(pdfSafe('Béji — l’Aouina « 2e »')).toBe('Béji — l’Aouina « 2e »');
-    expect(pdfSafe('أمينة')).toBe('?????');
-    expect(pdfSafe('Rue X\nbloc B')).toBe('Rue X bloc B');
   });
 });
 
@@ -94,6 +100,17 @@ describe('renderLabels', () => {
     );
     const pdf = await renderLabels([long], 'THERMAL');
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('embeds the Latin and the Arabic fonts, subset (D-45)', async () => {
+    const arabic = labelContent(
+      { ...parcel, recipientName: 'أمينة بن صالح', landmark: 'قرب الجامع' },
+      'https://www.mirely.store',
+    );
+    const pdf = (await renderLabels([arabic], 'A4')).toString('latin1');
+    expect(pdf).toMatch(/\/BaseFont \/[A-Z]{6}\+NotoSansArabic-Bold/);
+    expect(pdf).toMatch(/\/BaseFont \/[A-Z]{6}\+NotoSans-Bold/);
+    expect(pdf).not.toContain('/Helvetica');
   });
 
   it('embeds the Code128 and the QR of every label', async () => {

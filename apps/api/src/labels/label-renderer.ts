@@ -2,6 +2,7 @@ import bwipjs from 'bwip-js';
 import PDFDocument from 'pdfkit';
 import { LabelFormat } from '@faffago/shared';
 import type { LabelContent } from './label-content';
+import { drawField, fontName, layoutField, lineHeightFor, registerFonts } from './label-fonts';
 
 /**
  * Draws the labels (Vendeur 4.4): thermal 100 × 150 mm, one per page, or
@@ -44,6 +45,16 @@ async function symbolsFor(content: LabelContent): Promise<Symbols> {
   return { barcode, qr };
 }
 
+/** A small grey caption above a field. */
+function caption(doc: PDFKit.PDFDocument, text: string, x: number, y: number, width: number) {
+  doc
+    .font(fontName('latin', false))
+    .fontSize(7)
+    .fillColor('#4A5470')
+    .text(text, x, y, { width, lineBreak: false })
+    .fillColor(NAVY);
+}
+
 function drawLabel(doc: PDFKit.PDFDocument, content: LabelContent, symbols: Symbols, box: Box) {
   const pad = 4 * MM;
   const x = box.x + pad;
@@ -51,18 +62,29 @@ function drawLabel(doc: PDFKit.PDFDocument, content: LabelContent, symbols: Symb
   let y = box.y + pad;
   doc.fillColor(NAVY).strokeColor(NAVY);
 
-  // Header: the brand and the sender.
-  doc.font('Helvetica-Bold').fontSize(12).text('FAFFA GO', x, y, { width, lineBreak: false });
+  // Header: the brand, and the sender in its own direction on the right.
   doc
-    .font('Helvetica')
-    .fontSize(8)
-    .text(`Expéditeur : ${content.shop}`, x + 28 * MM, y + 2, {
-      width: width - 28 * MM,
-      align: 'right',
-      height: 10,
-      ellipsis: true,
-    });
-  y += 7 * MM;
+    .font(fontName('latin', true))
+    .fontSize(12)
+    .text('FAFFA GO', x, y, { width, lineBreak: false });
+  const senderX = x + 30 * MM;
+  const senderWidth = width - 30 * MM;
+  doc
+    .font(fontName('latin', false))
+    .fontSize(6.5)
+    .fillColor('#4A5470')
+    .text('Expéditeur', senderX, y - 1, { width: senderWidth, align: 'right', lineBreak: false })
+    .fillColor(NAVY);
+  drawField(doc, content.shop, {
+    x: senderX,
+    y: y + 1.5 * MM,
+    width: senderWidth,
+    size: 9,
+    bold: true,
+    maxLines: 1,
+    align: 'right',
+  });
+  y += 10 * MM;
   doc
     .moveTo(x, y)
     .lineTo(x + width, y)
@@ -78,27 +100,30 @@ function drawLabel(doc: PDFKit.PDFDocument, content: LabelContent, symbols: Symb
     height: 16 * MM,
   });
   y += 18 * MM;
-  doc.font('Helvetica-Bold').fontSize(16).text(content.code, x, y, { width, align: 'center' });
+  doc
+    .font(fontName('latin', true))
+    .fontSize(16)
+    .text(content.code, x, y, { width, align: 'center', lineBreak: false });
   y += 8 * MM;
 
   // COD in large type, the flags, and the QR on the right.
   const qrSize = 26 * MM;
   const left = width - qrSize - 3 * MM;
   doc.image(symbols.qr, x + width - qrSize, y, { width: qrSize, height: qrSize });
-  doc.font('Helvetica').fontSize(9).text('COD', x, y, { width: left });
+  doc.font(fontName('latin', false)).fontSize(9).text('COD', x, y, { width: left });
   doc
-    .font('Helvetica-Bold')
+    .font(fontName('latin', true))
     .fontSize(24)
-    .text(content.cod, x, y + 4 * MM, { width: left });
+    .text(content.cod, x, y + 3.5 * MM, { width: left, lineBreak: false });
   let flagY = y + 15 * MM;
   for (const flag of content.flags) {
-    doc.font('Helvetica-Bold').fontSize(9);
+    doc.font(fontName('latin', true)).fontSize(9);
     const flagWidth = doc.widthOfString(flag) + 4 * MM;
     doc
       .rect(x, flagY, flagWidth, 5 * MM)
       .lineWidth(1.2)
       .stroke();
-    doc.text(flag, x + 2 * MM, flagY + 1.3 * MM, { lineBreak: false });
+    doc.text(flag, x + 2 * MM, flagY + 0.9 * MM, { lineBreak: false });
     flagY += 6 * MM;
   }
   y += qrSize + 3 * MM;
@@ -107,28 +132,29 @@ function drawLabel(doc: PDFKit.PDFDocument, content: LabelContent, symbols: Symb
     .lineTo(x + width, y)
     .lineWidth(0.8)
     .stroke();
-  y += 3 * MM;
+  y += 2.5 * MM;
 
-  // The recipient, down to the bottom of the label.
+  // The recipient, each field in its own direction (D-45).
   const bottom = box.y + box.height - pad;
-  doc.font('Helvetica').fontSize(8).text('Destinataire', x, y, { width });
-  y += 4 * MM;
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(15)
-    .text(content.recipientName, x, y, { width, height: 13 * MM, ellipsis: true });
-  y = Math.min(doc.y, y + 13 * MM) + 1 * MM;
-  doc.font('Helvetica-Bold').fontSize(15).text(content.phones, x, y, { width, lineBreak: false });
-  y += 8 * MM;
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(12)
-    .text(content.place, x, y, { width, height: 10 * MM, ellipsis: true });
-  y = Math.min(doc.y, y + 10 * MM) + 1.5 * MM;
-  doc
-    .font('Helvetica')
-    .fontSize(12)
-    .text(content.address, x, y, { width, height: Math.max(0, bottom - y), ellipsis: true });
+  caption(doc, 'Destinataire', x, y, width);
+  y += 3.5 * MM;
+  y += drawField(doc, content.recipientName, { x, y, width, size: 15, bold: true, maxLines: 2 });
+  y += drawField(doc, content.phones, { x, y, width, size: 15, bold: true, maxLines: 1 });
+  y += drawField(doc, content.place, { x, y, width, size: 12, bold: true, maxLines: 2 });
+
+  // The address takes what the landmark leaves: nothing runs off the label.
+  const addressLine = lineHeightFor(12);
+  let landmarkHeight = 0;
+  if (content.landmark) {
+    const laid = layoutField(doc, content.landmark, { x, y, width, size: 11, maxLines: 2 });
+    landmarkHeight = 4.5 * MM + laid.lines.length * lineHeightFor(11);
+  }
+  const addressLines = Math.max(1, Math.floor((bottom - y - landmarkHeight) / addressLine));
+  y += drawField(doc, content.address, { x, y, width, size: 12, maxLines: addressLines });
+  if (content.landmark) {
+    caption(doc, 'Repère', x, y + 1 * MM, width);
+    drawField(doc, content.landmark, { x, y: y + 4.5 * MM, width, size: 11, maxLines: 2 });
+  }
 }
 
 /** One PDF holding every label, in the order given. */
@@ -141,6 +167,7 @@ export async function renderLabels(contents: LabelContent[], format: LabelFormat
     autoFirstPage: false,
     info: { Title: 'Étiquettes Faffa Go', Producer: 'Faffa Go', Creator: 'Faffa Go' },
   });
+  registerFonts(doc);
   const chunks: Buffer[] = [];
   doc.on('data', (chunk: Buffer) => chunks.push(chunk));
   const done = new Promise<Buffer>((resolve, reject) => {

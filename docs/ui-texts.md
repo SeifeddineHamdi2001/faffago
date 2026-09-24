@@ -253,7 +253,7 @@ The banner's first line, "Vous consultez le compte de {boutique}", is D-5.
 
 | Key                                  | Français                                                                                             |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| api `label-renderer` — texte imprimé | FAFFA GO · Expéditeur : {boutique} · COD · Destinataire                                              |
+| api `label-renderer` — texte imprimé | FAFFA GO · Expéditeur (au-dessus du nom de la boutique) · COD · Destinataire · Repère (D-45)         |
 | api `label-content` — drapeaux       | ÉCHANGE · OUVERTURE AUTORISÉE                                                                        |
 | `LABEL_FORMAT_LABELS_FR`             | Thermique 10 × 15 cm · A4 (4 par page)                                                               |
 | web `print-labels` — titres          | Imprimer l’étiquette · Réimprimer l’étiquette · Imprimer toutes les étiquettes                       |

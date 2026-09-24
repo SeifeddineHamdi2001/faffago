@@ -178,6 +178,12 @@ committed in steps, each reported before the next.
       domain. Web: print links on the parcel page and in the reprint
       warning; "Imprimer toutes les étiquettes" after an import — 5 shared,
       18 API, 3 web tests
+- [x] Arabic on labels (D-45): Noto Sans and Noto Sans Arabic embedded
+      (OFL, `apps/api/assets/fonts`), words shaped in the font of their
+      script, each field laid out with the Unicode bidi algorithm
+      (bidi-js) in its own direction, wrapped within its box, "…" past its
+      lines. The landmark under the address; the second phone only when
+      there is one — 16 API tests
 - [ ] Mes colis + Détail du colis (D-38, D-40)
 - [ ] Ramassage requests + pickup address at first request (D-35)
 - [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
@@ -573,6 +579,23 @@ committed in steps, each reported before the next.
   - A batch with one code that is not the seller's is refused as a whole,
     as "Code inconnu" (D-26).
 
+- 2026-09-24 — **Arabic on labels (D-45).** How it is built:
+  - pdfkit shapes an Arabic word correctly but misplaces the spaces of a
+    right-to-left line, so **each word is shaped on its own** and placed by
+    our layout (`apps/api/src/labels/text-layout.ts`). Arabic letters never
+    join across a space, so nothing is lost.
+  - Runs holding Arabic letters go to the font engine in reading order (it
+    shapes and draws them right to left); other right-to-left runs, such as
+    brackets, go in visual order, mirrored.
+  - Every run sits on one baseline: Noto Sans Arabic is taller and deeper
+    than Noto Sans. Lines are 1.55 × the type size.
+  - The text a PDF reader extracts from an Arabic label is scrambled (as
+    usual with shaped Arabic in PDFs). Printing is not affected; nothing
+    reads the text back.
+  - Sample labels were rendered in both formats and checked: a pure Arabic
+    label, the mixed address, a long Arabic address ending in "…", a French
+    label with its landmark.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -595,10 +618,6 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
-- **Arabic on labels**: the PDF uses the built-in fonts (Windows-1252). A
-  recipient name or address typed in Arabic prints as "?" for each letter;
-  place names are always French (Q6). If sellers type Arabic names, the
-  labels need an embedded Arabic font with right-to-left shaping. Do they?
 - **Suggestion (not in the specs): a downloadable list of localités** beside
   the délégation list, for sellers filling the `localite` column. Q5 offers
   the délégation list only.

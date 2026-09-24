@@ -71,6 +71,7 @@ export class LabelsService {
       delegationNameFr: parcel.delegation.nameFr,
       gouvernoratNameFr: parcel.delegation.gouvernorat.nameFr,
       address: parcel.address,
+      landmark: parcel.landmark,
       codAmountMillimes: parcel.codAmountMillimes,
       isExchange: parcel.isExchange,
       openingAllowed: parcel.openingAllowed,
