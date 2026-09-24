@@ -6,6 +6,11 @@ import {
   CHANGE_REQUEST_FIELDS,
   CHANGE_REQUEST_FIELD_LABELS_FR,
   CHANGE_REQUEST_STATUS_LABELS_FR,
+  CANCELLATION_AFTER_PICKUP_LABEL_FR,
+  FAILURE_REASON_LABELS_FR,
+  PARCEL_CASH_STATUS_LABELS_FR,
+  PARCEL_EVENT_LABELS_FR,
+  PARCEL_LOCATION_LABELS_FR,
   PARCEL_STATUS_LABELS_FR,
   ParcelStatus,
   canCancelStatus,
@@ -14,18 +19,32 @@ import {
   localitesOfTree,
   millimesFromJson,
   parcelChangeRequestSchema,
+  parcelMoneyFor,
+  timelineActorLabel,
   type GeoTreeView,
 } from '@faffago/shared';
 import { bff } from '@/lib/client/call';
-import type { ApiError, ParcelChangeRequest, ParcelEdit, SellerParcel } from '@/lib/types';
+import type {
+  ApiError,
+  ParcelChangeRequest,
+  ParcelEdit,
+  SellerParcel,
+  SellerParcelDetail,
+} from '@/lib/types';
 import { ErrorAlert, fieldErrors } from './account-actions';
 import { Field } from './create-courier-form';
 import { ConfirmDialog, Dialog } from './dialog';
 import { LocalitePicker } from './localite-picker';
 import { ParcelForm } from './parcel-form';
 import { PrintLabels } from './print-labels';
+import { TrackLine } from './track-line';
 
-const dateTime = new Intl.DateTimeFormat('fr-TN', { dateStyle: 'short', timeStyle: 'short' });
+// Tunis time, whether the page is drawn on the server or in the browser.
+const dateTime = new Intl.DateTimeFormat('fr-TN', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+  timeZone: 'Africa/Tunis',
+});
 
 export const REPRINT_WARNING =
   'Colis modifié. Réimprimez l’étiquette : celle déjà imprimée porte les anciennes informations.';
@@ -41,7 +60,7 @@ export function ParcelScreen({
   tree,
   readOnly,
 }: {
-  parcel: SellerParcel;
+  parcel: SellerParcelDetail;
   tree: GeoTreeView;
   readOnly: boolean;
 }) {
@@ -112,9 +131,17 @@ export function ParcelScreen({
         <h1 className="font-mono text-2xl font-bold text-navy">{parcel.code}</h1>
         <span className="badge-muted">{PARCEL_STATUS_LABELS_FR[status]}</span>
       </div>
-      <p className="mb-6 text-sm text-navy/70">
+      <p className="mb-3 text-sm text-navy/70">
         Créé le {dateTime.format(new Date(parcel.createdAt))}
+        {parcel.attemptCount > 0 && (
+          <span className="ml-2 font-semibold text-navy">
+            · Tentative {parcel.attemptCount} sur {parcel.maxAttempts}
+          </span>
+        )}
       </p>
+      <div className="mb-6">
+        <TrackLine status={parcel.status} />
+      </div>
       {reprint && (
         <div role="status" className="mb-4 space-y-3 rounded-xl bg-orange/15 p-4">
           <p className="text-sm font-semibold text-navy">{REPRINT_WARNING}</p>
@@ -146,7 +173,6 @@ export function ParcelScreen({
           label="Produit"
           value={`${parcel.productDescription} · ${parcel.pieceCount} pièce${parcel.pieceCount > 1 ? 's' : ''}`}
         />
-        <Item label="Montant COD" value={formatDT(millimesFromJson(parcel.codAmountMillimes))} />
         {(parcel.isExchange || parcel.openingAllowed) && (
           <Item
             label="Options"
@@ -160,6 +186,8 @@ export function ParcelScreen({
         )}
         {parcel.courierNote && <Item label="Note pour le coursier" value={parcel.courierNote} />}
       </dl>
+
+      <MoneyBlock parcel={parcel} />
 
       {(canEdit || canCancel || canRequest) && (
         <div className="mb-8 flex flex-wrap gap-2">
@@ -221,6 +249,8 @@ export function ParcelScreen({
         </section>
       )}
 
+      <Timeline parcel={parcel} />
+
       {open === 'annuler' && (
         <ConfirmDialog
           title="Annuler le colis"
@@ -266,6 +296,90 @@ export function ParcelScreen({
           onCancel={() => setOpen(null)}
         />
       )}
+    </section>
+  );
+}
+
+/**
+ * The money of the parcel (Vendeur 4.8, D-40): COD, the delivery fee frozen
+ * on it, and the net as an estimate before retenue; a return shows its return
+ * fee instead. The bon de versement stays the only real figure.
+ */
+function MoneyBlock({ parcel }: { parcel: SellerParcelDetail }) {
+  const money = parcelMoneyFor({
+    status: parcel.status,
+    codAmountMillimes: millimesFromJson(parcel.codAmountMillimes),
+    deliveryFeeMillimes: millimesFromJson(parcel.deliveryFeeMillimes),
+    returnFeeMillimes: millimesFromJson(parcel.returnFeeMillimes),
+  });
+  return (
+    <section aria-labelledby="argent-title" className="card mb-6 text-sm">
+      <h2 id="argent-title" className="mb-2 font-display text-lg font-bold text-navy">
+        Argent
+      </h2>
+      <dl className="space-y-1">
+        <MoneyLine label="Montant COD" value={formatDT(money.cod)} />
+        {money.kind === 'LIVRAISON' && (
+          <>
+            <MoneyLine label="Frais de livraison" value={`− ${formatDT(money.deliveryFee)}`} />
+            <MoneyLine label="Net estimé" value={formatDT(money.estimatedNet)} strong />
+            <p className="text-navy/70">
+              Estimation avant retenue à la source : le bon de versement fait foi.
+            </p>
+          </>
+        )}
+        {money.kind === 'RETOUR' && (
+          <MoneyLine label="Frais de retour" value={`− ${formatDT(money.returnFee)}`} strong />
+        )}
+        {money.kind === 'ANNULE' && <p className="text-navy/70">Aucun frais.</p>}
+        {parcel.cashStatus && (
+          <MoneyLine
+            label="Paiement"
+            value={`${PARCEL_CASH_STATUS_LABELS_FR[parcel.cashStatus]}${
+              parcel.bonNumber ? ` · ${parcel.bonNumber}` : ''
+            }`}
+          />
+        )}
+      </dl>
+    </section>
+  );
+}
+
+function MoneyLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-navy/70">{label}</dt>
+      <dd className={strong ? 'font-bold text-navy' : 'text-navy'}>{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * The history (Vendeur 4.8, D-38): when, what, who and where. Couriers by
+ * first name only, the team as "Faffa Go", the place as a label, never GPS.
+ */
+function Timeline({ parcel }: { parcel: SellerParcelDetail }) {
+  if (parcel.timeline.length === 0) return null;
+  return (
+    <section aria-labelledby="historique-title" className="mb-8">
+      <h2 id="historique-title" className="mb-3 font-display text-lg font-bold text-navy">
+        Historique
+      </h2>
+      <ol className="space-y-2 border-l-2 border-navy/15 pl-4 text-sm">
+        {[...parcel.timeline].reverse().map((entry, i) => (
+          <li key={`${entry.at}-${i}`}>
+            <p className="font-semibold text-navy">
+              {PARCEL_EVENT_LABELS_FR[entry.type]}
+              {entry.failureReason && ` · ${FAILURE_REASON_LABELS_FR[entry.failureReason]}`}
+              {entry.cancelledAfterPickup && ` · ${CANCELLATION_AFTER_PICKUP_LABEL_FR}`}
+            </p>
+            <p className="text-navy/70">
+              {dateTime.format(new Date(entry.at))} · {timelineActorLabel(entry.actor)}
+              {entry.location && ` · ${PARCEL_LOCATION_LABELS_FR[entry.location]}`}
+            </p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

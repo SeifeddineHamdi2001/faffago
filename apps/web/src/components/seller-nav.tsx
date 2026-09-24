@@ -5,11 +5,12 @@ import { usePathname } from 'next/navigation';
 
 /**
  * The seller menu (Vendeur 3). Only the screens built so far are listed;
- * Mes colis, Étiquettes, Ramassages and the rest join it with
+ * Ramassages and the rest join it with
  * their steps.
  */
 const ITEMS: { href: string; label: string; exact?: boolean }[] = [
   { href: '/vendeur', label: 'Tableau de bord', exact: true },
+  { href: '/vendeur/colis', label: 'Mes colis', exact: true },
   { href: '/vendeur/colis/nouveau', label: 'Créer un colis' },
   { href: '/vendeur/colis/import', label: 'Import CSV' },
 ];

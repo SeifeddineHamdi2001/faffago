@@ -386,7 +386,8 @@ export function evaluateCsvRow(
 /** U+FEFF at the start of a file: Excel reads the rest as UTF-8. */
 export const BYTE_ORDER_MARK = String.fromCharCode(0xfeff);
 
-function csvLine(cells: readonly string[]): string {
+/** One CSV line, `;`-separated, quoting a cell only when it must. */
+export function csvLine(cells: readonly string[]): string {
   return cells
     .map((cell) => (/[";\r\n]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell))
     .join(';');

@@ -4,10 +4,16 @@ import type {
   CourierBlocker,
   CsvRowProblem,
   CsvRowVerdict,
+  FailureReason,
+  ParcelCashStatus,
+  ParcelEventType,
+  ParcelGroup,
+  ParcelLocation,
   ParcelStatus,
   Permission,
   Role,
   SellerDocumentType,
+  TimelineActor,
 } from '@faffago/shared';
 
 /** GET /auth/me. */
@@ -123,7 +129,7 @@ export interface SellerParcel {
   code: string;
   status: ParcelStatus;
   location: string;
-  cashStatus: string | null;
+  cashStatus: ParcelCashStatus | null;
   recipientName: string;
   recipientPhone: string;
   recipientPhone2: string | null;
@@ -165,4 +171,44 @@ export interface RefusedImportRow {
   line: number;
   verdict: CsvRowVerdict;
   problems: CsvRowProblem[];
+}
+
+/** GET /parcels: one row of Mes colis (Vendeur 4.7). */
+export interface ParcelListItem {
+  code: string;
+  recipientName: string;
+  recipientPhone: string;
+  delegationNameFr: string;
+  localiteNameFr: string;
+  status: ParcelStatus;
+  cashStatus: ParcelCashStatus | null;
+  codAmountMillimes: string;
+  createdAt: string;
+}
+
+export interface ParcelList {
+  items: ParcelListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  counts: Record<ParcelGroup, number>;
+}
+
+/** One line of the timeline as the seller reads it (D-38). */
+export interface TimelineEntry {
+  type: ParcelEventType;
+  at: string;
+  actor: TimelineActor;
+  location: ParcelLocation | null;
+  failureReason: FailureReason | null;
+  cancelledAfterPickup: boolean;
+}
+
+/** GET /parcels/:code: Détail du colis (Vendeur 4.8). */
+export interface SellerParcelDetail extends SellerParcel {
+  attemptCount: number;
+  maxAttempts: number;
+  lastFailureReason: FailureReason | null;
+  bonNumber: string | null;
+  timeline: TimelineEntry[];
 }

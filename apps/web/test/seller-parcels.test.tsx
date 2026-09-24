@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GeoTreeView } from '@faffago/shared';
 import { ParcelForm } from '@/components/parcel-form';
 import { ParcelScreen, REPRINT_WARNING } from '@/components/parcel-screen';
-import type { SellerParcel } from '@/lib/types';
+import type { SellerParcelDetail } from '@/lib/types';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -55,7 +55,7 @@ const tree: GeoTreeView = {
   ],
 };
 
-const parcel: SellerParcel = {
+const parcel: SellerParcelDetail = {
   id: 'p1',
   code: 'FG-8K2QX7AB',
   status: 'CREE',
@@ -79,6 +79,11 @@ const parcel: SellerParcel = {
   createdAt: '2026-09-24T09:00:00.000Z',
   cancelledAt: null,
   changeRequests: [],
+  attemptCount: 0,
+  maxAttempts: 3,
+  lastFailureReason: null,
+  bonNumber: null,
+  timeline: [],
 };
 
 async function fillNewParcel(user: ReturnType<typeof userEvent.setup>) {

@@ -184,7 +184,18 @@ committed in steps, each reported before the next.
       (bidi-js) in its own direction, wrapped within its box, "…" past its
       lines. The landmark under the address; the second phone only when
       there is one — 16 API tests
-- [ ] Mes colis + Détail du colis (D-38, D-40)
+- [x] Mes colis + Détail du colis (D-38, D-40) — step 5, API and web.
+      `GET /parcels`: the seller's parcels by status group with the count of
+      each, search by code, name or phone, a date range in Tunis days,
+      50 a page. `GET /parcels/export`: the same filter as CSV (up to
+      10 000 rows). `GET /parcels/:code` adds the timeline (Vous, a courier
+      by first name, Faffa Go; the place as a label, never GPS or the
+      courier's note), the attempts, and the bon of a paid parcel. Web: Mes
+      colis with its groups, filters in the address, Exporter, and a
+      selection printed as one batch of labels; the parcel page with the
+      track line, "Tentative n sur m", the money block and the history.
+      Migration `20261002000000_parcel_event_sequence` — 15 shared, 11 API
+      e2e, 9 web tests
 - [ ] Ramassage requests + pickup address at first request (D-35)
 - [ ] Tableau de bord: Aujourd'hui counts and quick actions (D-39)
 - [ ] Playwright end-to-end tests, once a full flow exists: create a seller →
@@ -595,6 +606,30 @@ committed in steps, each reported before the next.
   - Sample labels were rendered in both formats and checked: a pure Arabic
     label, the mixed address, a long Arabic address ending in "…", a French
     label with its landmark.
+
+- 2026-09-24 — **Phase 4, step 5 (Mes colis, Détail du colis).** Choices
+  to confirm, all in `packages/shared/src/seller-parcels.ts`:
+  - **Status groups** (Vendeur 4.7 names them, not their content): En cours
+    = Créé, Ramassé, Au dépôt, En livraison, Relancé; Livrés = Livré; À
+    vérifier; Payés = Livré and paid; Non payés = Livré, cash with the
+    courier or at the depot; Retours = the three return statuses. Annulé is
+    under Tous only. Counts follow the search and the dates.
+  - **The track line**: the delivery flow of 4.8; À vérifier and Relancé
+    stop at En livraison, marked; a return switches to the return flow of
+    4.12; Annulé is struck through.
+  - **The timeline**: the seller's own actions read "Vous", the team and
+    the automatic rules "Faffa Go", couriers their first name (D-38). The
+    failure reason is shown; the courier's free-text note is not (À
+    vérifier, phase 7, decides what the seller reads of it). Status
+    corrections and cancelled scans are shown too.
+  - **Exporter** holds the table's columns plus phone 2 and the address,
+    `;`-separated with a byte-order mark, like the CSV template.
+  - Appels Faffa Go (phase 7) and the chat (phase 10) join the parcel page
+    with their phases.
+  - **`parcel_events.sequence`** (new migration): events written by one
+    action share their server time, and the timeline needs their order.
+  - Dates on these screens are drawn in Tunis time (`Africa/Tunis`), also
+    when the page is rendered on the server.
 
 ## Open questions
 

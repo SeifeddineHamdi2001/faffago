@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { GeoModule } from '../geo/geo.module';
 import { ParcelImportsController } from './parcel-imports.controller';
 import { ParcelImportsService } from './parcel-imports.service';
+import { ParcelQueriesService } from './parcel-queries.service';
 import { ParcelCodeGenerator } from './parcel-code.generator';
 import { ParcelEventService } from './parcel-event.service';
 import { ParcelsController } from './parcels.controller';
@@ -16,7 +17,13 @@ import { ParcelsService } from './parcels.service';
   imports: [GeoModule],
   // The imports route first: its fixed segment must not be read as a parcel code.
   controllers: [ParcelImportsController, ParcelsController],
-  providers: [ParcelCodeGenerator, ParcelEventService, ParcelsService, ParcelImportsService],
+  providers: [
+    ParcelCodeGenerator,
+    ParcelEventService,
+    ParcelsService,
+    ParcelImportsService,
+    ParcelQueriesService,
+  ],
   exports: [ParcelEventService, ParcelsService],
 })
 export class ParcelsModule {}

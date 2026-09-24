@@ -837,6 +837,8 @@ model ParcelEvent {
   appVersion       String?
   deviceTime       DateTime?
   serverTime       DateTime        @default(now())
+  /// The order events were written in, even within one transaction.
+  sequence         BigInt          @unique @default(autoincrement())
   metadata         Json?
   /// The transaction that wrote the event. A deferred trigger refuses, at
   /// commit, a parcel created or moved without an event of its own

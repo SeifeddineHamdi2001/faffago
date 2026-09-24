@@ -7,21 +7,26 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Res,
+  StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
   Permission,
   createParcelRequestSchema,
   parcelChangeRequestSchema,
+  parcelListQuerySchema,
   updateParcelSchema,
   type CreateParcelRequestValues,
   type ParcelChangeRequestValues,
+  type ParcelListQuery,
   type UpdateParcelValues,
 } from '@faffago/shared';
 import { AllowImpersonation, CurrentPrincipal, RequirePermission } from '../auth/decorators';
 import type { Principal, UserPrincipal } from '../auth/principal';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { ParcelQueriesService } from './parcel-queries.service';
 import { ParcelsService } from './parcels.service';
 
 /**
@@ -31,7 +36,39 @@ import { ParcelsService } from './parcels.service';
  */
 @Controller('parcels')
 export class ParcelsController {
-  constructor(private readonly parcels: ParcelsService) {}
+  constructor(
+    private readonly parcels: ParcelsService,
+    private readonly queries: ParcelQueriesService,
+  ) {}
+
+  /** Mes colis (Vendeur 4.7): the seller's parcels, filtered, with the count of each group. */
+  @Get()
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @AllowImpersonation()
+  list(
+    @Query(new ZodValidationPipe(parcelListQuerySchema)) query: ParcelListQuery,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.queries.list(principal, query);
+  }
+
+  /** Exporter (Vendeur 4.7): the current filter, every page, as CSV. */
+  @Get('export')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  async export(
+    @Query(new ZodValidationPipe(parcelListQuerySchema)) query: ParcelListQuery,
+    @CurrentPrincipal() principal: Principal,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const csv = Buffer.from(await this.queries.exportCsv(principal, query), 'utf8');
+    // The customers' names, phones and addresses: no cache keeps them.
+    response.setHeader('Cache-Control', 'no-store');
+    return new StreamableFile(csv, {
+      type: 'text/csv; charset=utf-8',
+      disposition: 'attachment; filename="mes-colis.csv"',
+      length: csv.length,
+    });
+  }
 
   /** Créer un colis. 201 when created, 200 when the same request came before. */
   @Post()
@@ -53,7 +90,7 @@ export class ParcelsController {
   @RequirePermission(Permission.ESPACE_VENDEUR)
   @AllowImpersonation()
   get(@Param('code') code: string, @CurrentPrincipal() principal: Principal) {
-    return this.parcels.get(principal, code);
+    return this.queries.detail(principal, code);
   }
 
   /** Modifier, while Créé (Vendeur 4.6, D-41). */

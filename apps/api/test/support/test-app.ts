@@ -109,8 +109,12 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
       body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
     });
     const contentType = response.headers.get('content-type') ?? '';
-    if (!contentType.includes('json') && !contentType.startsWith('text/') && contentType) {
-      // A file: handed back as bytes.
+    const isFile =
+      contentType.startsWith('text/csv') ||
+      (!contentType.includes('json') && !contentType.startsWith('text/') && contentType !== '');
+    if (isFile) {
+      // A file, handed back as bytes: a CSV keeps its byte-order mark, which
+      // reading it as text would drop.
       return {
         status: response.status,
         body: Buffer.from(await response.arrayBuffer()),
