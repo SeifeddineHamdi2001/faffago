@@ -48,10 +48,14 @@ export function labelNeedsReprint(changedFields: readonly string[]): boolean {
 
 // ── Demander une modification (Vendeur 4.6) ─────────────────
 
-/** "The seller requests a change (phone, address)". Faffa Go applies it (phase 5). */
+/**
+ * What the seller can ask for after pickup (Vendeur 4.6, D-44). Faffa Go
+ * applies it in phase 5; a new localité only while the parcel is at the depot.
+ */
 export const CHANGE_REQUEST_FIELDS = [
   'recipientPhone',
   'recipientPhone2',
+  'localiteId',
   'address',
   'landmark',
 ] as const;
@@ -60,6 +64,7 @@ export type ChangeRequestField = (typeof CHANGE_REQUEST_FIELDS)[number];
 export const CHANGE_REQUEST_FIELD_LABELS_FR: Record<ChangeRequestField, string> = {
   recipientPhone: 'Téléphone',
   recipientPhone2: 'Téléphone 2',
+  localiteId: 'Localité',
   address: 'Adresse',
   landmark: 'Repère',
 };
@@ -68,6 +73,8 @@ export const ChangeRequestStatus = {
   EN_ATTENTE: 'EN_ATTENTE',
   APPLIQUEE: 'APPLIQUEE',
   REFUSEE: 'REFUSEE',
+  /** Withdrawn by the seller while it waited (D-44). */
+  RETIREE: 'RETIREE',
 } as const;
 export type ChangeRequestStatus = (typeof ChangeRequestStatus)[keyof typeof ChangeRequestStatus];
 
@@ -75,12 +82,14 @@ export const CHANGE_REQUEST_STATUS_LABELS_FR: Record<ChangeRequestStatus, string
   EN_ATTENTE: 'En attente',
   APPLIQUEE: 'Appliquée',
   REFUSEE: 'Refusée',
+  RETIREE: 'Retirée',
 };
 
 export const parcelChangeRequestSchema = z
   .object({
     recipientPhone: tunisianPhone.optional(),
     recipientPhone2: tunisianPhone.optional(),
+    localiteId: z.string().uuid('Localité invalide').optional(),
     address: z.string().trim().min(5, 'Adresse trop courte').max(500).optional(),
     landmark: z.string().trim().min(1).max(200).optional(),
     note: z.string().trim().max(300).optional(),
@@ -118,6 +127,9 @@ export const ParcelErrorCode = {
   DEMANDE_IMPOSSIBLE: 'DEMANDE_IMPOSSIBLE',
   DEMANDE_AVANT_RAMASSAGE: 'DEMANDE_AVANT_RAMASSAGE',
   REQUETE_DEJA_UTILISEE: 'REQUETE_DEJA_UTILISEE',
+  DEMANDE_EN_ATTENTE: 'DEMANDE_EN_ATTENTE',
+  DEMANDE_INTROUVABLE: 'DEMANDE_INTROUVABLE',
+  DEMANDE_CLOSE: 'DEMANDE_CLOSE',
 } as const;
 export type ParcelErrorCode = (typeof ParcelErrorCode)[keyof typeof ParcelErrorCode];
 
@@ -130,4 +142,7 @@ export const PARCEL_MESSAGES: Record<ParcelErrorCode, string> = {
   DEMANDE_IMPOSSIBLE: 'Ce colis ne peut plus être modifié.',
   DEMANDE_AVANT_RAMASSAGE: 'Le colis n’est pas encore ramassé : modifiez-le directement.',
   REQUETE_DEJA_UTILISEE: 'Cette demande a déjà été utilisée. Rechargez la page.',
+  DEMANDE_EN_ATTENTE: 'Une demande attend déjà Faffa Go pour ce colis : modifiez-la ou retirez-la.',
+  DEMANDE_INTROUVABLE: 'Demande introuvable.',
+  DEMANDE_CLOSE: 'Cette demande a déjà été traitée ou retirée.',
 };

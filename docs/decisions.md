@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-43** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-43 are rules |
+| **D-1 … D-44** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-44 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-43**
+**Rules decided during the build — D-4 to D-44**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -72,6 +72,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-41 · Changing the COD before pickup](#d-41--changing-the-cod-before-pickup)
 - [D-42 · Correcting the contact, or changing it](#d-42--correcting-the-contact-or-changing-it)
 - [D-43 · The site's domain is an environment variable](#d-43--the-sites-domain-is-an-environment-variable)
+- [D-44 · Demander une modification](#d-44--demander-une-modification)
 
 **Money — A-1 to A-5**
 
@@ -815,6 +816,8 @@ field. The fees stay as frozen (they do not depend on the COD). The change is
 a `MODIFICATION_VENDEUR` event. The label printed before carries the old
 amount, so the screen warns the seller to **reprint the label** after saving.
 
+> Refined by **D-44**: the warning shows when any printed field changes.
+
 ### D-42 · Correcting the contact, or changing it
 
 The contact person is the one whose CIN was submitted (Vendeur 2.3), so two
@@ -836,6 +839,32 @@ setting**: it is printed in the QR code of every label (D-36) and must never
 change once labels are printed. Production: **https://www.mirely.store**.
 The API reads the same variable to build the QR code, and refuses to print
 labels without it.
+
+**If Faffa Go ever moves to a domain of its own**, `www.mirely.store` must
+keep redirecting `/suivi/*` to the new domain **forever**: labels already
+printed carry the old address and cannot change.
+
+### D-44 · Demander une modification
+
+Decided 2026-09-24, with the phase 4 step 2 review. Vendeur 4.6: after pickup
+the seller asks, Faffa Go applies.
+
+- **What the seller can ask**: phone, phone 2, address, landmark, and the
+  **localité**.
+- **When**: from Ramassé to Relancé. Before pickup the seller uses Modifier;
+  once delivered, cancelled or in a return, nothing can be asked.
+- **One waiting request per parcel.** A new one is refused while another is
+  En attente; the seller **edits** the waiting one or **withdraws** it.
+  A withdrawn request keeps its row with the status **Retirée**, who
+  withdrew it and when. `ChangeRequestStatus.RETIREE` is added for this.
+- **A new localité** (phase 5, Service client): applied only while the parcel
+  is **at the depot** (location Au dépôt). While the livreur carries it, the
+  request waits. Applying it changes the délégation, and so the zone, is
+  written as an event, and the depot reprints the label with the same code
+  (A-9).
+- **The reprint warning** after Modifier shows when any field printed on the
+  label changes (Vendeur 4.4), not only the COD. Refines D-41, which stands:
+  the COD stays editable while Créé, only the fees stay frozen.
 
 ---
 

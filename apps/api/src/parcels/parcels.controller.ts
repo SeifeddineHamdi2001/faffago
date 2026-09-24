@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Res,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import {
   Permission,
@@ -74,5 +84,29 @@ export class ParcelsController {
     @CurrentPrincipal() principal: Principal,
   ) {
     return this.parcels.requestChange(principal as UserPrincipal, code, body);
+  }
+
+  /** The waiting request, edited (D-44). */
+  @Patch(':code/change-requests/:id')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  editChangeRequest(
+    @Param('code') code: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(parcelChangeRequestSchema)) body: ParcelChangeRequestValues,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.parcels.editChangeRequest(principal as UserPrincipal, code, id, body);
+  }
+
+  /** The waiting request, withdrawn: Retirée (D-44). */
+  @Post(':code/change-requests/:id/withdraw')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @HttpCode(200)
+  withdrawChangeRequest(
+    @Param('code') code: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentPrincipal() principal: Principal,
+  ) {
+    return this.parcels.withdrawChangeRequest(principal as UserPrincipal, code, id);
   }
 }

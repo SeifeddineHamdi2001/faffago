@@ -1,4 +1,6 @@
 import type {
+  ChangeRequestField,
+  ChangeRequestStatus,
   CourierBlocker,
   ParcelStatus,
   Permission,
@@ -100,15 +102,16 @@ export interface CreatedAccount {
   password: string;
 }
 
-/** A change request as its seller sees it (Vendeur 4.6). */
+/** A change request as its seller sees it (Vendeur 4.6, D-44). */
 export interface ParcelChangeRequest {
   id: string;
-  requestedFields: Partial<
-    Record<'recipientPhone' | 'recipientPhone2' | 'address' | 'landmark', string>
-  >;
+  requestedFields: Partial<Record<ChangeRequestField, string>>;
+  /** The localité asked for, named. */
+  requestedLocalite: { id: string; nameFr: string; delegationNameFr: string } | null;
   sellerNote: string | null;
-  status: 'EN_ATTENTE' | 'APPLIQUEE' | 'REFUSEE';
+  status: ChangeRequestStatus;
   createdAt: string;
+  editedAt: string | null;
   handledAt: string | null;
 }
 

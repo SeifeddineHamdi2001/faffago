@@ -241,10 +241,12 @@ enum SellerDocumentType {
   CARTE_AUTO_ENTREPRENEUR
 }
 
+/// RETIREE: withdrawn by the seller while it was waiting (D-44).
 enum ChangeRequestStatus {
   EN_ATTENTE
   APPLIQUEE
   REFUSEE
+  RETIREE
 }
 
 enum ChatParticipantKind {
@@ -1361,11 +1363,15 @@ model SellerChangeRequest {
   sellerId        String              @db.Uuid
   requestedFields Json
   sellerNote      String?
+  /// One EN_ATTENTE per parcel, enforced by a partial unique index (D-44).
   status          ChangeRequestStatus @default(EN_ATTENTE)
+  /// Who closed it and when: staff applying or refusing, or the seller withdrawing.
   handledByUserId String?             @db.Uuid
   handledAt       DateTime?
   staffNote       String?
   createdAt       DateTime            @default(now())
+  /// Set when the seller edits it while it waits.
+  editedAt        DateTime?
 
   parcel Parcel @relation(fields: [parcelId], references: [id])
   seller Seller @relation(fields: [sellerId], references: [id])

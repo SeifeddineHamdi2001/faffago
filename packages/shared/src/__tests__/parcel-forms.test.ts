@@ -63,7 +63,13 @@ describe('Demander une modification (Vendeur 4.6)', () => {
     ).toEqual({ recipientPhone: '98765432', note: 'Nouveau n°' });
   });
 
-  it('refuses a note alone, and anything but phone and address', () => {
+  it('takes a new localité (D-44)', () => {
+    const localiteId = '3f1e4b6a-2c7d-4e8f-9a0b-1c2d3e4f5a6b';
+    expect(parcelChangeRequestSchema.parse({ localiteId })).toEqual({ localiteId });
+    expect(parcelChangeRequestSchema.safeParse({ localiteId: 'Ennasr' }).success).toBe(false);
+  });
+
+  it('refuses a note alone, and anything but phone, address and localité', () => {
     expect(parcelChangeRequestSchema.safeParse({ note: 'x' }).success).toBe(false);
     expect(parcelChangeRequestSchema.safeParse({ codAmountMillimes: '1' }).success).toBe(false);
     expect(parcelChangeRequestSchema.safeParse({ recipientName: 'Autre' }).success).toBe(false);

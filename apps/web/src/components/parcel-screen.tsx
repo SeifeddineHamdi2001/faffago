@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import {
   CHANGE_REQUEST_FIELDS,
   CHANGE_REQUEST_FIELD_LABELS_FR,
@@ -11,15 +11,17 @@ import {
   canCancelStatus,
   canRequestChange,
   formatDT,
+  localitesOfTree,
   millimesFromJson,
   parcelChangeRequestSchema,
   type GeoTreeView,
 } from '@faffago/shared';
 import { bff } from '@/lib/client/call';
-import type { ApiError, ParcelEdit, SellerParcel } from '@/lib/types';
+import type { ApiError, ParcelChangeRequest, ParcelEdit, SellerParcel } from '@/lib/types';
 import { ErrorAlert, fieldErrors } from './account-actions';
 import { Field } from './create-courier-form';
 import { ConfirmDialog, Dialog } from './dialog';
+import { LocalitePicker } from './localite-picker';
 import { ParcelForm } from './parcel-form';
 
 const dateTime = new Intl.DateTimeFormat('fr-TN', { dateStyle: 'short', timeStyle: 'short' });
@@ -44,7 +46,9 @@ export function ParcelScreen({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [open, setOpen] = useState<'annuler' | 'demande' | null>(null);
+  const [open, setOpen] = useState<
+    'annuler' | 'demande' | 'modifier-demande' | 'retirer-demande' | null
+  >(null);
   const [reprint, setReprint] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -52,7 +56,9 @@ export function ParcelScreen({
   const status = parcel.status;
   const canEdit = !readOnly && status === ParcelStatus.CREE;
   const canCancel = !readOnly && canCancelStatus(status);
-  const canRequest = !readOnly && canRequestChange(status);
+  // One waiting request per parcel: the seller edits or withdraws it (D-44).
+  const waiting = parcel.changeRequests.find((r) => r.status === 'EN_ATTENTE') ?? null;
+  const canRequest = !readOnly && canRequestChange(status) && !waiting;
   const pickedUp = status !== ParcelStatus.CREE;
 
   async function cancel() {
@@ -62,6 +68,23 @@ export function ParcelScreen({
     setOpen(null);
     if (result.ok) router.refresh();
     else setError(result.error);
+  }
+
+  async function withdraw(request: ParcelChangeRequest) {
+    setBusy(true);
+    const result = await bff(
+      'POST',
+      `parcels/${parcel.code}/change-requests/${request.id}/withdraw`,
+    );
+    setBusy(false);
+    setOpen(null);
+    if (result.ok) router.refresh();
+    else setError(result.error);
+  }
+
+  function requestDone() {
+    setOpen(null);
+    router.refresh();
   }
 
   if (editing) {
@@ -166,14 +189,28 @@ export function ParcelScreen({
                   {CHANGE_REQUEST_STATUS_LABELS_FR[request.status]} ·{' '}
                   {dateTime.format(new Date(request.createdAt))}
                 </p>
-                <ul className="mt-1 text-navy/80">
-                  {CHANGE_REQUEST_FIELDS.filter((f) => request.requestedFields[f]).map((f) => (
-                    <li key={f}>
-                      {CHANGE_REQUEST_FIELD_LABELS_FR[f]} : {request.requestedFields[f]}
-                    </li>
-                  ))}
-                </ul>
+                <RequestedFields request={request} />
                 {request.sellerNote && <p className="mt-1 text-navy/70">{request.sellerNote}</p>}
+                {request === waiting && !readOnly && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {canRequestChange(status) && (
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={() => setOpen('modifier-demande')}
+                      >
+                        Modifier la demande
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      onClick={() => setOpen('retirer-demande')}
+                    >
+                      Retirer la demande
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -200,10 +237,28 @@ export function ParcelScreen({
       {open === 'demande' && (
         <ChangeRequestDialog
           code={parcel.code}
-          onDone={() => {
-            setOpen(null);
-            router.refresh();
-          }}
+          tree={tree}
+          onDone={requestDone}
+          onCancel={() => setOpen(null)}
+        />
+      )}
+      {open === 'modifier-demande' && waiting && (
+        <ChangeRequestDialog
+          code={parcel.code}
+          tree={tree}
+          request={waiting}
+          onDone={requestDone}
+          onCancel={() => setOpen(null)}
+        />
+      )}
+      {open === 'retirer-demande' && waiting && (
+        <ConfirmDialog
+          title="Retirer la demande"
+          message="Faffa Go n’appliquera pas cette demande. Vous pourrez en envoyer une autre."
+          confirmLabel="Retirer la demande"
+          cancelLabel="Garder la demande"
+          busy={busy}
+          onConfirm={() => withdraw(waiting)}
           onCancel={() => setOpen(null)}
         />
       )}
@@ -220,22 +275,47 @@ function Item({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Vendeur 4.6: the seller asks, Faffa Go applies it (phase 5). */
+function RequestedFields({ request }: { request: ParcelChangeRequest }) {
+  return (
+    <ul className="mt-1 text-navy/80">
+      {CHANGE_REQUEST_FIELDS.filter((f) => request.requestedFields[f]).map((f) => (
+        <li key={f}>
+          {CHANGE_REQUEST_FIELD_LABELS_FR[f]} :{' '}
+          {f === 'localiteId' && request.requestedLocalite
+            ? `${request.requestedLocalite.nameFr} — ${request.requestedLocalite.delegationNameFr}`
+            : request.requestedFields[f]}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Vendeur 4.6, D-44: the seller asks, Faffa Go applies it (phase 5). Given a
+ * waiting request, the same form edits it: what is sent replaces it.
+ */
 function ChangeRequestDialog({
   code,
+  tree,
+  request,
   onDone,
   onCancel,
 }: {
   code: string;
+  tree: GeoTreeView;
+  request?: ParcelChangeRequest;
   onDone: () => void;
   onCancel: () => void;
 }) {
+  const localites = useMemo(() => localitesOfTree(tree), [tree]);
+  const fields = request?.requestedFields ?? {};
   const [values, setValues] = useState({
-    recipientPhone: '',
-    recipientPhone2: '',
-    address: '',
-    landmark: '',
-    note: '',
+    recipientPhone: fields.recipientPhone ?? '',
+    recipientPhone2: fields.recipientPhone2 ?? '',
+    localiteId: fields.localiteId ?? '',
+    address: fields.address ?? '',
+    landmark: fields.landmark ?? '',
+    note: request?.sellerNote ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<ApiError | null>(null);
@@ -257,18 +337,24 @@ function ChangeRequestDialog({
       return;
     }
     setBusy(true);
-    const result = await bff('POST', `parcels/${code}/change-requests`, body);
+    const result = request
+      ? await bff('PATCH', `parcels/${code}/change-requests/${request.id}`, body)
+      : await bff('POST', `parcels/${code}/change-requests`, body);
     setBusy(false);
     if (result.ok) onDone();
     else setApiError(result.error);
   }
 
   return (
-    <Dialog title="Demander une modification" onDismiss={onCancel}>
+    <Dialog
+      title={request ? 'Modifier la demande' : 'Demander une modification'}
+      onDismiss={onCancel}
+    >
       {apiError && <ErrorAlert error={apiError} />}
-      <form onSubmit={submit} className="space-y-3" noValidate>
+      <form onSubmit={submit} className="max-h-[70vh] space-y-3 overflow-y-auto pr-1" noValidate>
         <p className="text-sm text-navy/70">
-          Remplissez seulement ce qui change. Faffa Go applique la modification.
+          Remplissez seulement ce qui change. Faffa Go applique la modification ; une nouvelle
+          localité est appliquée quand le colis est au dépôt.
         </p>
         <Field
           id="cr-phone"
@@ -285,6 +371,13 @@ function ChangeRequestDialog({
           onChange={set('recipientPhone2')}
           error={errors.recipientPhone2}
           inputMode="tel"
+        />
+        <LocalitePicker
+          tree={tree}
+          localites={localites}
+          value={values.localiteId}
+          onChange={set('localiteId')}
+          error={errors.localiteId}
         />
         <Field
           id="cr-address"
@@ -312,7 +405,7 @@ function ChangeRequestDialog({
             Annuler
           </button>
           <button type="submit" className="btn-primary" disabled={busy}>
-            Envoyer la demande
+            {request ? 'Enregistrer la demande' : 'Envoyer la demande'}
           </button>
         </div>
       </form>

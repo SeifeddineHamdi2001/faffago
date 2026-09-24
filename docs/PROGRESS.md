@@ -150,6 +150,15 @@ committed in steps, each reported before the next.
       Modifier, Annuler, Demander une modification. Migration
       `20260929000000_parcel_client_request` — 29 API e2e, 9 shared, 10 web
       tests
+- [x] Demander une modification, as decided in D-44: the localité can be
+      asked for, and one request waits per parcel (partial unique index).
+      The seller edits the waiting one or withdraws it (status Retirée,
+      with who and when):
+      `PATCH /parcels/:code/change-requests/:id` and
+      `POST /parcels/:code/change-requests/:id/withdraw`.
+      Migration `20260930000000_change_request_waiting` — 8 API e2e,
+      1 shared, 4 web tests. Applying a request (at the depot for a
+      localité) is phase 5
 - [ ] Import CSV (client preview + server validation, D-37)
 - [ ] Labels PDF (Code128 + QR; thermal and A4, D-36)
 - [ ] Mes colis + Détail du colis (D-38, D-40)
@@ -499,6 +508,13 @@ committed in steps, each reported before the next.
   - The seller menu lists the screens built so far; the rest of Vendeur 3
     joins as each step lands.
 
+- 2026-09-24 — **Answers recorded**: D-43 gains the permanent `/suivi/*`
+  redirect from `www.mirely.store` should the domain ever change; D-44
+  holds the change request rules (localité allowed, applied at the depot;
+  one waiting request, edited or withdrawn; `ChangeRequestStatus.RETIREE`
+  added, approved) and the reprint warning on any printed field. D-41
+  stands: the COD is editable while Créé, only the fees are frozen.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -521,9 +537,3 @@ committed in steps, each reported before the next.
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
-- **Demander une modification, the localité**: the request carries phone and
-  address only, as Vendeur 4.6 words it. A wrong localité after pickup
-  (which moves the parcel to another zone) cannot be requested yet. Should
-  it be?
-- **Several change requests waiting on one parcel**: allowed for now. Should
-  a new one be refused while another is still En attente?

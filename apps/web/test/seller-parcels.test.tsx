@@ -236,3 +236,77 @@ describe('the parcel page', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 });
+
+describe('one waiting request, edited or withdrawn (D-44)', () => {
+  const waiting = {
+    id: 'r1',
+    requestedFields: {
+      localiteId: '5d0c2a8e-1f3b-4c6d-9e7f-0a1b2c3d4e5f',
+      address: '3 rue de Carthage',
+    },
+    requestedLocalite: {
+      id: '5d0c2a8e-1f3b-4c6d-9e7f-0a1b2c3d4e5f',
+      nameFr: 'Cité Ennasr 1',
+      delegationNameFr: 'Ariana Ville',
+    },
+    sellerNote: 'Déménagé',
+    status: 'EN_ATTENTE' as const,
+    createdAt: '2026-09-24T10:00:00.000Z',
+    editedAt: null,
+    handledAt: null,
+  };
+  const atDepot = { ...parcel, status: 'AU_DEPOT' as const, changeRequests: [waiting] };
+
+  it('shows the localité asked for by name, and no second request button', () => {
+    render(<ParcelScreen parcel={atDepot} tree={tree} readOnly={false} />);
+    expect(screen.getByText('Localité : Cité Ennasr 1 — Ariana Ville')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Demander une modification' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Modifier la demande' })).toBeTruthy();
+  });
+
+  it('edits the waiting request, prefilled, with PATCH', async () => {
+    const user = userEvent.setup();
+    bff.mockResolvedValueOnce({ ok: true, data: waiting });
+    render(<ParcelScreen parcel={atDepot} tree={tree} readOnly={false} />);
+    await user.click(screen.getByRole('button', { name: 'Modifier la demande' }));
+    const dialog = screen.getByRole('dialog', { name: 'Modifier la demande' });
+    expect((within(dialog).getByLabelText('Nouvelle adresse') as HTMLInputElement).value).toBe(
+      '3 rue de Carthage',
+    );
+    expect((within(dialog).getByLabelText('Localité') as HTMLSelectElement).value).toBe(
+      waiting.requestedFields.localiteId,
+    );
+    await user.type(within(dialog).getByLabelText('Nouveau téléphone'), '98765432');
+    await user.click(within(dialog).getByRole('button', { name: 'Enregistrer la demande' }));
+    expect(bff).toHaveBeenCalledWith('PATCH', 'parcels/FG-8K2QX7AB/change-requests/r1', {
+      recipientPhone: '98765432',
+      localiteId: waiting.requestedFields.localiteId,
+      address: '3 rue de Carthage',
+      note: 'Déménagé',
+    });
+  });
+
+  it('withdraws it after a confirmation', async () => {
+    const user = userEvent.setup();
+    bff.mockResolvedValueOnce({ ok: true, data: {} });
+    render(<ParcelScreen parcel={atDepot} tree={tree} readOnly={false} />);
+    await user.click(screen.getByRole('button', { name: 'Retirer la demande' }));
+    const dialog = screen.getByRole('dialog', { name: 'Retirer la demande' });
+    await user.click(within(dialog).getByRole('button', { name: 'Retirer la demande' }));
+    expect(bff).toHaveBeenCalledWith('POST', 'parcels/FG-8K2QX7AB/change-requests/r1/withdraw');
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('offers a new request once the waiting one is withdrawn', () => {
+    render(
+      <ParcelScreen
+        parcel={{ ...atDepot, changeRequests: [{ ...waiting, status: 'RETIREE' }] }}
+        tree={tree}
+        readOnly={false}
+      />,
+    );
+    expect(screen.getByText(/Retirée/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Demander une modification' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Retirer la demande' })).toBeNull();
+  });
+});

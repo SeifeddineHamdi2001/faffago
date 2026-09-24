@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   Prisma,
   type Parcel,
@@ -26,6 +26,7 @@ import {
   type UpdateParcelValues,
 } from '@faffago/shared';
 import { sellerIdOf, type Principal, type UserPrincipal } from '../auth/principal';
+import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -73,11 +74,16 @@ class AlreadyCreated extends Error {
 export interface ChangeRequestView {
   id: string;
   requestedFields: Prisma.JsonValue;
+  /** The localité asked for, named, when the request carries one (D-44). */
+  requestedLocalite: { id: string; nameFr: string; delegationNameFr: string } | null;
   sellerNote: string | null;
   status: string;
   createdAt: Date;
+  editedAt: Date | null;
   handledAt: Date | null;
 }
+
+type NamedLocalite = Localite & { delegation: Delegation };
 
 /**
  * A parcel as its seller sees it. Money stays bigint here and leaves the API
@@ -122,18 +128,35 @@ const WITH_PLACE = {
   changeRequests: { orderBy: { createdAt: 'desc' } },
 } satisfies Prisma.ParcelInclude;
 
-function changeRequestView(request: SellerChangeRequest): ChangeRequestView {
+function requestedLocaliteId(request: SellerChangeRequest): string | null {
+  const fields = request.requestedFields as Record<string, unknown> | null;
+  return typeof fields?.localiteId === 'string' ? fields.localiteId : null;
+}
+
+function changeRequestView(
+  request: SellerChangeRequest,
+  localites: ReadonlyMap<string, NamedLocalite>,
+): ChangeRequestView {
+  const localiteId = requestedLocaliteId(request);
+  const localite = localiteId ? localites.get(localiteId) : undefined;
   return {
     id: request.id,
     requestedFields: request.requestedFields,
+    requestedLocalite: localite
+      ? { id: localite.id, nameFr: localite.nameFr, delegationNameFr: localite.delegation.nameFr }
+      : null,
     sellerNote: request.sellerNote,
     status: request.status,
     createdAt: request.createdAt,
+    editedAt: request.editedAt,
     handledAt: request.handledAt,
   };
 }
 
-function sellerView(parcel: ParcelWithPlace): SellerParcelView {
+function sellerView(
+  parcel: ParcelWithPlace,
+  localites: ReadonlyMap<string, NamedLocalite>,
+): SellerParcelView {
   return {
     id: parcel.id,
     code: parcel.code,
@@ -161,7 +184,7 @@ function sellerView(parcel: ParcelWithPlace): SellerParcelView {
     returnFeeMillimes: parcel.returnFeeMillimes,
     createdAt: parcel.createdAt,
     cancelledAt: parcel.cancelledAt,
-    changeRequests: parcel.changeRequests.map(changeRequestView),
+    changeRequests: parcel.changeRequests.map((r) => changeRequestView(r, localites)),
   };
 }
 
@@ -209,6 +232,7 @@ export class ParcelsService {
     private readonly settings: SettingsService,
     private readonly events: ParcelEventService,
     private readonly codes: ParcelCodeGenerator,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   /**
@@ -400,8 +424,9 @@ export class ParcelsService {
   }
 
   /**
-   * Demander une modification (Vendeur 4.6): after pickup the seller asks,
-   * Faffa Go applies it (phase 5). The parcel itself does not change here.
+   * Demander une modification (Vendeur 4.6, D-44): after pickup the seller
+   * asks, Faffa Go applies it (phase 5). The parcel itself does not change
+   * here. One request waits at a time; the seller edits or withdraws it.
    */
   async requestChange(
     principal: UserPrincipal,
@@ -410,26 +435,59 @@ export class ParcelsService {
   ): Promise<ChangeRequestView> {
     return this.prisma.$transaction(async (tx) => {
       const parcel = await this.owned(tx, principal, code, { lock: true });
-      if (parcel.status === ParcelStatus.CREE) {
-        throw parcelError(409, ParcelErrorCode.DEMANDE_AVANT_RAMASSAGE);
-      }
-      if (!canRequestChange(parcel.status)) {
-        throw parcelError(409, ParcelErrorCode.DEMANDE_IMPOSSIBLE);
-      }
-      const requestedFields: Record<string, string> = {};
-      for (const field of CHANGE_REQUEST_FIELDS) {
-        const value = values[field];
-        if (value !== undefined) requestedFields[field] = value;
-      }
+      this.assertCanRequest(parcel);
+      const waiting = await tx.sellerChangeRequest.findFirst({
+        where: { parcelId: parcel.id, status: 'EN_ATTENTE' },
+      });
+      if (waiting) throw parcelError(409, ParcelErrorCode.DEMANDE_EN_ATTENTE);
       const request = await tx.sellerChangeRequest.create({
         data: {
           parcelId: parcel.id,
           sellerId: parcel.sellerId,
-          requestedFields,
-          sellerNote: values.note || null,
+          ...(await this.requestContent(tx, values)),
         },
       });
-      return changeRequestView(request);
+      return this.requestView(tx, request);
+    });
+  }
+
+  /** The waiting request, replaced by what the seller sends now (D-44). */
+  async editChangeRequest(
+    principal: UserPrincipal,
+    code: string,
+    requestId: string,
+    values: ParcelChangeRequestValues,
+  ): Promise<ChangeRequestView> {
+    return this.prisma.$transaction(async (tx) => {
+      const parcel = await this.owned(tx, principal, code, { lock: true });
+      const request = await this.waitingRequest(tx, parcel, requestId);
+      this.assertCanRequest(parcel);
+      const updated = await tx.sellerChangeRequest.update({
+        where: { id: request.id },
+        data: { ...(await this.requestContent(tx, values)), editedAt: this.clock.now() },
+      });
+      return this.requestView(tx, updated);
+    });
+  }
+
+  /** Retirée: kept, with who withdrew it and when (D-44). */
+  async withdrawChangeRequest(
+    principal: UserPrincipal,
+    code: string,
+    requestId: string,
+  ): Promise<ChangeRequestView> {
+    return this.prisma.$transaction(async (tx) => {
+      const parcel = await this.owned(tx, principal, code, { lock: true });
+      const request = await this.waitingRequest(tx, parcel, requestId);
+      const updated = await tx.sellerChangeRequest.update({
+        where: { id: request.id },
+        data: {
+          status: 'RETIREE',
+          handledByUserId: principal.userId,
+          handledAt: this.clock.now(),
+        },
+      });
+      return this.requestView(tx, updated);
     });
   }
 
@@ -461,7 +519,64 @@ export class ParcelsService {
       where: { id: parcelId },
       include: WITH_PLACE,
     });
-    return sellerView(parcel);
+    return sellerView(parcel, await this.localitesOf(db, parcel.changeRequests));
+  }
+
+  private async requestView(db: Tx, request: SellerChangeRequest): Promise<ChangeRequestView> {
+    return changeRequestView(request, await this.localitesOf(db, [request]));
+  }
+
+  /** The localités the requests ask for, with their délégation, to name them. */
+  private async localitesOf(
+    db: Tx,
+    requests: readonly SellerChangeRequest[],
+  ): Promise<Map<string, NamedLocalite>> {
+    const ids = [
+      ...new Set(requests.map(requestedLocaliteId).filter((id): id is string => id !== null)),
+    ];
+    if (ids.length === 0) return new Map();
+    const localites = await db.localite.findMany({
+      where: { id: { in: ids } },
+      include: { delegation: true },
+    });
+    return new Map(localites.map((localite) => [localite.id, localite]));
+  }
+
+  private assertCanRequest(parcel: Parcel): void {
+    if (parcel.status === ParcelStatus.CREE) {
+      throw parcelError(409, ParcelErrorCode.DEMANDE_AVANT_RAMASSAGE);
+    }
+    if (!canRequestChange(parcel.status)) {
+      throw parcelError(409, ParcelErrorCode.DEMANDE_IMPOSSIBLE);
+    }
+  }
+
+  /** The fields asked for, checked: a new localité must exist and be open (D-27). */
+  private async requestContent(
+    db: Tx,
+    values: ParcelChangeRequestValues,
+  ): Promise<{ requestedFields: Record<string, string>; sellerNote: string | null }> {
+    const requestedFields: Record<string, string> = {};
+    for (const field of CHANGE_REQUEST_FIELDS) {
+      const value = values[field];
+      if (value !== undefined) requestedFields[field] = value;
+    }
+    if (values.localiteId) await this.activeLocalite(db, values.localiteId);
+    return { requestedFields, sellerNote: values.note || null };
+  }
+
+  /** A request of this very parcel, still waiting. */
+  private async waitingRequest(
+    db: Tx,
+    parcel: Parcel,
+    requestId: string,
+  ): Promise<SellerChangeRequest> {
+    const request = await db.sellerChangeRequest.findFirst({
+      where: { id: requestId, parcelId: parcel.id },
+    });
+    if (!request) throw parcelError(404, ParcelErrorCode.DEMANDE_INTROUVABLE);
+    if (request.status !== 'EN_ATTENTE') throw parcelError(409, ParcelErrorCode.DEMANDE_CLOSE);
+    return request;
   }
 
   private async activeLocalite(db: Tx, localiteId: string): Promise<Localite> {

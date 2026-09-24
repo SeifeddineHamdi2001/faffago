@@ -428,3 +428,104 @@ describe('Demander une modification (Vendeur 4.6)', () => {
     expect(response.status).toBe(404);
   });
 });
+
+describe('one waiting request, edited or withdrawn (D-44)', () => {
+  function request(code: string, body: unknown, as = token) {
+    return t.request('POST', `/parcels/${code}/change-requests`, { token: as, body });
+  }
+  function edit(code: string, id: string, body: unknown, as = token) {
+    return t.request('PATCH', `/parcels/${code}/change-requests/${id}`, { token: as, body });
+  }
+  function withdraw(code: string, id: string, as = token) {
+    return t.request('POST', `/parcels/${code}/change-requests/${id}/withdraw`, { token: as });
+  }
+
+  it('takes a new localité, shown with its délégation', async () => {
+    const code = await parcelIn('EN_LIVRAISON', 'AVEC_LE_LIVREUR');
+    const response = await request(code, { localiteId: marsa.localiteId });
+    expect(response.status).toBe(201);
+    expect(response.body.requestedFields).toEqual({ localiteId: marsa.localiteId });
+    expect(response.body.requestedLocalite).toEqual({
+      id: marsa.localiteId,
+      nameFr: 'Sidi Bou Saïd',
+      delegationNameFr: 'La Marsa',
+    });
+    // The parcel keeps its localité until Faffa Go applies it at the depot (phase 5).
+    const parcel = await t.request('GET', `/parcels/${code}`, { token });
+    expect(parcel.body.localite.nameFr).toBe('Khaznadar');
+    expect(parcel.body.changeRequests[0].requestedLocalite.nameFr).toBe('Sidi Bou Saïd');
+  });
+
+  it('refuses a deactivated localité (D-27)', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const response = await request(code, { localiteId: closedLocaliteId });
+    expect(response.body.code).toBe('LOCALITE_INACTIVE');
+  });
+
+  it('refuses a second request while the first waits', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    expect((await request(code, { address: '3 rue de Carthage' })).status).toBe(201);
+    const second = await request(code, { recipientPhone: '98765432' });
+    expect(second.status).toBe(409);
+    expect(second.body.code).toBe('DEMANDE_EN_ATTENTE');
+  });
+
+  it('holds one waiting request per parcel in the database too', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const parcel = await t.prisma.parcel.findUniqueOrThrow({ where: { code } });
+    const row = { parcelId: parcel.id, sellerId: parcel.sellerId, requestedFields: {} };
+    await t.prisma.sellerChangeRequest.create({ data: row });
+    await expect(t.prisma.sellerChangeRequest.create({ data: row })).rejects.toThrow();
+  });
+
+  it('lets the seller edit the waiting request: the new fields replace the old', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const { id } = (await request(code, { address: '3 rue de Carthage', note: 'Déménagé' })).body;
+    t.clock.advance(60);
+    const response = await edit(code, id, { recipientPhone: '98 765 432' });
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      id,
+      status: 'EN_ATTENTE',
+      requestedFields: { recipientPhone: '98765432' },
+      sellerNote: null,
+    });
+    expect(response.body.editedAt).not.toBeNull();
+  });
+
+  it('lets the seller withdraw it: Retirée, by him, then a new one can be filed', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const { id } = (await request(code, { address: '3 rue de Carthage' })).body;
+    const response = await withdraw(code, id);
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('RETIREE');
+    const row = await t.prisma.sellerChangeRequest.findUniqueOrThrow({ where: { id } });
+    expect(row.handledByUserId).toBe(seller.id);
+    expect(row.handledAt).not.toBeNull();
+
+    expect((await request(code, { recipientPhone: '98765432' })).status).toBe(201);
+  });
+
+  it('refuses to edit or withdraw a request that is no longer waiting', async () => {
+    const code = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const { id } = (await request(code, { address: '3 rue de Carthage' })).body;
+    await withdraw(code, id);
+    expect((await withdraw(code, id)).body.code).toBe('DEMANDE_CLOSE');
+    const edited = await edit(code, id, { address: '4 rue de Carthage' });
+    expect(edited.status).toBe(409);
+    expect(edited.body.code).toBe('DEMANDE_CLOSE');
+  });
+
+  it("does not reach another parcel's request, nor another seller's (D-26)", async () => {
+    const a = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const b = await parcelIn('AU_DEPOT', 'AU_DEPOT');
+    const { id } = (await request(a, { address: '3 rue de Carthage' })).body;
+    const wrongParcel = await withdraw(b, id);
+    expect(wrongParcel.status).toBe(404);
+    expect(wrongParcel.body.code).toBe('DEMANDE_INTROUVABLE');
+
+    const other = (await login(t, otherSeller)).accessToken;
+    expect((await withdraw(a, id, other)).status).toBe(404);
+    expect((await edit(a, id, { address: 'x rue y' }, other)).status).toBe(404);
+  });
+});
