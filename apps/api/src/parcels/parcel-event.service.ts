@@ -23,6 +23,7 @@ import {
   type ParcelSnapshot,
   type ParcelTransitionEvent,
   type RelaunchSlot,
+  type ReturnCorrectionTarget,
 } from '@faffago/shared';
 import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
@@ -43,6 +44,8 @@ export interface ParcelActionRequest {
   failureReason?: FailureReason;
   postponedTo?: Date | null;
   relaunchSlot?: RelaunchSlot | null;
+  /** The admin's correction of a Retour reçu scanned by mistake (D-88). */
+  correctionTo?: ReturnCorrectionTarget;
 }
 
 /** Where and how it happened, stored on the event as it was received. */
@@ -150,6 +153,7 @@ export class ParcelEventService {
       failureReason: request.failureReason,
       postponedTo: request.postponedTo ?? null,
       relaunchSlot: request.relaunchSlot ?? null,
+      correctionTo: request.correctionTo,
       today: businessDateOf(context.deviceTime ?? now),
       maxAttempts: settings.maxDeliveryAttempts,
       maxClientChanges: settings.maxClientChangesPerParcel,
@@ -506,9 +510,11 @@ export class ParcelEventService {
 
   /**
    * The cash side of a delivered parcel moving (D-79, D-80): Au dépôt when
-   * its courier's caisse is closed, Payé when the seller signs the bon. The
-   * status and the place do not move; one event says what happened, and a
-   * paid parcel's life ends there (D-24). The caller holds the transaction.
+   * its courier's caisse is closed, Payé when the seller signs the bon, Au
+   * dépôt again when the admin corrects a bon scanned Remis by mistake
+   * (D-88). The status and the place do not move; one event says what
+   * happened, and a paid parcel's life ends there (D-24) — or starts again.
+   * The caller holds the transaction.
    */
   async recordCashTransition(
     tx: Prisma.TransactionClient,
@@ -519,6 +525,8 @@ export class ParcelEventService {
       scanId?: string | null;
       deviceTime?: Date | null;
       metadata?: Prisma.InputJsonObject;
+      /** A correction's reason: staff read it, the seller never does (D-88). */
+      reason?: string | null;
     },
   ): Promise<Parcel> {
     await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
@@ -529,9 +537,10 @@ export class ParcelEventService {
     }
     const now = this.clock.now();
     const paid = cashStatus === ParcelCashStatus.PAYE;
+    const unpaid = current.cashStatus === ParcelCashStatus.PAYE;
     const updated = await tx.parcel.update({
       where: { id: current.id },
-      data: { cashStatus, ...(paid ? { closedAt: now } : {}) },
+      data: { cashStatus, ...(paid ? { closedAt: now } : unpaid ? { closedAt: null } : {}) },
     });
     await tx.parcelEvent.create({
       data: {
@@ -539,7 +548,9 @@ export class ParcelEventService {
         type:
           input.transition === CashTransition.BON_REMIS
             ? ParcelEventType.PAIEMENT_VENDEUR
-            : ParcelEventType.ENCAISSEMENT_DEPOT,
+            : input.transition === CashTransition.BON_CORRIGE
+              ? ParcelEventType.CORRECTION_BON
+              : ParcelEventType.ENCAISSEMENT_DEPOT,
         previousStatus: current.status,
         newStatus: current.status,
         previousLocation: current.location,
@@ -547,12 +558,50 @@ export class ParcelEventService {
         actorUserId: input.actor.userId,
         actorRole: input.actor.role,
         scanId: input.scanId ?? null,
+        reasonText: input.reason ?? null,
         deviceTime: input.deviceTime ?? null,
         serverTime: now,
         metadata: input.metadata,
       },
     });
     return updated;
+  }
+
+  /**
+   * The old item of an échange scanned Retour reçu by mistake (D-88): the
+   * delivered parcel does not move, its item goes back with the ramasseur or
+   * to the depot, and one CORRECTION_BON event says so. The caller holds the
+   * parcel's lock.
+   */
+  async recordExchangeItemCorrection(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      itemStatus: typeof ParcelStatus.RETOUR_EN_ROUTE | typeof ParcelStatus.RETOUR_AU_DEPOT;
+      reason: string;
+      bonNumber: string;
+    },
+  ): Promise<ParcelEvent> {
+    const parcel = await tx.parcel.update({
+      where: { id: input.parcelId },
+      data: { exchangeItemStatus: input.itemStatus },
+    });
+    return tx.parcelEvent.create({
+      data: {
+        parcelId: parcel.id,
+        type: ParcelEventType.CORRECTION_BON,
+        previousStatus: parcel.status,
+        newStatus: parcel.status,
+        previousLocation: parcel.location,
+        newLocation: parcel.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        reasonText: input.reason,
+        serverTime: this.clock.now(),
+        metadata: { bonRetour: input.bonNumber, ancienArticle: input.itemStatus },
+      },
+    });
   }
 
   /**

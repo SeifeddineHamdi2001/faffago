@@ -632,9 +632,13 @@ export class CaisseService {
 
   // ── Écarts and debts ──────────────────────────────────────
 
-  /** What the admin still has to look at: surpluses to check, ramasseur shortfalls for HR. */
+  /**
+   * What the admin still has to look at: surpluses to check, ramasseur
+   * shortfalls for HR — his closed caisses short, and the bons corrected
+   * after his caisse was closed that no surplus covered (D-88).
+   */
   async ecarts() {
-    const [surpluses, shortfalls] = await Promise.all([
+    const [surpluses, shortfalls, bonShortfalls] = await Promise.all([
       this.prisma.caisseSession.findMany({
         where: { status: 'CLOTUREE', ecartFlagged: true, ecartCheckedAt: null },
         orderBy: { businessDate: 'desc' },
@@ -662,6 +666,22 @@ export class CaisseService {
           },
         },
       }),
+      this.prisma.bonCorrection.findMany({
+        where: { shortfallMillimes: { gt: 0 } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+        include: {
+          bonVersement: { select: { number: true } },
+          caisseSession: {
+            select: {
+              businessDate: true,
+              courier: {
+                select: { user: { select: { id: true, firstName: true, lastName: true } } },
+              },
+            },
+          },
+        },
+      }),
     ]);
     const view = (row: (typeof surpluses)[number]) => ({
       sessionId: row.id,
@@ -676,7 +696,25 @@ export class CaisseService {
       countedMillimes: row.countedMillimes,
       ecartMillimes: row.ecartMillimes,
     });
-    return { aVerifier: surpluses.map(view), ramasseurs: shortfalls.map(view) };
+    return {
+      aVerifier: surpluses.map(view),
+      ramasseurs: shortfalls.map(view),
+      bonsCorriges: bonShortfalls.map((row) => ({
+        correctionId: row.id,
+        day: row.caisseSession ? documentDateKey(row.caisseSession.businessDate) : null,
+        courier: row.caisseSession
+          ? {
+              userId: row.caisseSession.courier.user.id,
+              firstName: row.caisseSession.courier.user.firstName,
+              lastName: row.caisseSession.courier.user.lastName,
+            }
+          : null,
+        bonNumber: row.bonVersement?.number ?? null,
+        shortfallMillimes: row.shortfallMillimes,
+        reason: row.reason,
+        correctedAt: row.createdAt,
+      })),
+    };
   }
 
   /** Vérifier un écart positif (answer 3): the admin, with a note. */

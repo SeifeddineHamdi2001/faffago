@@ -561,6 +561,14 @@ session refresh of D-15 lives there), `next build` moves to Turbopack, and
 `@next/eslint-plugin-next` to 16. Not trivial on the eve of launch, so
 proposed as its own branch before phase 11, behind the full `pnpm e2e` gate.
 
+## Bon corrections (D-88)
+
+Built on `main` after phase 9 (2026-09-25), as approved with two additions: a
+bon de versement wrongly Remis whose ramasseur's caisse is closed, with no
+matching surplus, becomes his shortfall for HR; the seller reads "Correction
+Faffa Go". Shared rules tests first (19), 6 API e2e, 1 schema test, 3 web
+tests. Migration `20261011000000_bon_corrections`.
+
 ## Phase 10 — Communication and reports
 
 - [ ] In-app notifications (all roles)
@@ -1298,13 +1306,14 @@ proposed as its own branch before phase 11, behind the full `pnpm e2e` gate.
   site-info endpoints, landing page in French and Arabic, SEO, Meta Pixel
   behind a setting (off), language detection and memory; Next.js 16 evaluated,
   not upgraded.
+- 2026-09-25 — **Bon corrections (D-88)**, on `main`: Corriger on a bon de
+  versement Remis (Paiements vendeurs) and on a received line of a bon de
+  retour (Retours), admin only; the HR list of bons corrected after closing.
 
 ## Open questions
 
-- **Correcting a bon scanned Remis, or a return scanned Retour reçu, by
-  mistake** (phase 8 check, 2026-09-25): no correction exists; the proposal is
-  with the owner (money and a new transition, CLAUDE.md "When to stop").
-  Nothing is built until it is answered.
+- ~~**Correcting a bon scanned Remis, or a return scanned Retour reçu, by
+  mistake**~~ **Closed 2026-09-25 (D-88)**: built as approved.
 - **The company's legal information** for the public site's footer (Landing
   2.8): name, registration and tax numbers, address. Not in the specs; the
   footer shows none until given (D-87).

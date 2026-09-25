@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { documentDateKey } from './codes.js';
-import { ParcelCashStatus, ParcelStatus, PickupStatus } from './statuses.js';
+import type { Millimes } from './money.js';
+import type { ReturnCorrectionTarget } from './parcel-state-machine.js';
+import { BonStatus, ParcelCashStatus, ParcelStatus, PickupStatus } from './statuses.js';
 
 /**
  * Bons de versement and bons de retour (Vendeur 4.11, 4.12, Admin 4.10,
@@ -139,6 +141,123 @@ export function bonRetourComplete(lines: readonly { received: boolean }[]): bool
   return lines.length > 0 && lines.every((line) => line.received);
 }
 
+// ── Correcting a bon scanned by mistake (D-88) ─────────────
+
+/** What the seller reads on his bon and his parcel's timeline: never the reason. */
+export const BON_CORRECTION_LABEL_FR = 'Correction Faffa Go';
+
+export const BonCorrectionRefusal = {
+  /** The signed copy proves the seller received it. */
+  BON_ARCHIVE: 'BON_ARCHIVE',
+  BON_NON_REMIS: 'BON_NON_REMIS',
+  LIGNE_NON_RECUE: 'LIGNE_NON_RECUE',
+  /** A bon de retour out again on another trip: its lines are not where the correction would put them. */
+  BON_REPARTI: 'BON_REPARTI',
+} as const;
+export type BonCorrectionRefusal = (typeof BonCorrectionRefusal)[keyof typeof BonCorrectionRefusal];
+
+export const BON_CORRECTION_REFUSAL_MESSAGES_FR: Record<BonCorrectionRefusal, string> = {
+  BON_ARCHIVE: 'Bon archivé : la copie signée prouve la remise, il ne se corrige plus',
+  BON_NON_REMIS: 'Seul un bon remis se corrige',
+  LIGNE_NON_RECUE: 'Cette ligne n’a pas été scannée reçue',
+  BON_REPARTI:
+    'Ce bon est de nouveau en route : corrigez-le après la clôture de la caisse du ramasseur',
+};
+
+export type BonVersementCorrection =
+  | {
+      ok: true;
+      /** En route with him while his caisse is open; Préparé, unattached, once it is closed. */
+      bonStatusAfter: typeof BonStatus.EN_ROUTE | typeof BonStatus.PREPARE;
+      /** The part of his closed caisse's surplus this bon explains. */
+      coveredBySurplusMillimes: Millimes;
+      /** What the surplus does not cover: the ramasseur's shortfall, for HR. */
+      shortfallMillimes: Millimes;
+      /** Nothing of the surplus is left unexplained: it is marked Vérifié. */
+      surplusExplained: boolean;
+    }
+  | { ok: false; refusal: BonCorrectionRefusal };
+
+/**
+ * A bon de versement scanned Remis by mistake (D-88). While the ramasseur's
+ * caisse of the day he carried it is open, the cash is simply expected from
+ * him again. Once it is closed, the cash he did not hand over came back in
+ * his count as a surplus: the bon's net is taken from that surplus (what an
+ * earlier correction of the same caisse already took excluded), and whatever
+ * it does not cover is his shortfall. The closed session is never rewritten.
+ */
+export function bonVersementCorrection(input: {
+  status: BonStatus;
+  caisseClosed: boolean;
+  netMillimes: Millimes;
+  /** The closed session's écart when positive, else 0. */
+  surplusMillimes: Millimes;
+  surplusAlreadyExplainedMillimes: Millimes;
+}): BonVersementCorrection {
+  if (input.status === BonStatus.ARCHIVE)
+    return { ok: false, refusal: BonCorrectionRefusal.BON_ARCHIVE };
+  if (input.status !== BonStatus.REMIS)
+    return { ok: false, refusal: BonCorrectionRefusal.BON_NON_REMIS };
+  if (!input.caisseClosed) {
+    return {
+      ok: true,
+      bonStatusAfter: BonStatus.EN_ROUTE,
+      coveredBySurplusMillimes: 0n,
+      shortfallMillimes: 0n,
+      surplusExplained: false,
+    };
+  }
+  const left = input.surplusMillimes - input.surplusAlreadyExplainedMillimes;
+  const available = left > 0n ? left : 0n;
+  const covered = available < input.netMillimes ? available : input.netMillimes;
+  return {
+    ok: true,
+    bonStatusAfter: BonStatus.PREPARE,
+    coveredBySurplusMillimes: covered,
+    shortfallMillimes: input.netMillimes - covered,
+    surplusExplained: available > 0n && available === covered,
+  };
+}
+
+export type BonRetourLineCorrection =
+  | {
+      ok: true;
+      parcelTo: ReturnCorrectionTarget;
+      bonStatusAfter: typeof BonStatus.EN_ROUTE | typeof BonStatus.PREPARE;
+    }
+  | { ok: false; refusal: BonCorrectionRefusal };
+
+/**
+ * A line of a bon de retour scanned Retour reçu by mistake (D-88): back with
+ * the ramasseur, the bon En route, while his caisse of the day he received it
+ * is open and he still carries the bon; at the depot, the bon Préparé and
+ * unattached, once that caisse is closed. A bon out again on another trip
+ * waits for that trip's Clôturer.
+ */
+export function bonRetourLineCorrection(input: {
+  bonStatus: BonStatus;
+  lineReceived: boolean;
+  caisseClosed: boolean;
+  /** The bon is carried by the ramasseur whose scan received the line. */
+  sameCarrier: boolean;
+}): BonRetourLineCorrection {
+  if (input.bonStatus === BonStatus.ARCHIVE) {
+    return { ok: false, refusal: BonCorrectionRefusal.BON_ARCHIVE };
+  }
+  if (input.bonStatus === BonStatus.ANNULE) {
+    return { ok: false, refusal: BonCorrectionRefusal.BON_NON_REMIS };
+  }
+  if (!input.lineReceived) return { ok: false, refusal: BonCorrectionRefusal.LIGNE_NON_RECUE };
+  const carried = input.bonStatus === BonStatus.EN_ROUTE || input.bonStatus === BonStatus.REMIS;
+  if (!input.caisseClosed && carried && input.sameCarrier) {
+    return { ok: true, parcelTo: 'RAMASSEUR', bonStatusAfter: BonStatus.EN_ROUTE };
+  }
+  if (input.bonStatus === BonStatus.EN_ROUTE) {
+    return { ok: false, refusal: BonCorrectionRefusal.BON_REPARTI };
+  }
+  return { ok: true, parcelTo: 'DEPOT', bonStatusAfter: BonStatus.PREPARE };
+}
+
 // ── Forms ───────────────────────────────────────────────────
 
 /** At most this many parcels on one bon, so a bon prints on a sane number of pages. */
@@ -185,3 +304,18 @@ export const handOutBonsSchema = z
     message: 'Cochez au moins un bon',
   });
 export type HandOutBonsValues = z.output<typeof handOutBonsSchema>;
+
+/** Corriger un bon (D-88): the admin, with a reason kept staff-side. */
+export const correctBonSchema = z
+  .object({ reason: z.string().trim().min(5, 'Indiquez la raison de la correction').max(500) })
+  .strict();
+export type CorrectBonValues = z.output<typeof correctBonSchema>;
+
+/** Corriger une ligne d'un bon de retour (D-88): which line, and why. */
+export const correctBonRetourLineSchema = correctBonSchema
+  .extend({
+    parcelCode: z.string().trim().toUpperCase().min(1).max(20),
+    itemType: z.enum(['COLIS', 'ARTICLE_RECUPERE']),
+  })
+  .strict();
+export type CorrectBonRetourLineValues = z.output<typeof correctBonRetourLineSchema>;

@@ -122,6 +122,18 @@ describe('as faffago_app, the role the API connects as', () => {
     await expect(asApp(`select count(*) from parcel_events`)).resolves.toBeUndefined();
   });
 
+  it('may only append to bon_corrections (D-88), and even the owner cannot truncate it', async () => {
+    const grants = await db.query<{ privileges: string }>(`
+      select string_agg(privilege_type, ',' order by privilege_type) as privileges
+      from information_schema.role_table_grants
+      where grantee = 'faffago_app' and table_name = 'bon_corrections'`);
+    expect(grants.rows[0]?.privileges).toBe('INSERT,SELECT');
+    await expect(asApp(`delete from bon_corrections`)).rejects.toThrow(
+      /permission denied for table bon_corrections/,
+    );
+    await expect(db.exec(`truncate bon_corrections`)).rejects.toThrow(/ajout seul/);
+  });
+
   it('can still update an ordinary table', async () => {
     await expect(
       asApp(`update parcels set "courierNote" = 'sonner deux fois' where id = '${PARCEL_ID}'`),

@@ -430,6 +430,8 @@ export interface BonVersementRow {
   archivedAt: string | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** The last Correction Faffa Go (D-88). */
+  correctedAt: string | null;
 }
 
 export interface BonVersementDetail extends BonVersementRow {
@@ -491,6 +493,8 @@ export interface BonRetourRow {
   enRouteAt: string | null;
   remisAt: string | null;
   archivedAt: string | null;
+  /** The last Correction Faffa Go (D-88). */
+  correctedAt: string | null;
   visit: BonVisit | null;
   lines: {
     code: string;
@@ -579,6 +583,23 @@ export interface CaisseSession {
   }[];
   bonsRetourEnRoute: { number: string; shopName: string; pendingLines: number }[];
   debt: { id: string; amountMillimes: string; status: string } | null;
+}
+
+/** A bon corrected after the ramasseur's caisse was closed, not covered by a surplus (D-88). */
+export interface BonShortfallRow {
+  correctionId: string;
+  day: string | null;
+  courier: PersonRef | null;
+  bonNumber: string | null;
+  shortfallMillimes: string;
+  reason: string;
+  correctedAt: string;
+}
+
+export interface CaisseEcarts {
+  aVerifier: CaisseEcartRow[];
+  ramasseurs: CaisseEcartRow[];
+  bonsCorriges: BonShortfallRow[];
 }
 
 export interface CaisseEcartRow {

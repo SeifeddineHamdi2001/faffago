@@ -51,6 +51,9 @@ export const AuditAction = {
   ANNULATION_BON_VERSEMENT: 'ANNULATION_BON_VERSEMENT',
   /** A livreur's pay plan, applying from the next period (A-16). */
   CHANGEMENT_PLAN_PAIE: 'CHANGEMENT_PLAN_PAIE',
+  /** A bon scanned Remis, or a return scanned Retour reçu, by mistake, corrected (D-88). */
+  CORRECTION_BON_VERSEMENT: 'CORRECTION_BON_VERSEMENT',
+  CORRECTION_BON_RETOUR: 'CORRECTION_BON_RETOUR',
   /** A fiche de paie marked Payée (Admin 4.12). */
   PAIEMENT_FICHE: 'PAIEMENT_FICHE',
 } as const;

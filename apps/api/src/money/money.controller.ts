@@ -20,6 +20,8 @@ import {
   caisseDaySchema,
   cancelBonSchema,
   changePayPlanSchema,
+  correctBonRetourLineSchema,
+  correctBonSchema,
   debtCancelSchema,
   ecartCheckSchema,
   handOutBonsSchema,
@@ -29,6 +31,8 @@ import {
   type CaisseCountValues,
   type CancelBonValues,
   type ChangePayPlanValues,
+  type CorrectBonRetourLineValues,
+  type CorrectBonValues,
   type DebtCancelValues,
   type EcartCheckValues,
   type HandOutBonsValues,
@@ -40,6 +44,7 @@ import { AllowImpersonation, CurrentPrincipal, Meta, RequirePermission } from '.
 import { sellerIdOf, type Principal, type UserPrincipal } from '../auth/principal';
 import type { RequestMeta } from '../auth/sessions.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { BonCorrectionsService } from './bon-corrections.service';
 import { BonHandoverService } from './bon-handover.service';
 import { BonsRetourService } from './bons-retour.service';
 import { BonsVersementService } from './bons-versement.service';
@@ -181,7 +186,10 @@ export class PaiementsVendeursController {
 
 @Controller('bons-versement')
 export class BonsVersementController {
-  constructor(private readonly bons: BonsVersementService) {}
+  constructor(
+    private readonly bons: BonsVersementService,
+    private readonly corrections: BonCorrectionsService,
+  ) {}
 
   /** Préparer le bon (Admin 4.10). */
   @Post()
@@ -201,8 +209,26 @@ export class BonsVersementController {
 
   @Get(':id')
   @RequirePermission(Permission.BONS_VERSEMENT)
-  detail(@Param('id', ParseUUIDPipe) id: string) {
-    return this.bons.detail(id);
+  async detail(@Param('id', ParseUUIDPipe) id: string) {
+    const [bon, corrections] = await Promise.all([
+      this.bons.detail(id),
+      this.corrections.ofBon({ bonVersementId: id }),
+    ]);
+    return { ...bon, corrections };
+  }
+
+  /** Corriger un bon scanned Remis by mistake (D-88): the admin, with a reason. */
+  @Post(':id/corriger')
+  @RequirePermission(Permission.CORRIGER_BON)
+  @HttpCode(200)
+  async correct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(correctBonSchema)) body: CorrectBonValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    await this.corrections.correctBonVersement(principal as UserPrincipal, id, body.reason, meta);
+    return this.detail(id);
   }
 
   @Get(':id/pdf')
@@ -251,7 +277,10 @@ export class BonsVersementController {
 /** Retours (Admin 4.11): every staff reads; Admin and Dépôt prepare (D-11). */
 @Controller('bons-retour')
 export class BonsRetourController {
-  constructor(private readonly bons: BonsRetourService) {}
+  constructor(
+    private readonly bons: BonsRetourService,
+    private readonly corrections: BonCorrectionsService,
+  ) {}
 
   /** The returns waiting, by seller, with their open bons. */
   @Get()
@@ -268,8 +297,26 @@ export class BonsRetourController {
 
   @Get(':id')
   @RequirePermission(Permission.RETOURS_LECTURE)
-  detail(@Param('id', ParseUUIDPipe) id: string) {
-    return this.bons.detail(id);
+  async detail(@Param('id', ParseUUIDPipe) id: string) {
+    const [bon, corrections] = await Promise.all([
+      this.bons.detail(id),
+      this.corrections.ofBon({ bonRetourId: id }),
+    ]);
+    return { ...bon, corrections };
+  }
+
+  /** Corriger une ligne scanned Retour reçu by mistake (D-88): the admin, with a reason. */
+  @Post(':id/corriger')
+  @RequirePermission(Permission.CORRIGER_BON)
+  @HttpCode(200)
+  async correct(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(correctBonRetourLineSchema)) body: CorrectBonRetourLineValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    await this.corrections.correctBonRetourLine(principal as UserPrincipal, id, body, meta);
+    return this.detail(id);
   }
 
   @Get(':id/pdf')

@@ -63,7 +63,7 @@ export interface ParcelColumnChanges {
   pickedUpAt?: Date;
   deliveredAt?: Date;
   cancelledAt?: Date;
-  closedAt?: Date;
+  closedAt?: Date | null;
 }
 
 export interface ChargeToCreate {
@@ -131,6 +131,10 @@ function stampTimes(
       return;
     case ParcelEventType.RETOUR_RECU:
       columns.closedAt = ctx.now;
+      return;
+    case ParcelEventType.CORRECTION_BON:
+      // A Retour reçu taken back: the parcel's story is open again (D-88).
+      columns.closedAt = null;
       return;
     default:
       return;

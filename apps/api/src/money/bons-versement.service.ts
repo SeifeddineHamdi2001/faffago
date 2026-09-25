@@ -56,6 +56,8 @@ export interface BonVersementView {
   archivedAt: Date | null;
   cancelledAt: Date | null;
   cancelReason: string | null;
+  /** The last Correction Faffa Go (D-88); the seller reads only that and its date. */
+  correctedAt: Date | null;
 }
 
 export interface BonVersementDetail extends BonVersementView {
@@ -79,6 +81,7 @@ const BON_INCLUDE = {
   seller: { select: { id: true, shopName: true, contactFullName: true, contactPhone: true } },
   pickup: { select: { status: true, ramasseurId: true, plannedDate: true } },
   _count: { select: { parcels: { where: { releasedAt: null } } } },
+  corrections: { select: { createdAt: true }, orderBy: { createdAt: 'desc' }, take: 1 },
 } satisfies Prisma.BonVersementInclude;
 
 type BonRow = Prisma.BonVersementGetPayload<{ include: typeof BON_INCLUDE }>;
@@ -434,6 +437,7 @@ export class BonsVersementService {
         archivedAt: row.archivedAt,
         cancelledAt: row.cancelledAt,
         cancelReason: row.cancelReason,
+        correctedAt: row.corrections[0]?.createdAt ?? null,
       };
     });
   }

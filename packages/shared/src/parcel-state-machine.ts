@@ -54,6 +54,11 @@ export const ParcelEventType = {
   MODIFICATION_APPLIQUEE: 'MODIFICATION_APPLIQUEE',
   /** A return taken out and not handed over, back at the depot (D-81, answer 6). */
   RETOUR_NON_REMIS: 'RETOUR_NON_REMIS',
+  /**
+   * The admin corrects a bon scanned Remis, or a return scanned Retour reçu, by
+   * mistake (D-88). The seller reads "Correction Faffa Go", never the reason.
+   */
+  CORRECTION_BON: 'CORRECTION_BON',
 } as const;
 export type ParcelEventType = (typeof ParcelEventType)[keyof typeof ParcelEventType];
 
@@ -78,6 +83,8 @@ export const ParcelAction = {
   /** At the ramasseur's Clôturer: a return he brought back (D-81). */
   RETOUR_NON_REMIS: 'RETOUR_NON_REMIS',
   AUTO_RETOUR_48H: 'AUTO_RETOUR_48H',
+  /** The admin takes back a Retour reçu scanned by mistake (D-88). */
+  CORRECTION_RETOUR_RECU: 'CORRECTION_RETOUR_RECU',
 } as const;
 export type ParcelAction = (typeof ParcelAction)[keyof typeof ParcelAction];
 
@@ -225,6 +232,9 @@ export interface ParcelSnapshot {
   relaunchSlot: RelaunchSlot | null;
 }
 
+/** Where a return scanned Retour reçu by mistake goes back to (D-88). */
+export type ReturnCorrectionTarget = 'RAMASSEUR' | 'DEPOT';
+
 export interface ParcelActionCommand {
   action: ParcelAction;
   actor: Actor;
@@ -239,6 +249,11 @@ export interface ParcelActionCommand {
    */
   postponedTo?: Date | null;
   relaunchSlot?: RelaunchSlot | null;
+  /**
+   * CORRECTION_RETOUR_RECU: back with the ramasseur while his caisse is open,
+   * or at the depot once it is closed (D-88).
+   */
+  correctionTo?: ReturnCorrectionTarget;
   /** The business day the action happens on, used to validate that window. */
   today?: Date;
   maxAttempts: number;
@@ -296,6 +311,7 @@ const ALLOWED_ACTORS: Record<ParcelAction, readonly Actor[]> = {
   DEPART_RETOUR: [Role.ADMIN, Role.DEPOT],
   RETOUR_NON_REMIS: [Role.ADMIN, Role.DEPOT],
   AUTO_RETOUR_48H: [SYSTEM_ACTOR],
+  CORRECTION_RETOUR_RECU: [Role.ADMIN],
 };
 
 function refuse(refusal: ScanRefusal): ParcelTransition {
@@ -891,6 +907,20 @@ export function applyParcelAction(
       };
     }
 
+    case ParcelAction.CORRECTION_RETOUR_RECU: {
+      if (parcel.status !== ParcelStatus.RETOUR_RECU) return refuseByStatus(parcel);
+      if (!command.correctionTo) return refuse(ScanRefusal.MAUVAIS_MODE);
+      // No effect: the return fee was charged when the return was decided (D-88).
+      const withRamasseur = command.correctionTo === 'RAMASSEUR';
+      const status = withRamasseur ? ParcelStatus.RETOUR_EN_ROUTE : ParcelStatus.RETOUR_AU_DEPOT;
+      const location = withRamasseur ? ParcelLocation.AVEC_LE_RAMASSEUR : ParcelLocation.AU_DEPOT;
+      return {
+        ok: true,
+        next: { ...parcel, status, location },
+        events: [event(ParcelEventType.CORRECTION_BON, parcel, status, location)],
+      };
+    }
+
     default: {
       const exhaustive: never = action;
       throw new Error(`Action inconnue : ${String(exhaustive)}`);
@@ -909,6 +939,8 @@ export const CashTransition = {
   BON_REMIS: 'BON_REMIS',
   /** The admin cancelled a bon that never reached the seller (A-5b). */
   BON_ANNULE: 'BON_ANNULE',
+  /** The admin corrects a bon scanned Remis by mistake (D-88). */
+  BON_CORRIGE: 'BON_CORRIGE',
 } as const;
 export type CashTransition = (typeof CashTransition)[keyof typeof CashTransition];
 
@@ -932,6 +964,7 @@ export function applyCashTransition(
         ? ParcelCashStatus.PAYE
         : parcel.cashStatus;
     case CashTransition.BON_ANNULE:
+    case CashTransition.BON_CORRIGE:
       return parcel.cashStatus === ParcelCashStatus.PAYE
         ? ParcelCashStatus.AU_DEPOT
         : parcel.cashStatus;

@@ -68,6 +68,8 @@ export const Permission = {
   VOIR_COMME_VENDEUR: 'VOIR_COMME_VENDEUR',
   /** Nobody but the admin changes a password (A-20, Q7). */
   REGENERER_MOT_DE_PASSE: 'REGENERER_MOT_DE_PASSE',
+  /** Correct a bon scanned Remis, or a return scanned Retour reçu, by mistake (D-88). */
+  CORRIGER_BON: 'CORRIGER_BON',
 
   // ── One space per non-staff role ──────────────────────────
   /** The seller's own data only; the service scopes by the token's seller. */
@@ -116,6 +118,7 @@ export const ROLES_BY_PERMISSION: Readonly<Record<Permission, readonly Role[]>> 
   REIMPRIMER_ETIQUETTE: frozen([ADMIN, DEPOT]),
   VOIR_COMME_VENDEUR: frozen([ADMIN]),
   REGENERER_MOT_DE_PASSE: frozen([ADMIN]),
+  CORRIGER_BON: frozen([ADMIN]),
 
   ESPACE_VENDEUR: frozen([VENDEUR]),
   APP_LIVREUR: frozen([LIVREUR]),

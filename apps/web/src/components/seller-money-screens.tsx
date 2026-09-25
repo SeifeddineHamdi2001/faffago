@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import {
+  BON_CORRECTION_LABEL_FR,
   BON_STATUS_LABELS_FR,
   PARCEL_CASH_STATUS_LABELS_FR,
   PARCEL_STATUS_LABELS_FR,
@@ -115,6 +116,7 @@ function BonVersementLine({ bon, canPrint }: { bon: BonVersementRow; canPrint: b
       <span>
         <strong>{bon.number}</strong> · {when(bon.preparedAt)} ·{' '}
         {BON_STATUS_LABELS_FR[bon.status as BonStatus]}
+        {bon.correctedAt && <Correction at={bon.correctedAt} />}
         <span className="block text-navy/70">
           {bon.parcelCount} colis · total {dt(bon.totalCodMillimes)} − frais{' '}
           {dt(bon.totalFeesMillimes)}
@@ -211,6 +213,7 @@ function BonRetourLine({ bon, canPrint }: { bon: BonRetourRow; canPrint: boolean
       <span>
         <strong>{bon.number}</strong> · {when(bon.preparedAt)} ·{' '}
         {BON_STATUS_LABELS_FR[bon.status as BonStatus]}
+        {bon.correctedAt && <Correction at={bon.correctedAt} />}
         <span className="block text-navy/70">{bon.lines.length} article(s)</span>
       </span>
       {canPrint && (
@@ -224,5 +227,14 @@ function BonRetourLine({ bon, canPrint }: { bon: BonRetourRow; canPrint: boolean
         </a>
       )}
     </li>
+  );
+}
+
+/** A bon corrected by the team (D-88): the seller reads this, never the reason. */
+function Correction({ at }: { at: string }) {
+  return (
+    <span className="ml-2 rounded bg-navy/10 px-1 text-xs text-navy">
+      {BON_CORRECTION_LABEL_FR} · {when(at)}
+    </span>
   );
 }

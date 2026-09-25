@@ -40,6 +40,7 @@ const BON_INCLUDE = {
       },
     },
   },
+  corrections: { select: { createdAt: true }, orderBy: { createdAt: 'desc' as const }, take: 1 },
 } satisfies Prisma.BonRetourInclude;
 
 type BonRow = Prisma.BonRetourGetPayload<{ include: typeof BON_INCLUDE }>;
@@ -192,6 +193,8 @@ export class BonsRetourService {
         enRouteAt: row.enRouteAt,
         remisAt: row.remisAt,
         archivedAt: row.archivedAt,
+        /** The last Correction Faffa Go (D-88). */
+        correctedAt: row.corrections[0]?.createdAt ?? null,
         visit: enRoute
           ? {
               ramasseur: ref(row.ramasseurId!),

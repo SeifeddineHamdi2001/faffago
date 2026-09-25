@@ -6,7 +6,7 @@ import { useState, type FormEvent } from 'react';
 import { CAISSE_SESSION_STATUS_LABELS_FR, ROLE_LABELS_FR, type Role } from '@faffago/shared';
 import { bff } from '@/lib/client/call';
 import { day, dt, ecart } from '@/lib/money';
-import type { CaisseEcartRow, CaisseSummary } from '@/lib/types';
+import type { CaisseEcartRow, CaisseEcarts, CaisseSummary } from '@/lib/types';
 import { Dialog } from './dialog';
 
 const STATUS_STYLE = {
@@ -28,7 +28,7 @@ export function CaisseScreen({
   summary: CaisseSummary;
   today: string;
   /** The admin's list (CAISSE_ECARTS); null for Dépôt. */
-  ecarts: { aVerifier: CaisseEcartRow[]; ramasseurs: CaisseEcartRow[] } | null;
+  ecarts: CaisseEcarts | null;
 }) {
   const { rows, totals } = summary;
   return (
@@ -159,11 +159,7 @@ function Tile({ label, value }: { label: string; value: string }) {
 }
 
 /** Admin only: surpluses to check with a note (answer 3), ramasseur shortfalls for HR. */
-function Ecarts({
-  ecarts,
-}: {
-  ecarts: { aVerifier: CaisseEcartRow[]; ramasseurs: CaisseEcartRow[] };
-}) {
+function Ecarts({ ecarts }: { ecarts: CaisseEcarts }) {
   const router = useRouter();
   const [checking, setChecking] = useState<CaisseEcartRow | null>(null);
   const [note, setNote] = useState('');
@@ -227,6 +223,25 @@ function Ecarts({
               <li key={row.sessionId} className="py-2">
                 {row.courier.firstName} {row.courier.lastName} · {day(row.day)} · manque{' '}
                 <strong>{ecart(row.ecartMillimes)}</strong>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card mt-4">
+        <h2 className="mb-2 font-display text-lg font-bold text-navy">
+          Bons corrigés après clôture, non couverts par un surplus (RH)
+        </h2>
+        {ecarts.bonsCorriges.length === 0 ? (
+          <p className="text-sm text-navy/70">Aucun manque.</p>
+        ) : (
+          <ul className="divide-y divide-navy/10 text-sm">
+            {ecarts.bonsCorriges.map((row) => (
+              <li key={row.correctionId} className="py-2">
+                {row.courier ? `${row.courier.firstName} ${row.courier.lastName}` : '—'}
+                {row.day && ` · ${day(row.day)}`} · {row.bonNumber} · manque{' '}
+                <strong>{dt(row.shortfallMillimes)}</strong>
+                <span className="block text-navy/70">{row.reason}</span>
               </li>
             ))}
           </ul>

@@ -167,6 +167,9 @@ enum ParcelEventType {
   MODIFICATION_APPLIQUEE
   /// A return taken out and not handed over, back at the depot (D-81).
   RETOUR_NON_REMIS
+  /// A bon scanned Remis, or a return scanned Retour reçu, by mistake,
+  /// corrected by the admin (D-88).
+  CORRECTION_BON
 }
 
 enum ScanAction {
@@ -1101,6 +1104,7 @@ model BonVersement {
   charges     SellerCharge[]
   certificate RetenueCertificate?
   caisseLines CaisseSessionBon[]
+  corrections BonCorrection[]
 
   @@index([sellerId, status])
   @@index([status, preparedAt])
@@ -1170,10 +1174,11 @@ model BonRetour {
   cancelReason      String?
   pdfStorageKey     String?
 
-  seller    Seller            @relation(fields: [sellerId], references: [id])
-  ramasseur Courier?          @relation(fields: [ramasseurId], references: [id])
-  pickup    Pickup?           @relation(fields: [pickupId], references: [id])
-  parcels   BonRetourParcel[]
+  seller      Seller            @relation(fields: [sellerId], references: [id])
+  ramasseur   Courier?          @relation(fields: [ramasseurId], references: [id])
+  pickup      Pickup?           @relation(fields: [pickupId], references: [id])
+  parcels     BonRetourParcel[]
+  corrections BonCorrection[]
 
   @@index([sellerId, status])
   @@map("bons_retour")
@@ -1194,6 +1199,43 @@ model BonRetourParcel {
   @@id([bonRetourId, parcelId, itemType])
   @@index([parcelId])
   @@map("bon_retour_parcels")
+}
+
+/// A bon scanned Remis, or a line of a bon de retour scanned Retour reçu, by
+/// mistake, corrected by the admin with a reason (D-88). Append-only: the
+/// trigger and the grants of its migration refuse any change.
+model BonCorrection {
+  id                       String             @id @default(uuid()) @db.Uuid
+  bonVersementId           String?            @db.Uuid
+  bonRetourId              String?            @db.Uuid
+  /// A bon de retour's line: the parcel and what it was.
+  parcelId                 String?            @db.Uuid
+  itemType                 BonRetourItemType?
+  /// The scan made by mistake, now marked cancelled with the same reason.
+  scanId                   String?            @db.Uuid
+  statusBefore             BonStatus
+  statusAfter              BonStatus
+  /// The ramasseur's caisse of the day, and whether it was already closed.
+  courierId                String?            @db.Uuid
+  caisseSessionId          String?            @db.Uuid
+  caisseClosed             Boolean
+  /// Closed caisse (bon de versement): the part of its surplus this bon
+  /// explains, and what it does not cover, the ramasseur's shortfall for HR.
+  coveredBySurplusMillimes BigInt             @default(0)
+  shortfallMillimes        BigInt             @default(0)
+  reason                   String
+  actorUserId              String             @db.Uuid
+  createdAt                DateTime           @default(now())
+
+  bonVersement  BonVersement?  @relation(fields: [bonVersementId], references: [id])
+  bonRetour     BonRetour?     @relation(fields: [bonRetourId], references: [id])
+  caisseSession CaisseSession? @relation(fields: [caisseSessionId], references: [id])
+
+  @@index([bonVersementId])
+  @@index([bonRetourId])
+  @@index([caisseSessionId])
+  @@index([shortfallMillimes, createdAt])
+  @@map("bon_corrections")
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1224,10 +1266,11 @@ model CaisseSession {
   closedAt       DateTime?
   closedByUserId String?   @db.Uuid
 
-  courier Courier               @relation(fields: [courierId], references: [id])
-  parcels CaisseSessionParcel[]
-  bons    CaisseSessionBon[]
-  debts   CourierDebt[]
+  courier     Courier               @relation(fields: [courierId], references: [id])
+  parcels     CaisseSessionParcel[]
+  bons        CaisseSessionBon[]
+  debts       CourierDebt[]
+  corrections BonCorrection[]
 
   @@unique([courierId, businessDate])
   @@index([businessDate, status])

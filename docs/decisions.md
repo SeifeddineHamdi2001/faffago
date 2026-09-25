@@ -1724,7 +1724,8 @@ permission beyond D-79 to D-85).
   belongs to any later open session of its courier; the first one counted
   writes it into its lines, and no other session counts it after that.
 - **Bon steps are not undone.** A Remis or Retour reçu scan, and an
-  Archivage, are corrected by the admin (`ANNULATION_BON`); a Préparation
+  Archivage, are corrected by the admin (`ANNULATION_BON`; the correction is
+  D-88); a Préparation
   retours scan is cancelled like any depot scan, the line leaving the bon.
 - **Handing out a bon** needs a ramasseur active and taking work (D-12), and
   his caisse of today not closed; it opens that session if needed.
@@ -1802,6 +1803,54 @@ a permission).
 `packages/shared/src/public-site.ts`, `apps/web/src/app/(public)`,
 `apps/web/src/components/public`, `apps/web/src/lib/locale.ts`,
 `apps/web/src/lib/public-texts.ts`, `apps/web/src/middleware.ts`.
+
+### D-88 · Correcting a bon scanned by mistake
+
+Decided 2026-09-25, the proposal of the pre-phase-9 check approved with two
+additions. Replaces D-86's "the admin corrects (`ANNULATION_BON`)", which had
+no path behind it.
+
+- **Who and how**: the admin alone (`CORRIGER_BON`), a reason required, one
+  transaction, audited (`CORRECTION_BON_VERSEMENT`, `CORRECTION_BON_RETOUR`),
+  one append-only `bon_corrections` row. The mistaken scan (Remis, Retour
+  reçu) is marked cancelled with the reason, so public tracking and the
+  delivery rate drop it. **Refused once the bon is Archivé**: the signed copy
+  proves the seller received it. **No fee changes**: the charges on the bon
+  stay Déduite; the return fee was charged when the return was decided.
+- **Bon de versement scanned Remis**, the ramasseur's caisse of the day he
+  carried it still open: the bon goes back **En route** with him, each
+  parcel's cash **Payé → Au dépôt** (one `CORRECTION_BON` event, the parcel
+  reopened), and his caisse expects the net again (a count made since must be
+  redone).
+- **Same, his caisse already closed**: the bon goes back **Préparé**,
+  unattached, the cash Au dépôt; the closed session is never rewritten. His
+  surplus of that session explains the bon: the part it covers is recorded,
+  and a surplus fully explained is marked Vérifié with "Expliqué par la
+  correction du bon BV-…". **No matching surplus** (addition 1): what the
+  surplus does not cover is recorded as **his shortfall, for HR**, with the bon
+  and the reason, listed in Caisse › "Bons corrigés après clôture, non
+  couverts par un surplus (RH)" beside the other ramasseur écarts; never a
+  courier debt (ramasseurs are paid outside the app). A surplus is never used
+  twice for two bons of the same session.
+- **A line of a bon de retour scanned Retour reçu**: the new transition out of
+  Retour reçu (`CORRECTION_RETOUR_RECU`, admin only). The ramasseur's caisse
+  of the day of that scan still open and the bon still his: the parcel goes
+  back **Retour en route** with him, the bon En route (his Clôturer then brings
+  it back as D-81 says). Closed: the parcel goes back **Retour au dépôt**, at
+  the depot, the bon **Préparé** and unattached. The old item of an échange
+  follows its line (`exchangeItemStatus`), the parcel itself does not move. A
+  bon out again on another trip waits for that trip's Clôturer.
+- **The seller** (addition 2) reads **"Correction Faffa Go"** on his bon in
+  Paiements or Retours (with its date) and on the parcel's timeline; never the
+  reason. Staff read the reason on the bon, the Colis log and the audit.
+- **Not built**: undoing a wrong Archivage scan (Archivé → Remis), proposed as a
+  separate action with no money effect; not requested.
+
+**Where.** `bonVersementCorrection`, `bonRetourLineCorrection`,
+`correctBonSchema` in `packages/shared/src/bons.ts`; `CORRECTION_RETOUR_RECU`,
+`CashTransition.BON_CORRIGE` in `parcel-state-machine.ts`;
+`apps/api/src/money/bon-corrections.service.ts`; migration
+`20261011000000_bon_corrections`.
 
 ---
 

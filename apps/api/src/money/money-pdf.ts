@@ -373,7 +373,12 @@ export async function renderBonRetour(bon: BonRetourPdf): Promise<Buffer> {
     );
     if (y + 108 > BOTTOM) y = newPage();
     line(doc, `${bon.lines.length} article(s) rendu(s)`, MARGIN, y + 8, WIDTH, { bold: true });
-    signatures(doc, y + 20, 'Remis par (ramasseur Faffa Go)', 'Reçu par (le contact, pour le vendeur)');
+    signatures(
+      doc,
+      y + 20,
+      'Remis par (ramasseur Faffa Go)',
+      'Reçu par (le contact, pour le vendeur)',
+    );
   }
   doc.end();
   return done;

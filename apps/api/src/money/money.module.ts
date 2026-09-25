@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ParcelsModule } from '../parcels/parcels.module';
+import { BonCorrectionsService } from './bon-corrections.service';
 import { BonHandoverService } from './bon-handover.service';
 import { BonsRetourService } from './bons-retour.service';
 import { BonsVersementService } from './bons-versement.service';
@@ -31,6 +32,7 @@ import { SellerMoneyService } from './seller-money.service';
     SellerMoneyController,
   ],
   providers: [
+    BonCorrectionsService,
     BonHandoverService,
     BonsRetourService,
     BonsVersementService,

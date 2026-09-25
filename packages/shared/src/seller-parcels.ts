@@ -232,6 +232,7 @@ export const PARCEL_EVENT_LABELS_FR: Record<ParcelEventType, string> = {
   ANNULATION_SCAN: 'Scan annulé',
   MODIFICATION_APPLIQUEE: 'Modification appliquée',
   RETOUR_NON_REMIS: 'Retour ramené au dépôt',
+  CORRECTION_BON: 'Correction Faffa Go',
 };
 
 /**

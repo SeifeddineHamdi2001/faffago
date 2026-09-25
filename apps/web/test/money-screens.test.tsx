@@ -73,9 +73,23 @@ describe('Caisse (Admin 4.9, D-79)', () => {
             },
           ],
           ramasseurs: [],
+          bonsCorriges: [
+            {
+              correctionId: 'c1',
+              day: '2026-09-24',
+              courier: { userId: 'u-sami', firstName: 'Sami', lastName: 'Trabelsi' },
+              bonNumber: 'BV-2026-0924-02',
+              shortfallMillimes: '78000',
+              reason: 'Le vendeur n’a jamais reçu le bon',
+              correctedAt: '2026-09-25T09:00:00.000Z',
+            },
+          ],
         }}
       />,
     );
+    // A bon corrected after closing, not covered by a surplus: for HR (D-88).
+    expect(screen.getByText(/BV-2026-0924-02 · manque/)).toBeInTheDocument();
+    expect(screen.getByText('Le vendeur n’a jamais reçu le bon')).toBeInTheDocument();
     const row = screen.getByRole('link', { name: 'Ali Ben Salah' }).closest('tr')!;
     expect(within(row).getByText('Ouverte')).toBeInTheDocument();
     expect(within(row).getByText('1 tardif')).toBeInTheDocument();
@@ -310,6 +324,7 @@ describe('Retours (Admin 4.11)', () => {
     render(
       <ReturnsScreen
         groups={groups}
+        remis={[]}
         ramasseurs={[]}
         permissions={['BONS_RETOUR']}
         today="2026-09-25"
@@ -317,6 +332,71 @@ describe('Retours (Admin 4.11)', () => {
     );
     expect(screen.getByText(/Ancien article \(échange\)/)).toBeInTheDocument();
     expect(screen.getByText(/BR-2026-0925-01/)).toBeInTheDocument();
+  });
+});
+
+describe('Corriger une ligne de bon de retour (D-88)', () => {
+  it('lets the admin correct a line of a bon remis, with a reason', async () => {
+    bff.mockResolvedValue({ ok: true, data: {} });
+    render(
+      <ReturnsScreen
+        groups={[]}
+        remis={[
+          {
+            id: 'br1',
+            number: 'BR-2026-0925-03',
+            status: 'REMIS',
+            seller: {
+              id: 's1',
+              shopName: 'Chic',
+              contactFullName: 'Amel',
+              contactPhone: '22000000',
+            },
+            preparedAt: '2026-09-25T07:00:00.000Z',
+            enRouteAt: '2026-09-25T07:30:00.000Z',
+            remisAt: '2026-09-25T09:00:00.000Z',
+            archivedAt: null,
+            correctedAt: null,
+            visit: null,
+            lines: [
+              {
+                code: 'FG-DDDDDDDD',
+                recipientName: 'Client',
+                productDescription: 'Robe',
+                itemType: 'COLIS',
+                received: true,
+                receivedAt: '2026-09-25T09:00:00.000Z',
+              },
+            ],
+            pendingCount: 0,
+          },
+        ]}
+        ramasseurs={[]}
+        permissions={['BONS_RETOUR', 'CORRIGER_BON']}
+        today="2026-09-25"
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Corriger' }));
+    await userEvent.type(screen.getByLabelText('Raison'), 'Scanné chez le mauvais vendeur');
+    await userEvent.click(screen.getByRole('button', { name: 'Corriger le retour' }));
+    expect(bff).toHaveBeenCalledWith('POST', 'bons-retour/br1/corriger', {
+      parcelCode: 'FG-DDDDDDDD',
+      itemType: 'COLIS',
+      reason: 'Scanné chez le mauvais vendeur',
+    });
+  });
+
+  it('shows no correction without the permission', () => {
+    render(
+      <ReturnsScreen
+        groups={[]}
+        remis={[]}
+        ramasseurs={[]}
+        permissions={['BONS_RETOUR']}
+        today="2026-09-25"
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Corriger' })).toBeNull();
   });
 });
 
@@ -397,6 +477,7 @@ describe('the seller’s money (Vendeur 4.11, 4.12)', () => {
               archivedAt: null,
               cancelledAt: null,
               cancelReason: null,
+              correctedAt: '2026-09-22T10:00:00.000Z',
             },
           ],
         }}
@@ -405,6 +486,8 @@ describe('the seller’s money (Vendeur 4.11, 4.12)', () => {
     expect(
       within(screen.getByRole('region', { name: 'À recevoir' })).getByText('78,000 DT'),
     ).toBeInTheDocument();
+    // Corrected by the team: the label only, never the reason (D-88).
+    expect(screen.getByText(/Correction Faffa Go/)).toBeInTheDocument();
     // The worked example of Vendeur 2.4.
     expect(screen.getByText(/retenue à la source 3 % 27,480 DT/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Imprimer' })).toHaveAttribute(

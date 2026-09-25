@@ -263,7 +263,10 @@ function Line({ label, value, strong }: { label: string; value: string; strong?:
   );
 }
 
-/** His bons: print, assign a visit when no pickup is planned, cancel while Préparé. */
+/**
+ * His bons: print, assign a visit when no pickup is planned, cancel while
+ * Préparé, correct one scanned Remis by mistake (D-88).
+ */
 function Bons({
   bons,
   ramasseurs,
@@ -276,6 +279,7 @@ function Bons({
   const router = useRouter();
   const [assigning, setAssigning] = useState<BonVersementRow | null>(null);
   const [cancelling, setCancelling] = useState<BonVersementRow | null>(null);
+  const [correcting, setCorrecting] = useState<BonVersementRow | null>(null);
   const [ramasseurId, setRamasseurId] = useState('');
   const [date, setDate] = useState(today);
   const [reason, setReason] = useState('');
@@ -291,6 +295,8 @@ function Bons({
     }
     setAssigning(null);
     setCancelling(null);
+    setCorrecting(null);
+    setReason('');
     router.refresh();
   }
 
@@ -316,6 +322,7 @@ function Bons({
                       : bon.cancelReason
                         ? `Annulé : ${bon.cancelReason}`
                         : ''}
+                  {bon.correctedAt && ` · Corrigé le ${when(bon.correctedAt)}`}
                 </span>
               </span>
               <span className="flex gap-2">
@@ -328,6 +335,15 @@ function Bons({
                   >
                     Imprimer
                   </a>
+                )}
+                {bon.status === 'REMIS' && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setCorrecting(bon)}
+                  >
+                    Corriger
+                  </button>
                 )}
                 {bon.status === 'PREPARE' && (
                   <>
@@ -439,6 +455,49 @@ function Bons({
                 Annuler le bon
               </button>
               <button type="button" className="btn-secondary" onClick={() => setCancelling(null)}>
+                Retour
+              </button>
+            </div>
+          </form>
+        </Dialog>
+      )}
+      {correcting && (
+        <Dialog title={`Corriger ${correcting.number}`} onDismiss={() => setCorrecting(null)}>
+          <form
+            className="space-y-3"
+            onSubmit={(event) =>
+              send(event, `bons-versement/${correcting.id}/corriger`, { reason })
+            }
+          >
+            <p className="text-sm">
+              Seulement pour un bon scanné remis par erreur. Si la caisse du ramasseur de ce jour
+              est ouverte, le bon repart en route avec lui et sa caisse attend de nouveau l’argent.
+              Si elle est clôturée, le bon redevient préparé : son surplus couvre le montant, et ce
+              qui manque est inscrit pour les RH. Les frais ne changent pas. Le vendeur voit «
+              Correction Faffa Go », jamais la raison.
+            </p>
+            <label htmlFor="bon-correction" className="field-label">
+              Raison
+            </label>
+            <textarea
+              id="bon-correction"
+              className="field"
+              required
+              minLength={5}
+              maxLength={500}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+            />
+            {error && (
+              <p role="alert" className="text-sm text-red-700">
+                {error}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button type="submit" className="btn-primary">
+                Corriger le bon
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setCorrecting(null)}>
                 Retour
               </button>
             </div>
