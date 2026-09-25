@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { seed } from '../../prisma/seed';
-import { seedDemo, seedDemoOperations } from '../../prisma/seed-demo';
+import { seedDemo, seedDemoFailures, seedDemoOperations } from '../../prisma/seed-demo';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
 import { PrismaService } from '../../src/common/prisma/prisma.service';
@@ -40,6 +40,8 @@ async function main(): Promise<void> {
   });
   await seedDemo(prisma, { nodeEnv: 'test' });
   await seedDemoOperations(prisma, { nodeEnv: 'test' });
+  // Phase 7: two failed deliveries waiting on the demo seller.
+  await seedDemoFailures(prisma, { nodeEnv: 'test' });
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(PrismaService)

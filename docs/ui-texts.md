@@ -624,6 +624,48 @@ plans and the API's refusals have their Arabic in the same file
 | web Exceptions (D-59)                 | Marquer comme traité                                                                                                                                                                                                                      |
 | app.json, permissions                 | La caméra sert à scanner les étiquettes des colis. · La position est enregistrée avec chaque scan.                                                                                                                                        |
 
+## À vérifier (phase 7)
+
+### Seller (`/vendeur/a-verifier`, Détail du colis, Tableau de bord)
+
+| Key                                                    | Français                                                                                                                                                    |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `seller-verify-screen` — intro                     | Appelez votre client, puis choisissez : Relancer, Retourner ou Changer de client. Sans décision sous 48 heures, le colis vous est retourné automatiquement. |
+| web `seller-verify-screen` — vide                      | Aucun colis à vérifier.                                                                                                                                     |
+| web `seller-verify-screen` — ligne                     | Tentative {n} sur {max} · {lieu} · {n} appel(s) Faffa Go · Décider                                                                                          |
+| web note du livreur (D-71)                             | Note du livreur : « {note} »                                                                                                                                |
+| web `time-left`                                        | Retour automatique dans {durée} · Retour automatique en cours · (équipe) Retour dans {durée}                                                                |
+| `timeLeftLabelFR`                                      | {h} h {mm} min · {h} h · {m} min · moins d’une minute                                                                                                       |
+| web `seller-nav` — badge                               | {n} colis à vérifier                                                                                                                                        |
+| web `verify-banner`                                    | Moins de 24 h pour décider sur {n} colis · Sans décision, il vous sera retourné automatiquement.                                                            |
+| web `seller-decisions` — titre                         | Votre décision                                                                                                                                              |
+| web `seller-decisions` — Relancer                      | Une nouvelle tentative, gratuite, au client actuel. Corrigez ce qui a changé ; pour une autre localité, utilisez « Demander une modification ».             |
+| web `seller-decisions` — champs date                   | Jour de livraison · Créneau (facultatif) · Toute la journée                                                                                                 |
+| web `seller-decisions` — boutons                       | Changer la date · Enregistrer la date · Retourner le colis · Garder le colis                                                                                |
+| web `seller-decisions` — Retourner                     | Le colis devient un retour et vous sera rendu par le ramasseur. Frais de retour : {montant}, déduits de votre prochain paiement.                            |
+| web `seller-decisions` — Changer de client             | Frais de changement de client : {montant}, déduits de votre prochain paiement. Une seule fois par colis ; les tentatives repartent à zéro.                  |
+| web `parcel-screen` — relance                          | Relancé pour {jour}{ (créneau)} · Reporté au {jour}{ (créneau)}, à la demande du client · (historique) pour {jour}                                          |
+| `DEPOT_REPRINT_NOTICE`                                 | Informations mises à jour. Faffa Go réimprime l’étiquette au dépôt, avec le même code.                                                                      |
+| `SCAN_REFUSAL_MESSAGES_FR.DATE_RELANCE_REQUISE` (D-76) | Choisissez le jour de la nouvelle tentative de livraison                                                                                                    |
+| `DECISION_MESSAGES_FR`                                 | Ce colis n’attend plus de décision. Rechargez la page. · Disponible au retour au dépôt : le livreur a encore le colis.                                      |
+
+### Team (`/admin/a-verifier`, Colis)
+
+| Key                              | Français                                                                                                                                         |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| web `follow-up-screen` — intro   | Le vendeur décide : Relancer, Retourner ou Changer de client. Faffa Go appelle le client ou le vendeur et note ses appels ; le vendeur les voit. |
+| web `follow-up-screen` — ligne   | Client : {nom} · {tél} · Vendeur : {boutique} · {contact} · {tél} · Dernier appel : {date} · {résultat} · {note} ({n}) · Aucun appel             |
+| web `calls-panel`                | Noter un appel · Résultat de l’appel · Note (visible par le vendeur) · Enregistrer l’appel · Indiquez si le client a répondu. · Aucun appel.     |
+| `callOutcomeLabelFR`             | Répondu · Pas de réponse                                                                                                                         |
+| API, appel refusé                | Ce colis n’est pas encore ramassé ou son parcours est terminé.                                                                                   |
+| web Colis — changement de client | Ancien client : {nom} · COD {avant} → {après} · Frais {montant}                                                                                  |
+
+### Courier app
+
+| Key                   | Français               | العربية      |
+| --------------------- | ---------------------- | ------------ |
+| `noteVisibleToSeller` | Visible par le vendeur | يراها البائع |
+
 ## Terminal (équipe technique uniquement)
 
 `admin:reset`, `db:seed`, `db:seed:demo` and `documents:verify` print short French messages

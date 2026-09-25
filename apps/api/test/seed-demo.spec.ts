@@ -10,6 +10,9 @@ import {
   demoParcelRequestId,
   seedDemo,
   seedDemoOperations,
+  seedDemoFailures,
+  demoFailureRequestId,
+  DEMO_FAILURES,
 } from '../prisma/seed-demo';
 import { pgliteAdapter } from './support/pglite-adapter';
 import { applyMigrations } from './migrations';
@@ -176,6 +179,43 @@ describe('seedDemoOperations: work for the back office screens (D-50)', () => {
       },
     });
     expect(slot.courierId).toBe(other.courier!.id);
+  });
+
+  it('adds two failed deliveries for À vérifier, one back at the depot under 24 hours (phase 7)', async () => {
+    const now = new Date('2026-09-25T08:00:00.000Z');
+    await expect(seedDemoFailures(client, { nodeEnv: 'production', now })).rejects.toThrow(
+      /production/,
+    );
+
+    expect(await seedDemoFailures(client, { nodeEnv: 'development', now })).toBe(2);
+
+    const failed = (i: number) =>
+      client.parcel.findUniqueOrThrow({
+        where: { clientRequestId: demoFailureRequestId(i) },
+        include: { events: { orderBy: { sequence: 'asc' } } },
+      });
+    const withLivreur = await failed(0);
+    const atDepot = await failed(1);
+    expect(withLivreur).toMatchObject({
+      status: 'A_VERIFIER',
+      location: 'AVEC_LE_LIVREUR',
+      attemptCount: 1,
+      lastFailureReason: DEMO_FAILURES[0]!.reason,
+      lastFailureNote: DEMO_FAILURES[0]!.note,
+    });
+    expect(withLivreur.verifyDeadlineAt?.toISOString()).toBe('2026-09-27T06:00:00.000Z');
+    expect(atDepot).toMatchObject({ status: 'A_VERIFIER', location: 'AU_DEPOT' });
+    expect(atDepot.verifyDeadlineAt!.getTime() - now.getTime()).toBe(8 * 3_600_000);
+    expect(atDepot.events.map((e) => e.type)).toEqual([
+      'CREATION',
+      'RAMASSAGE',
+      'ENTREE_DEPOT',
+      'SORTIE_COURSIER',
+      'ECHEC_LIVRAISON',
+      'RETOUR_DE_TOURNEE',
+    ]);
+
+    expect(await seedDemoFailures(client, { nodeEnv: 'development', now })).toBe(0);
   });
 });
 

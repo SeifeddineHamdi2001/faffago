@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-69** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-69 are rules |
+| **D-1 … D-77** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-77 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-69**
+**Rules decided during the build — D-4 to D-77**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -98,6 +98,14 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-67 · Pickup scans and Terminer le ramassage](#d-67--pickup-scans-and-terminer-le-ramassage)
 - [D-68 · Mémoire d'adresse](#d-68--mémoire-dadresse)
 - [D-69 · The courier app's technical choices](#d-69--the-courier-apps-technical-choices)
+- [D-70 · Relancer corrects the parcel directly](#d-70--relancer-corrects-the-parcel-directly)
+- [D-71 · The seller reads the courier's note on a failure](#d-71--the-seller-reads-the-couriers-note-on-a-failure)
+- [D-72 · Changer de client withdraws a waiting change request](#d-72--changer-de-client-withdraws-a-waiting-change-request)
+- [D-73 · Appels Faffa Go](#d-73--appels-faffa-go)
+- [D-74 · Changer de client, in detail](#d-74--changer-de-client-in-detail)
+- [D-75 · The 48-hour job](#d-75--the-48-hour-job)
+- [D-76 · The in-app alert, the lists and the wording](#d-76--the-in-app-alert-the-lists-and-the-wording)
+- [D-77 · Demo parcels waiting on the seller](#d-77--demo-parcels-waiting-on-the-seller)
 
 **Money — A-1 to A-5**
 
@@ -714,7 +722,8 @@ in a database error. The date is checked in the same tomorrow-to-7-days
 window as before.
 
 The message is neutral for now (_Date de relance obligatoire_); the wording
-the seller reads comes with the À vérifier screen (phase 7).
+the seller reads comes with the À vérifier screen (phase 7). _Worded in
+**D-76**: "Choisissez le jour de la nouvelle tentative de livraison"._
 
 **Where.** The `DECISION_RELANCER` branch of `parcel-state-machine.ts`.
 
@@ -938,7 +947,7 @@ of 4.12; Annulé is struck through.
 automatic rules "Faffa Go", a courier his first name only (D-38); the
 place is a label, never GPS. The failure reason is shown. **The courier's
 free-text note is hidden** until phase 7 (À vérifier) decides what the
-seller reads of it. Status corrections and cancelled scans are shown.
+seller reads of it. _Superseded by **D-71**: the seller reads it._ Status corrections and cancelled scans are shown.
 
 **Exporter**: the table's columns plus phone 2 and the address,
 `;`-separated with a byte-order mark, at most 10 000 rows.
@@ -1381,6 +1390,143 @@ Decided 2026-09-25, building phase 6.
   the web's `react-dom` beside the app's `react` and broke every web test;
   the web app steps back from 19.3.0. React moves in both apps together, when
   the Expo SDK moves.
+
+### D-70 · Relancer corrects the parcel directly
+
+Decided 2026-09-25, with the phase 7 plan. Vendeur 4.9 lets the seller
+"correct the phone, address or note" with Relancer; D-44 sends every change
+after pickup through Demander une modification. For Relancer, Vendeur 4.9 wins:
+
+- The Relancer form offers **phone, phone 2, address, landmark and Note pour
+  le coursier**, pre-filled. What the seller changes is **applied at once**,
+  with the decision, in the same transaction.
+- Each changed field is written **before and after** on the
+  `DECISION_RELANCER` event (`metadata.changes`), like a Modifier (D-41).
+- A changed **printed** field sets `labelReprintNeeded` (D-57): the depot
+  reprints with the same code when the parcel comes back (A-9). The seller
+  reads "Faffa Go réimprime l'étiquette au dépôt". The courier note is not
+  printed (D-45), so it alone asks for no reprint.
+- The **localité** is not on the form: it changes the zone and applies only
+  at the depot, so it stays a change request (D-44).
+
+**Where.** `relancerSchema`, `RELANCER_CORRECTION_FIELDS` in
+`packages/shared/src/a-verifier.ts`; `DecisionsService.relancer`.
+
+### D-71 · The seller reads the courier's note on a failure
+
+Decided 2026-09-25, closing what D-46 left for phase 7. **Supersedes the
+"note hidden" line of D-46.**
+
+- The courier's free text on an Échec is shown to the seller **for every
+  reason**, as **"Note du livreur : « … »"**: under the reason on Détail du
+  colis and in the À vérifier list, and on each Échec line of the history.
+- **Never on public tracking** (landing 4.3). No other free text of an event
+  reaches the seller (a correction's reason stays staff-side).
+- The courier app says so under the note field: **"Visible par le vendeur"**
+  (Arabic: يراها البائع).
+
+**Why.** "Client disponible après 17 h" is what the seller needs to decide.
+D-9 already showed the note of a postponement.
+
+### D-72 · Changer de client withdraws a waiting change request
+
+Decided 2026-09-25. A request filed for the old customer must never be applied
+to the new one: Changer de client sets any request still En attente to
+**Retirée**, handled by the seller, in the same transaction. Retourner and
+Annuler après ramassage need nothing: applying is already refused once the
+parcel is a return (`COLIS_HORS_DELAI`).
+
+### D-73 · Appels Faffa Go
+
+Decided 2026-09-25 (Admin 2, 4.6; Vendeur 4.8, rule 18; D-11).
+
+- **Who logs**: Admin and Service client (`SUIVI_A_VERIFIER`), from the
+  À vérifier follow-up or the Colis page: `POST /colis/:code/appels`.
+- **What**: answered or not (**Répondu** / **Pas de réponse**) and an optional
+  note (300 characters), at the **server's time**.
+- **When**: from pickup until the parcel's journey ends (not Créé, Annulé or
+  Retour reçu).
+- **Never edited, never deleted**. A mistake is corrected by logging again.
+- **The seller** reads time, outcome and note, as "Faffa Go", never the staff
+  member. **The team** reads who called.
+- The calls are the team's to the customer or to the seller; one log for both.
+
+**Where.** `logCallSchema`, `canLogCall`; `CallsService`.
+
+### D-74 · Changer de client, in detail
+
+Decided 2026-09-25 (Vendeur 4.9, A-6, A-17, D-8, D-9, Q3).
+
+- **The form** is the customer part of Créer un colis: name, phone, phone 2,
+  localité, address, landmark, COD (it may change, 0 allowed), Colis
+  d'échange, Ouverture autorisée, Note pour le coursier. The product stays the
+  same parcel. A deactivated localité is refused (D-27).
+- **When**: À vérifier or Relancé, both origins, **location Au dépôt**, once
+  per parcel. With the courier, the refusal reads "Disponible au retour au
+  dépôt".
+- **What it writes**: status Au dépôt, attempts back to 0, the
+  `CHANGEMENT_CLIENT` charge at the fee **frozen on the parcel**
+  (`EN_ATTENTE`), `labelReprintNeeded`, and the old customer **whole** in
+  `parcel_client_changes` (migration `20261009000000_client_change_details`
+  adds phone 2, landmark, courier note and the two options). Nothing of the
+  old customer's delivery carries over: the failure reason and note, the
+  meeting point and the Tournées plan are cleared. The COD before and after
+  go on the event.
+- **Who sees the old customer**: staff, on the Colis page ("Changement de
+  client"). The seller and public tracking see the new customer only (A-17).
+
+### D-75 · The 48-hour job
+
+Decided 2026-09-25 (Vendeur 4.9, rule 15; D-30).
+
+- Runs **every minute**, returns every parcel still À vérifier whose
+  `verifyDeadlineAt` has passed on the **server clock**, **200 per pass**,
+  oldest first.
+- **One transaction per parcel**, through the parcel event service, as the
+  system (no actor): `RETOUR_AUTO_48H`, the return fee frozen on the parcel,
+  location unchanged (A-7). The locked parcel is read again, so a seller
+  deciding at the same instant wins or loses cleanly; a second pass returns
+  nothing twice.
+- **The deadline is stored when the failure is recorded.** Changing "À
+  vérifier time limit" in Paramètres changes the next failures only, like a
+  rate change.
+- A customer postponement has no deadline (D-9); any decision clears it.
+
+**Where.** `VerifyDeadlineJob` in `apps/api/src/a-verifier`.
+
+### D-76 · The in-app alert, the lists and the wording
+
+Decided 2026-09-25, building phase 7. Notifications are post-launch, so:
+
+- **Menu badge**: the seller's count of parcels À vérifier on the **À
+  vérifier** menu item (Vendeur 3), on every page of the seller space.
+- **Tableau de bord banner**: every parcel with **less than 24 hours** left,
+  soonest first, each with its time left and a link to decide — the "Plus que
+  24 h pour décider" of Vendeur 4.13. Absent when there is none.
+- **Time left** is counted from the **server's clock**, sent with the page,
+  and shown as "Retour automatique dans 31 h 20 min", in red under 24 hours.
+- **The seller's À vérifier screen** lists À vérifier parcels only, soonest
+  first; each opens Détail du colis, where the decisions are ("Votre
+  décision"). Relancé parcels are decided on Détail du colis (Changer la date,
+  Retourner, Changer de client).
+- **The team's À vérifier screen** (`/admin/a-verifier`): Admin and Service
+  client, per Admin 2; every seller's parcels with reason, courier note,
+  attempt, location, time left, the customer's and the seller's contacts, the
+  last call, and Noter un appel. Dépôt has no access (Admin 2).
+- **DATE_RELANCE_REQUISE** now reads "Choisissez le jour de la nouvelle
+  tentative de livraison" (closes D-29's open wording).
+- The Relancer and Changer la date pickers offer tomorrow to 7 days ahead,
+  in Tunis days (D-9).
+
+### D-77 · Demo parcels waiting on the seller
+
+Decided 2026-09-25 (D-16, D-50). `db:seed:demo` also adds two failed
+deliveries of Boutique Démo, through the state machine step by step: one with
+the demo livreur, failed 2 hours ago; one back at the depot, failed 40 hours
+ago (under 24 hours left). Development and browser tests only, never in
+production.
+
+**Where.** `seedDemoFailures` in `apps/api/prisma/seed-demo.ts`.
 
 ---
 

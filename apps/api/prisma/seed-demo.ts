@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { PrismaClient, type Role } from '@prisma/client';
 import * as argon2 from 'argon2';
 import {
+  FailureReason,
   ParcelAction,
   ParcelEventType,
   ParcelLocation,
@@ -12,7 +13,9 @@ import {
   generatePassword,
   parcelWriteFor,
   readPlatformSettings,
+  type ParcelActionCommand,
   type ParcelSnapshot,
+  type PlatformSettings,
 } from '@faffago/shared';
 
 /**
@@ -273,6 +276,7 @@ async function main(): Promise<void> {
   try {
     const results = await seedDemo(prisma, { nodeEnv: process.env.NODE_ENV });
     const work = await seedDemoOperations(prisma, { nodeEnv: process.env.NODE_ENV });
+    const failures = await seedDemoFailures(prisma, { nodeEnv: process.env.NODE_ENV });
     console.log('\n─────────────────────────────────────────────');
     console.log('  Comptes de démonstration. Mots de passe affichés une seule fois.');
     for (const r of results) {
@@ -282,6 +286,7 @@ async function main(): Promise<void> {
     console.log(
       `  Affectations de zone : ${work.assignments} · colis ramassés : ${work.parcels} · demandes de ramassage : ${work.pickups}`,
     );
+    console.log(`  Colis à vérifier : ${failures}`);
     console.log('─────────────────────────────────────────────\n');
   } finally {
     await prisma.$disconnect();
@@ -490,4 +495,226 @@ export async function seedDemoOperations(
   }
 
   return result;
+}
+
+// ── Phase 7: parcels waiting on the seller (À vérifier) ─────
+
+/**
+ * Two failed deliveries of the demo seller, for the À vérifier screens: one
+ * still in the demo livreur's bag, failed 2 hours ago; one brought back to
+ * the depot, failed 40 hours ago, so less than 24 hours are left and the
+ * Tableau de bord banner shows it. Each goes through the shared state
+ * machine step by step (pickup, depot, out, failure) with the event of each
+ * step, like the scans write them.
+ */
+export const DEMO_FAILURES: ReadonlyArray<{
+  recipientName: string;
+  recipientPhone: string;
+  address: string;
+  codMillimes: bigint;
+  reason: FailureReason;
+  note: string;
+  failedHoursAgo: number;
+  backAtDepot: boolean;
+}> = [
+  {
+    recipientName: 'Nour Démo',
+    recipientPhone: '22100101',
+    address: '9 rue Ibn Khaldoun',
+    codMillimes: 54000n,
+    reason: FailureReason.NE_REPOND_PAS,
+    note: 'Client dit rappeler après 17 h',
+    failedHoursAgo: 2,
+    backAtDepot: false,
+  },
+  {
+    recipientName: 'Yassine Démo',
+    recipientPhone: '22100102',
+    address: '17 avenue de la République',
+    codMillimes: 38000n,
+    reason: FailureReason.INJOIGNABLE,
+    note: 'Téléphone éteint toute la journée',
+    failedHoursAgo: 40,
+    backAtDepot: true,
+  },
+];
+
+export function demoFailureRequestId(index: number): string {
+  return `d0000000-0000-4000-8000-${String(index + 101).padStart(12, '0')}`;
+}
+
+type Tx = Parameters<Parameters<PrismaClient['$transaction']>[0]>[0];
+type DemoActor = { userId: string; role: Role; courierId?: string };
+
+/** One step of the state machine on a demo parcel, written with its event. */
+async function demoStep(
+  tx: Tx,
+  parcelId: string,
+  settings: PlatformSettings,
+  actor: DemoActor,
+  command: Pick<ParcelActionCommand, 'action' | 'assignToCourierId' | 'failureReason'>,
+  at: Date,
+  note: string | null = null,
+): Promise<void> {
+  const parcel = await tx.parcel.findUniqueOrThrow({ where: { id: parcelId } });
+  const snapshot: ParcelSnapshot = {
+    status: parcel.status,
+    location: parcel.location,
+    cashStatus: parcel.cashStatus,
+    attemptCount: parcel.attemptCount,
+    changeClientCount: parcel.changeClientCount,
+    currentLivreurId: parcel.currentLivreurId,
+    isExchange: parcel.isExchange,
+    relaunchDate: parcel.relaunchDate,
+    relaunchOrigin: parcel.relaunchOrigin,
+    relaunchSlot: parcel.relaunchSlot,
+  };
+  const transition = applyParcelAction(snapshot, {
+    ...command,
+    actor: actor.role as SharedRole,
+    actorCourierId: actor.courierId ?? null,
+    maxAttempts: settings.maxDeliveryAttempts,
+    maxClientChanges: settings.maxClientChangesPerParcel,
+  });
+  if (!transition.ok) throw new Error(`${command.action} refusé : ${transition.message}`);
+  const write = parcelWriteFor(transition, {
+    now: at,
+    verifyDeadlineHours: settings.verifyDeadlineHours,
+    courierRatePerParcelMillimes: settings.courierRatePerParcelMillimes,
+    fees: {
+      deliveryFeeMillimes: parcel.deliveryFeeMillimes,
+      returnFeeMillimes: parcel.returnFeeMillimes,
+      changeClientFeeMillimes: parcel.changeClientFeeMillimes,
+    },
+    failureReason: command.failureReason ?? null,
+    failureNote: note,
+  });
+  await tx.parcel.update({ where: { id: parcelId }, data: write.columns });
+  for (const [index, step] of transition.events.entries()) {
+    await tx.parcelEvent.create({
+      data: {
+        parcelId,
+        type: step.type,
+        previousStatus: step.previousStatus,
+        newStatus: step.newStatus,
+        previousLocation: step.previousLocation,
+        newLocation: step.newLocation,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+        reasonCode:
+          step.type === ParcelEventType.ECHEC_LIVRAISON ? (command.failureReason ?? null) : null,
+        reasonText: index === 0 ? note : null,
+        serverTime: at,
+      },
+    });
+  }
+}
+
+/** Returns how many failed parcels were added; a second run adds none. */
+export async function seedDemoFailures(
+  prisma: PrismaClient,
+  options: { nodeEnv: string | undefined; now?: Date },
+): Promise<number> {
+  if (options.nodeEnv === 'production') {
+    throw new Error('db:seed:demo refuse de tourner en production (NODE_ENV=production).');
+  }
+  const now = options.now ?? new Date();
+  const seller = await prisma.seller.findFirst({ where: { user: { email: DEMO_SELLER_EMAIL } } });
+  const depot = await prisma.user.findFirst({ where: { username: 'demo.depot' } });
+  const person = (phone: string, role: Role) =>
+    prisma.user.findUnique({ where: { phone_role: { phone, role } }, include: { courier: true } });
+  const livreur = await person('50990004', 'LIVREUR');
+  const ramasseur = await person('50990005', 'RAMASSEUR');
+  if (!seller || !depot || !livreur?.courier || !ramasseur?.courier) {
+    throw new Error('Comptes de démonstration absents : lancez seedDemo avant.');
+  }
+  const delegation = await prisma.delegation.findUnique({ where: { code: 'TUN-MARSA' } });
+  if (!delegation) {
+    throw new Error("Géographie absente : lancez d'abord `pnpm --filter @faffago/api db:seed`.");
+  }
+  const localite = await prisma.localite.findFirstOrThrow({
+    where: { delegationId: delegation.id, isOther: false, isActive: true },
+    orderBy: { nameFr: 'asc' },
+  });
+  const { settings } = readPlatformSettings(
+    Object.fromEntries((await prisma.setting.findMany()).map((row) => [row.key, row.value])),
+  );
+  const HOUR = 3_600_000;
+  const asRamasseur: DemoActor = {
+    userId: ramasseur.id,
+    role: 'RAMASSEUR',
+    courierId: ramasseur.courier.id,
+  };
+  const asDepot: DemoActor = { userId: depot.id, role: 'DEPOT' };
+  const asLivreur: DemoActor = {
+    userId: livreur.id,
+    role: 'LIVREUR',
+    courierId: livreur.courier.id,
+  };
+  const livreurCourierId = livreur.courier.id;
+
+  let added = 0;
+  for (const [index, demo] of DEMO_FAILURES.entries()) {
+    const clientRequestId = demoFailureRequestId(index);
+    if (await prisma.parcel.findUnique({ where: { clientRequestId } })) continue;
+    const failedAt = new Date(now.getTime() - demo.failedHoursAgo * HOUR);
+    const shifted = (hours: number) => new Date(failedAt.getTime() + hours * HOUR);
+
+    await prisma.$transaction(async (tx) => {
+      const parcel = await tx.parcel.create({
+        data: {
+          code: generateParcelCode(randomBytes),
+          sellerId: seller.id,
+          recipientName: demo.recipientName,
+          recipientPhone: demo.recipientPhone,
+          delegationId: delegation.id,
+          localiteId: localite.id,
+          address: demo.address,
+          productDescription: 'Article de démonstration',
+          codAmountMillimes: demo.codMillimes,
+          deliveryFeeMillimes: settings.deliveryFeeMillimes,
+          returnFeeMillimes: settings.returnFeeMillimes,
+          changeClientFeeMillimes: settings.changeClientFeeMillimes,
+          createdByUserId: seller.userId,
+          clientRequestId,
+          createdAt: shifted(-26),
+        },
+      });
+      await tx.parcelEvent.create({
+        data: {
+          parcelId: parcel.id,
+          type: ParcelEventType.CREATION,
+          newStatus: ParcelStatus.CREE,
+          newLocation: ParcelLocation.CHEZ_LE_VENDEUR,
+          actorUserId: seller.userId,
+          actorRole: 'VENDEUR',
+          serverTime: shifted(-26),
+        },
+      });
+      const step = (
+        actor: DemoActor,
+        command: Pick<ParcelActionCommand, 'action' | 'assignToCourierId' | 'failureReason'>,
+        at: Date,
+        note: string | null = null,
+      ) => demoStep(tx, parcel.id, settings, actor, command, at, note);
+      await step(asRamasseur, { action: ParcelAction.SCAN_RAMASSAGE }, shifted(-24));
+      await step(asDepot, { action: ParcelAction.SCAN_ENTREE_DEPOT }, shifted(-20));
+      await step(
+        asDepot,
+        { action: ParcelAction.SCAN_SORTIE_COURSIER, assignToCourierId: livreurCourierId },
+        shifted(-4),
+      );
+      await step(
+        asLivreur,
+        { action: ParcelAction.SCAN_ECHEC, failureReason: demo.reason },
+        failedAt,
+        demo.note,
+      );
+      if (demo.backAtDepot) {
+        await step(asDepot, { action: ParcelAction.SCAN_RETOUR_DE_TOURNEE }, shifted(2));
+      }
+    });
+    added += 1;
+  }
+  return added;
 }

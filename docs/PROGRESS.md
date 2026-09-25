@@ -440,33 +440,39 @@ Steps, all done:
 
 ## Phase 7 — À vérifier
 
-Branch `phase-7`. Plan 2026-09-25; the three open questions answered the same
-day (D-70 to D-72: Relancer corrects directly, the seller reads the courier's
-note, Changer de client withdraws a waiting request).
+Built on branch `phase-7` (2026-09-25). The three open questions were answered
+the same day and recorded as D-70 to D-72: Relancer corrects the parcel
+directly, the seller reads the courier's note, and Changer de client withdraws
+a waiting request. The choices made while building are D-73 to D-77.
 
-Steps:
+Steps, all done:
 
-1. [ ] Shared (`a-verifier.ts`): the decision forms (Relancer with its
+1. [x] Shared (`a-verifier.ts`): the decision forms (Relancer with its
        corrections, Changer la date, Changer de client), time left and the
-       24-hour mark, the Appels Faffa Go form, the seller's wording of
-       DATE_RELANCE_REQUISE, `canChangeClient` / `canRelaunch` from Relancé
-       too — tests first
-2. [ ] API: the seller's decisions — Relancer, Changer la date, Retourner,
-       Changer de client (new customer, `parcel_client_changes`, the fee,
-       `labelReprintNeeded`, a waiting request withdrawn) — through the
-       parcel event service; migration for the client change's extra fields
-3. [ ] API: the 48-hour job (server clock, D-30), idempotent, in batches
-4. [ ] API: the seller's À vérifier list and its count (badge, banner under
-       24 h); Détail du colis gains the courier's note, the planned date,
-       time left and Appels Faffa Go
-5. [ ] API: Service client's follow-up list, sorted by time left, and
-       logging calls (`SUIVI_A_VERIFIER`); Colis shows the calls
-6. [ ] Web, seller: À vérifier screen, the decisions on Détail du colis, the
-       menu badge, the Tableau de bord banner
-7. [ ] Web, back office: À vérifier follow-up with Noter un appel; calls on
-       the Colis page
-8. [ ] Courier app: "Visible par le vendeur" under the failure note
-9. [ ] Browser tests, demo data, docs
+       24-hour mark, the Appels Faffa Go form, what the seller may decide
+       now; `canChangeClient` from Relancé too; DATE_RELANCE_REQUISE worded
+       for the seller (D-76). Tests first: 22 shared tests
+2. [x] API: the seller's decisions, all through the parcel event service:
+       `POST /parcels/:code/{relancer,changer-date,retourner,changer-client}`.
+       Changer de client writes the history row, the fee frozen on the
+       parcel, `labelReprintNeeded` and withdraws a waiting request (D-72,
+       D-74). Migration `20261009000000_client_change_details`
+3. [x] API: the 48-hour job, every minute, on the server clock, one
+       transaction per parcel, as the system (D-75)
+4. [x] API: `GET /a-verifier` and `/a-verifier/resume` (badge, banner);
+       Détail du colis gains the courier's note (D-71), the planned day, the
+       time left, the decisions and Appels Faffa Go
+5. [x] API: `GET /a-verifier/suivi` and `POST /colis/:code/appels` (Admin,
+       Service client, D-73); Colis shows the calls and the previous
+       customer. 28 API e2e tests
+6. [x] Web, seller: the À vérifier screen, "Votre décision" on Détail du
+       colis (Relancer, Changer la date, Retourner, Changer de client), the
+       menu badge, the Tableau de bord banner under 24 hours (D-76)
+7. [x] Web, back office: `/admin/a-verifier` with Noter un appel; Appels
+       Faffa Go and the previous customer on Colis. 11 web tests
+8. [x] Courier app: "Visible par le vendeur" under the failure note (D-71)
+9. [x] Demo data: two failed deliveries of Boutique Démo (D-77); browser
+       test `phase-7.spec.ts` (6 tests); decisions, ui-texts
 
 ## Phase 8 — Money
 
@@ -1208,6 +1214,13 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
 - 2026-09-25 — **Phase 6 merged into `main`** (fast-forward) after lint,
   typecheck, test and the 23 browser tests passed.
 
+- 2026-09-25 — **Phase 7, À vérifier** (D-70 to D-77): Relancer corrects the
+  phone, address, landmark and note directly; the seller reads the courier's
+  note; Changer de client withdraws a waiting request and keeps the old
+  customer whole for staff; the 48-hour job runs every minute on the server
+  clock; calls are Admin and Service client's, never edited; the badge and the
+  banner stand in for notifications until after launch.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -1224,8 +1237,10 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
   Nothing enforces that yet — it is a rule for the phase 6 implementation.~~
   **Closed 2026-09-25 (phase 6)**: each row carries its courier; a logout clears
   the session and the PIN, never the queue; tested through the app's provider.
-- **Relancer without a date** (D-29): the message is neutral for now; the
-  wording the seller reads comes with the phase 7 screen.
+- ~~**Relancer without a date** (D-29): the message is neutral for now; the
+  wording the seller reads comes with the phase 7 screen.~~ **Closed
+  2026-09-25 (D-76)**: "Choisissez le jour de la nouvelle tentative de
+  livraison".
 - **Off-server backup destination** (D-32): open until phase 11, pending a
   legal check on hosting personal data outside Tunisia (loi organique
   2004-63). This applies to **the whole database**, not only the seller
