@@ -18,10 +18,8 @@ const config: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
-  async redirects() {
-    // The public site lives under its locale (tech-stack 3); French by default.
-    return [{ source: '/', destination: '/fr', permanent: false }];
-  },
+  // `/` and `/suivi/*` go to their language in the middleware: the browser's
+  // on a first visit, the remembered one after (Landing 5).
 };
 
 export default config;

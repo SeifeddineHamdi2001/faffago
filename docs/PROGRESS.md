@@ -526,36 +526,40 @@ real bons printed: see phase 11.
 
 ## Phase 9 — Public site
 
-The whole public site, before launch (scope change 2026-09-25, CLAUDE.md
-launch scope). Branch `phase-9`, plan 2026-09-25:
+The whole public site, before launch. Built on branch `phase-9`
+(2026-09-25); merged into `main` once `pnpm lint`, `pnpm typecheck`,
+`pnpm test` (766 API, 287 web, 624 shared, 42 app tests) and `pnpm e2e`
+(42 browser tests) passed through turbo. Choices made while building: D-87.
+None touched money, a status or a permission.
 
 1. [x] Shared, tests first: Meta Pixel setting (empty = off, the default),
-       tracking backoff, `publicSiteInfoFrom`
-2. [x] API: `GET /public/tracking/:code` (public fields, D-9, D-31, D-54,
-       Q1–Q3, rate-limited per IP) and `GET /public/site-info` (fees, contact
-       links, zones, pixel id) — 15 API e2e tests
+       tracking backoff, the public timeline steps and track line (Q2),
+       `publicSiteInfoFrom` — 13 new shared tests
+2. [x] API: `GET /public/tracking/:code` (public fields only, Q1–Q3, D-9,
+       D-31, D-54, rate-limited per IP) and `GET /public/site-info` (fees,
+       rules, contact links, zones, pixel id) — 15 API e2e tests
 3. [x] Web: Paramètres › Suivi publicitaire (Meta Pixel id)
-4. [ ] Web: `/suivi/FG-…` tracking page, French and Arabic
-5. [ ] Web: landing page `/fr` and `/ar`, sections of landing.md, Tarifs and
-       Zones couvertes from the API, contact links
-6. [ ] Web: SEO (titles, descriptions, Open Graph, hreflang, sitemap, robots),
-       browser language on first visit, choice remembered
-7. [ ] Web: Meta Pixel script and events on the Devenir partenaire links
-8. [ ] Next.js 16: evaluate, report
-9. [ ] Playwright `phase-9.spec.ts`, decisions, ui-texts, PROGRESS
+4. [x] Web: `/fr|ar/suivi/FG-…`, the Suivre mon colis box; `/suivi/FG-…` (the
+       label's QR code) redirected in the visitor's language, forever (D-43)
+5. [x] Web: landing page `/fr` and `/ar` (right to left), the sections of
+       Landing 2, Tarifs and Zones couvertes from the API, contact links
+6. [x] Web: SEO (titles, descriptions, canonical, hreflang, Open Graph image,
+       sitemap, robots), browser language on the first visit, choice
+       remembered
+7. [x] Web: Meta Pixel script, Contact events on Devenir partenaire
+8. [x] Next.js 16 evaluated, not upgraded (below)
+9. [x] Playwright `phase-9.spec.ts` (8 tests: languages, 360 px, SEO,
+       tracking, QR address, unknown code, Meta Pixel on and off), decisions,
+       ui-texts — 22 web tests
 
-- [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
-- [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ
-      retour and Retour reçu when `cancelledAt` is set (D-31)
-- [ ] The public timeline skips the events of a cancelled scan (D-54): a
-      Sortie coursier cancelled at the depot must not read "En cours de
-      livraison". The seller's timeline shows both, with "Scan annulé"
-      (D-46)
-- [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
-- [ ] Tarifs and Zones couvertes read from Paramètres
-- [ ] Open Graph, SEO (/fr, /ar)
-- [ ] Meta Pixel (TO CONFIRM): easy to switch off
-- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
+**Next.js 16 (evaluated 2026-09-25, not upgraded).** 16.3.6 is current and
+accepts the pinned React 19.2.3 (D-69); Node 22+ and TypeScript 5.9 qualify.
+The code already meets its removals: every `params`, `searchParams`,
+`cookies()` and `headers()` is awaited, no edge runtime, no webpack config, no
+`next lint`. What would change: `middleware.ts` becomes `proxy.ts` (the
+session refresh of D-15 lives there), `next build` moves to Turbopack, and
+`@next/eslint-plugin-next` to 16. Not trivial on the eve of launch, so
+proposed as its own branch before phase 11, behind the full `pnpm e2e` gate.
 
 ## Phase 10 — Communication and reports
 
@@ -1290,8 +1294,27 @@ launch scope). Branch `phase-9`, plan 2026-09-25:
   `bons-versement.service.ts` (Annuler le bon, A-5) only accepts a bon still
   **Préparé**. Proposal sent to the user before building anything (money,
   CLAUDE.md "When to stop").
+- 2026-09-25 — **Phase 9, the public site** (D-87): public tracking and
+  site-info endpoints, landing page in French and Arabic, SEO, Meta Pixel
+  behind a setting (off), language detection and memory; Next.js 16 evaluated,
+  not upgraded.
 
 ## Open questions
+
+- **Correcting a bon scanned Remis, or a return scanned Retour reçu, by
+  mistake** (phase 8 check, 2026-09-25): no correction exists; the proposal is
+  with the owner (money and a new transition, CLAUDE.md "When to stop").
+  Nothing is built until it is answered.
+- **The company's legal information** for the public site's footer (Landing
+  2.8): name, registration and tax numbers, address. Not in the specs; the
+  footer shows none until given (D-87).
+- **The hero's courier and motorcycle** (Landing 2.2): a brand-coloured
+  drawing for now; a real illustration or photo is needed.
+- **The public site's Arabic** (`apps/web/src/lib/public-texts.ts`) is to be
+  read by a native speaker before launch, with the courier app's (Landing 5).
+- **Meta Pixel** (Landing 6, TO CONFIRM) is built and off; switching it on is
+  a Paramètres change. Whether a cookie notice is needed for it is a question
+  for the same legal check as the backups (loi organique 2004-63).
 
 - **Retenue à la source certificates**: phase 10, before launch and **before
   the first tax declaration deadline for the retenue**. The date comes from

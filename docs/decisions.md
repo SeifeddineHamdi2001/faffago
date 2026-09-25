@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-86** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-86 are rules |
+| **D-1 … D-87** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-87 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-86**
+**Rules decided during the build — D-4 to D-87**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -115,6 +115,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-84 · The ramasseur's visit](#d-84--the-ramasseurs-visit)
 - [D-85 · Forcer un statut on money](#d-85--forcer-un-statut-on-money)
 - [D-86 · Choices made building phase 8](#d-86--choices-made-building-phase-8)
+- [D-87 · Choices made building phase 9](#d-87--choices-made-building-phase-9)
 
 **Money — A-1 to A-5**
 
@@ -1745,6 +1746,62 @@ permission beyond D-79 to D-85).
   events by server time, mixing the test clock and the real one (now by the
   event sequence); one looked for the GPS "36.8" in a text that holds the
   real creation time (now distinctive coordinates).
+
+### D-87 · Choices made building phase 9
+
+Decided 2026-09-25, building the public site (none touches a fee, a status or
+a permission).
+
+- **Tracking**: `GET /public/tracking/:code?langue=FR|AR`, `@Public`. A wrong
+  code (malformed or unknown, the same answer, as D-26) slows the visitor's
+  IP: 10 free, then 1 s doubling up to 60 s, forgotten after an hour; a found
+  parcel clears it (`PUBLIC_TRACKING_THROTTLE`, in memory like D-6). The
+  unused `PUBLIC_TRACKING_RATE_LIMIT_PER_MINUTE` is gone from `.env.example`.
+- **The public timeline** (Q2): each whitelisted event is a step, and a step
+  repeated in a row shows once, at its latest date (Ramassé + Entrée dépôt =
+  one "Chez Faffa Go"; a second attempt one "En cours de livraison").
+  Events of a cancelled scan are dropped (D-54); Départ retour and Retour reçu
+  are dropped once `cancelledAt` is set (D-31). The track line: Commande
+  enregistrée › Chez Faffa Go › En cours de livraison › Livré (or Retourné au
+  vendeur); a cancelled order reads Commande enregistrée › Commande annulée.
+- **The amount to prepare** shows while the delivery is ahead, not once
+  delivered, returned or cancelled; a COD of 0 reads "Rien à payer à la
+  livraison". The livreur's first name only while En cours de livraison.
+- **Addresses**: `/fr/suivi/FG-…` and `/ar/suivi/FG-…`. `/suivi/FG-…` (the QR
+  code, D-36, D-43) and `/` redirect to the remembered language, else the
+  browser's (Accept-Language order), else French. The language is remembered
+  in the `fg_locale` cookie by any visit to `/fr` or `/ar`, never by a
+  prefetch. The switch goes to the same page in the other language.
+- **`GET /public/site-info`**, `@Public`: fees, the À vérifier limit and the
+  attempts (the FAQ quotes them), contact links, délégations by gouvernorat,
+  the Meta Pixel id; never `GET /settings`. The web server keeps it 5 minutes
+  (`PUBLIC_SITE_CACHE_SECONDS`), keeps the last good copy if the API fails,
+  and reads it on each request, never at build.
+- **Meta Pixel**: a setting `meta_pixel_id`, empty = off (the default), digits
+  only; Paramètres › Suivi publicitaire. When on: PageView, and Meta's
+  standard `Contact` event with the channel on each Devenir partenaire link
+  (WhatsApp, phone, Facebook, Instagram, TikTok).
+- **SEO**: title and description per language, canonical, `hreflang` fr / ar
+  / x-default, Open Graph and Twitter card, `sitemap.xml` (both languages),
+  `robots.txt` (the landing page only; no seller space, back office, API or
+  tracking page). Tracking pages are `noindex`. The Open Graph image carries
+  the brand only, in Latin letters (no Arabic font in the renderer); the text
+  beside it is in the page's language.
+- **Landing page**: the sections of Landing 2 in order; the hero headline is
+  the "Returns" angle. Phone top bar: logo, language, Devenir partenaire, a
+  menu that opens without JavaScript. The FAQ opens without JavaScript too.
+  Contact links left empty in Paramètres are not shown.
+- **Not invented, so not shown**: the company's legal information in the
+  footer (Landing 2.8) waits for the real details; the hero's courier and
+  motorcycle is a simple brand-coloured drawing until a real illustration or
+  photo exists.
+- **Bon PDFs** (pre-phase-9 check): the Remis par / Reçu par blocks print Nom,
+  Date and Signature on both copies of both documents.
+
+**Where.** `apps/api/src/public`, `packages/shared/src/public-tracking.ts`,
+`packages/shared/src/public-site.ts`, `apps/web/src/app/(public)`,
+`apps/web/src/components/public`, `apps/web/src/lib/locale.ts`,
+`apps/web/src/lib/public-texts.ts`, `apps/web/src/middleware.ts`.
 
 ---
 

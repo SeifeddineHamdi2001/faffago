@@ -67,6 +67,8 @@ export default defineConfig({
       env: {
         API_BASE_URL: `http://127.0.0.1:${API_PORT}`,
         NEXT_PUBLIC_SITE_URL: WEB_URL,
+        // The public site reads Paramètres afresh on each page, so a change shows at once.
+        PUBLIC_SITE_CACHE_SECONDS: '0',
       },
     },
   ],

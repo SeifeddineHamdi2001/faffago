@@ -21,8 +21,15 @@ export interface PublicZone {
   delegations: NamedPlace[];
 }
 
+/** The rules the FAQ quotes (Landing 2.7): true every day because they are the platform's. */
+export interface PublicRules {
+  verifyDeadlineHours: number;
+  maxDeliveryAttempts: number;
+}
+
 export interface PublicSiteInfo {
   fees: PublicFees;
+  rules: PublicRules;
   contactLinks: ContactLinks;
   zones: PublicZone[];
   /** Empty when Meta Pixel is off (D-20 style setting, off by default). */
@@ -43,6 +50,10 @@ export function publicSiteInfoFrom(
       pickupFeeMillimes: settings.pickupFeeMillimes.toString(),
       pickupFreeThreshold: settings.pickupFreeThreshold,
       retenueRateBps: settings.retenueRateBps,
+    },
+    rules: {
+      verifyDeadlineHours: settings.verifyDeadlineHours,
+      maxDeliveryAttempts: settings.maxDeliveryAttempts,
     },
     contactLinks,
     zones,

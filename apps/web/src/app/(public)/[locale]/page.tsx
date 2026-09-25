@@ -1,34 +1,33 @@
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import {
+  Contact,
+  Faq,
+  Hero,
+  HowItWorks,
+  Prices,
+  WhyFaffaGo,
+  Zones,
+} from '@/components/public/landing-sections';
+import { isLocale } from '@/lib/locale';
+import { publicTexts } from '@/lib/public-texts';
+import { getSiteInfo } from '@/lib/server/public-site';
 
-/**
- * Placeholder until the landing page (phase 9, docs/landing.md). It only
- * carries the entry point that already exists: Se connecter.
- */
-const TEXT = {
-  fr: { login: 'Se connecter', other: 'العربية', otherHref: '/ar' },
-  // Approved 2026-09-25.
-  ar: { login: 'تسجيل الدخول', other: 'Français', otherHref: '/fr' },
-} as const;
-
+/** The landing page (Landing 2): one long page, in the order of the spec. */
 export default async function Home({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const text = TEXT[locale === 'ar' ? 'ar' : 'fr'];
+  if (!isLocale(locale)) notFound();
+  const texts = publicTexts(locale);
+  const info = await getSiteInfo();
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-navy p-4 text-white">
-      <p className="font-display text-4xl font-bold">
-        Faffa <span className="text-orange">Go</span>
-      </p>
-      <Link href="/vendeur/connexion" className="btn-primary">
-        {text.login}
-      </Link>
-      <Link
-        href={text.otherHref}
-        className="text-sm text-white/80 underline"
-        lang={locale === 'ar' ? 'fr' : 'ar'}
-      >
-        {text.other}
-      </Link>
-    </main>
+    <>
+      <Hero locale={locale} texts={texts} />
+      <HowItWorks texts={texts} />
+      <WhyFaffaGo texts={texts} />
+      <Prices locale={locale} texts={texts} info={info} />
+      <Zones locale={locale} texts={texts} info={info} />
+      <Faq texts={texts} info={info} />
+      <Contact texts={texts} info={info} />
+    </>
   );
 }

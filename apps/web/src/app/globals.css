@@ -51,4 +51,12 @@
   .badge-warn {
     @apply rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900;
   }
+  /* The brand chevron (Landing 2.3, 4.1): points the way of reading, so it
+     turns round in Arabic (Landing 5). */
+  .chevron {
+    clip-path: polygon(0 0, calc(100% - 0.75rem) 0, 100% 50%, calc(100% - 0.75rem) 100%, 0 100%, 0.75rem 50%);
+  }
+  [dir='rtl'] .chevron {
+    clip-path: polygon(0.75rem 0, 100% 0, calc(100% - 0.75rem) 50%, 100% 100%, 0.75rem 100%, 0 50%);
+  }
 }

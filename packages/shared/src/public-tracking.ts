@@ -1,4 +1,5 @@
 import { ParcelEventType } from './parcel-state-machine.js';
+import { TrackStepState } from './seller-parcels.js';
 import { ParcelStatus, RelaunchOrigin } from './statuses.js';
 
 /**
@@ -85,6 +86,117 @@ export const PUBLIC_TIMELINE_EVENT_TYPES: readonly ParcelEventType[] = [
 
 export function isPublicTimelineEvent(type: ParcelEventType): boolean {
   return PUBLIC_TIMELINE_EVENT_TYPES.includes(type);
+}
+
+/**
+ * The steps of the public timeline (Q2): Commande enregistrée → Chez Faffa Go
+ * → En cours de livraison → Changement de client → Livré / Retourné au
+ * vendeur / Commande annulée, each with a date.
+ */
+export const PublicTimelineStep = {
+  COMMANDE_ENREGISTREE: 'COMMANDE_ENREGISTREE',
+  CHEZ_FAFFA_GO: 'CHEZ_FAFFA_GO',
+  EN_COURS_DE_LIVRAISON: 'EN_COURS_DE_LIVRAISON',
+  CHANGEMENT_DE_CLIENT: 'CHANGEMENT_DE_CLIENT',
+  LIVRE: 'LIVRE',
+  RETOURNE_AU_VENDEUR: 'RETOURNE_AU_VENDEUR',
+  COMMANDE_ANNULEE: 'COMMANDE_ANNULEE',
+} as const;
+export type PublicTimelineStep = (typeof PublicTimelineStep)[keyof typeof PublicTimelineStep];
+
+export const PUBLIC_TIMELINE_STEP_BY_EVENT: Partial<Record<ParcelEventType, PublicTimelineStep>> = {
+  CREATION: PublicTimelineStep.COMMANDE_ENREGISTREE,
+  // Picked up and arrived at the depot are one step to the customer: "no
+  // depot scans" (Q2).
+  RAMASSAGE: PublicTimelineStep.CHEZ_FAFFA_GO,
+  ENTREE_DEPOT: PublicTimelineStep.CHEZ_FAFFA_GO,
+  SORTIE_COURSIER: PublicTimelineStep.EN_COURS_DE_LIVRAISON,
+  DECISION_CHANGER_CLIENT: PublicTimelineStep.CHANGEMENT_DE_CLIENT,
+  LIVRAISON: PublicTimelineStep.LIVRE,
+  DEPART_RETOUR: PublicTimelineStep.RETOURNE_AU_VENDEUR,
+  RETOUR_RECU: PublicTimelineStep.RETOURNE_AU_VENDEUR,
+  ANNULATION: PublicTimelineStep.COMMANDE_ANNULEE,
+};
+
+export const PUBLIC_TIMELINE_STEP_LABELS_FR: Record<PublicTimelineStep, string> = {
+  COMMANDE_ENREGISTREE: 'Commande enregistrée',
+  CHEZ_FAFFA_GO: 'Chez Faffa Go',
+  EN_COURS_DE_LIVRAISON: 'En cours de livraison',
+  CHANGEMENT_DE_CLIENT: 'Changement de client',
+  LIVRE: 'Livré',
+  RETOURNE_AU_VENDEUR: 'Retourné au vendeur',
+  COMMANDE_ANNULEE: 'Commande annulée',
+};
+
+/**
+ * The timeline as the customer reads it: each public event as its step, and
+ * a step repeated in a row shown once, at its latest date. A second attempt
+ * goes out again after a failure the customer never sees, so it reads as one
+ * "En cours de livraison" dated from when it really left.
+ */
+export function publicTimelineSteps(
+  timeline: ReadonlyArray<{ type: ParcelEventType; at: string }>,
+): Array<{ step: PublicTimelineStep; at: string }> {
+  const out: Array<{ step: PublicTimelineStep; at: string }> = [];
+  for (const event of timeline) {
+    const step = PUBLIC_TIMELINE_STEP_BY_EVENT[event.type];
+    if (!step) continue;
+    const last = out.at(-1);
+    if (last?.step === step) last.at = event.at;
+    else out.push({ step, at: event.at });
+  }
+  return out;
+}
+
+/**
+ * The chevron track line of the tracking page (Landing 4.1): the delivery
+ * flow, its last step swapped for Retourné au vendeur on a return. A
+ * cancelled order reads Commande enregistrée › Commande annulée (D-31).
+ * `postponed` marks the current step of a delivery that was put off.
+ */
+export function publicTrackLine(status: PublicStatus): {
+  steps: Array<{ step: PublicTimelineStep; state: TrackStepState }>;
+  postponed: boolean;
+} {
+  const S = PublicTimelineStep;
+  if (status === PublicStatus.COMMANDE_ANNULEE) {
+    return {
+      steps: [
+        { step: S.COMMANDE_ENREGISTREE, state: TrackStepState.FAIT },
+        { step: S.COMMANDE_ANNULEE, state: TrackStepState.ACTUEL },
+      ],
+      postponed: false,
+    };
+  }
+  const last = status === PublicStatus.RETOURNE_AU_VENDEUR ? S.RETOURNE_AU_VENDEUR : S.LIVRE;
+  const flow = [S.COMMANDE_ENREGISTREE, S.CHEZ_FAFFA_GO, S.EN_COURS_DE_LIVRAISON, last];
+  const current: Record<PublicStatus, number> = {
+    COMMANDE_ENREGISTREE: 0,
+    CHEZ_FAFFA_GO: 1,
+    EN_COURS_DE_LIVRAISON: 2,
+    LIVRAISON_REPORTEE: 2,
+    LIVRAISON_REPORTEE_CLIENT: 2,
+    LIVRE: 3,
+    RETOURNE_AU_VENDEUR: 3,
+    COMMANDE_ANNULEE: 1,
+  };
+  const at = current[status];
+  // A delivered parcel has nothing left to wait for: every step is done.
+  const finished = status === PublicStatus.LIVRE;
+  return {
+    steps: flow.map((step, index) => ({
+      step,
+      state:
+        index < at || finished
+          ? TrackStepState.FAIT
+          : index === at
+            ? TrackStepState.ACTUEL
+            : TrackStepState.A_VENIR,
+    })),
+    postponed:
+      status === PublicStatus.LIVRAISON_REPORTEE ||
+      status === PublicStatus.LIVRAISON_REPORTEE_CLIENT,
+  };
 }
 
 /**

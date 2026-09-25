@@ -20,6 +20,11 @@ describe('publicSiteInfoFrom (Landing 3, 2.6)', () => {
     expect(info.fees.retenueRateBps).toBe(300);
   });
 
+  it('carries the rules the FAQ quotes: the À vérifier limit and the attempts', () => {
+    const info = publicSiteInfoFrom(DEFAULT_SETTINGS, DEFAULT_CONTACT_LINKS, zones);
+    expect(info.rules).toEqual({ verifyDeadlineHours: 48, maxDeliveryAttempts: 3 });
+  });
+
   it('carries the contact links and the zones through unchanged', () => {
     const info = publicSiteInfoFrom(DEFAULT_SETTINGS, DEFAULT_CONTACT_LINKS, zones);
     expect(info.contactLinks).toEqual(DEFAULT_CONTACT_LINKS);
