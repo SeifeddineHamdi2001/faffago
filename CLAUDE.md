@@ -20,9 +20,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 
 ## Launch scope
 
-Build only what launch needs, in this order: finish phase 5 (depot), courier app, À vérifier, money (caisse, bons de versement, bons de retour, courier pay), public tracking page, deployment.
-
-Chat, notifications, reports, the full Exceptions queue and the rest of the public site are **post-launch**. They are listed in the "Post-lancement" section of PROGRESS.md. Don't build them before launch unless asked.
+Build in this order: finish phase 8 (money: caisse, bons de versement, bons de retour, courier pay), phase 9 (public site: tracking page, landing page FR + AR, Tarifs and Zones couvertes, SEO, Meta Pixel), phase 10 (communication and reports: notifications, chat, the full Exceptions queue, reports, retenue certificates), phase 11 (deployment). Everything is built before launch; PROGRESS.md lists each phase's items.
 
 ## Structure
 

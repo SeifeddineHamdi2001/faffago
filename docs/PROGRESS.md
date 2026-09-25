@@ -495,10 +495,10 @@ Steps, all done:
 - [ ] Bons de retour
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
 
-## Phase 9 — Public tracking page
+## Phase 9 — Public site
 
-Launch needs the tracking page only; the rest of the public site (landing
-page, tarifs, SEO) is post-launch (see below, CLAUDE.md launch scope).
+The whole public site, before launch (scope change 2026-09-25, CLAUDE.md
+launch scope).
 
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ
@@ -507,6 +507,25 @@ page, tarifs, SEO) is post-launch (see below, CLAUDE.md launch scope).
       Sortie coursier cancelled at the depot must not read "En cours de
       livraison". The seller's timeline shows both, with "Scan annulé"
       (D-46)
+- [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
+- [ ] Tarifs and Zones couvertes read from Paramètres
+- [ ] Open Graph, SEO (/fr, /ar)
+- [ ] Meta Pixel (TO CONFIRM): easy to switch off
+- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
+
+## Phase 10 — Communication and reports
+
+- [ ] In-app notifications (all roles)
+- [ ] Chat per parcel (seller ↔ livreur, staff can join), lifecycle as in
+      D-23 / Q15
+- [ ] Exceptions queue, the rest beyond the phase 5 first rows (D-50).
+      Phase 5 already has: parcels at the depot without a tour, pickups
+      planned but not done, seller change requests waiting, codes typed by
+      hand (with Marquer comme traité, D-59)
+- [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
+- [ ] Retenue à la source certificates + monthly report (the retenue amount
+      itself is computed and stored on every bon in phase 8, per CLAUDE.md,
+      Money). Must be ready before the first tax declaration deadline
 
 ## Phase 11 — Deployment
 
@@ -530,42 +549,6 @@ page, tarifs, SEO) is post-launch (see below, CLAUDE.md launch scope).
       barcode scanner — confirm `GUN_MAX_MEAN_KEY_INTERVAL_MS` (35 ms) tells
       it apart from typing — and with the camera on a phone over HTTPS
       (browsers only open the camera on a secure page)
-
-## Post-lancement
-
-Not built before launch (CLAUDE.md, Launch scope). The launch path is:
-finish phase 5 (done), courier app, À vérifier, money, public tracking page,
-deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
-
-### Chat
-
-- [ ] Chat per parcel (seller ↔ livreur, staff can join), was phase 10
-
-### Notifications
-
-- [ ] In-app notifications (all roles), was phase 10
-
-### Reports
-
-- [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export, was phase 10
-- [ ] Retenue à la source certificates + monthly report, was phase 8 (the
-      retenue amount itself is computed and stored on every bon at launch,
-      per CLAUDE.md, Money; only the certificate document and the monthly
-      report are deferred)
-
-### The full Exceptions queue
-
-- [ ] Exceptions queue, the rest beyond the phase 5 first rows (D-50), was
-      phase 10. Phase 5 already has: parcels at the depot without a tour,
-      pickups planned but not done, seller change requests waiting, codes
-      typed by hand (with Marquer comme traité, D-59)
-
-### The rest of the public site
-
-- [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md, was phase 9
-- [ ] Tarifs and Zones couvertes read from Paramètres, was phase 9
-- [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM), was phase 9
-- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned), was phase 9
 
 ## Decisions made during the build
 
@@ -1227,6 +1210,14 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
 
 - 2026-09-25 — **Phase 7 merged into `main`** (fast-forward) after lint,
   typecheck, test and the 29 browser tests passed.
+
+- 2026-09-25 — **Launch scope widened**: everything that was Post-lancement
+  is now built before launch. Phase 9 is the whole public site (tracking,
+  landing FR + AR, Tarifs and Zones couvertes, SEO, Meta Pixel, Next.js 16
+  evaluation); phase 10 is communication and reports (notifications, chat,
+  the full Exceptions queue, reports, retenue certificates); phase 11,
+  deployment, unchanged. The Post-lancement section is removed; CLAUDE.md,
+  Launch scope, updated.
 
 ## Open questions
 
