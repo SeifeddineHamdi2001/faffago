@@ -20,7 +20,15 @@ function resultOf(
   answer: OperationAnswer,
   replayed: boolean,
 ): CourierOperationResult {
-  return { kind, id, ok: answer.ok, replayed, code: answer.code, message: answer.message, parcel: null };
+  return {
+    kind,
+    id,
+    ok: answer.ok,
+    replayed,
+    code: answer.code,
+    message: answer.message,
+    parcel: null,
+  };
 }
 
 /**

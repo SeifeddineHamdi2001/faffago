@@ -67,7 +67,9 @@ export class CourierPickupsService {
   ) {}
 
   /** Planned for him today or earlier and still open, then those he closed today. */
-  async day(actor: UserPrincipal): Promise<{ open: CourierPickupView[]; done: CourierPickupView[] }> {
+  async day(
+    actor: UserPrincipal,
+  ): Promise<{ open: CourierPickupView[]; done: CourierPickupView[] }> {
     const now = this.clock.now();
     const todayKey = tunisDayKey(now);
     const include = {
@@ -140,8 +142,12 @@ export class CourierPickupsService {
   /** Terminer le ramassage, applied once per id the phone drew. */
   finish(actor: UserPrincipal, op: CourierFinishPickupOperation): Promise<CourierOperationResult> {
     const now = this.clock.now();
-    return applyOnce(this.prisma, actor, { ...op, kind: CourierOperationKind.TERMINER_RAMASSAGE }, now, (tx) =>
-      this.close(tx, actor, op.pickupId, now),
+    return applyOnce(
+      this.prisma,
+      actor,
+      { ...op, kind: CourierOperationKind.TERMINER_RAMASSAGE },
+      now,
+      (tx) => this.close(tx, actor, op.pickupId, now),
     );
   }
 
@@ -155,7 +161,11 @@ export class CourierPickupsService {
     // Terminer and a late scan of the same pickup queue here.
     await tx.$queryRaw`SELECT "id" FROM "pickups" WHERE "id" = ${pickupId}::uuid FOR UPDATE`;
     const pickup = await tx.pickup.findUnique({ where: { id: pickupId } });
-    if (!pickup || pickup.ramasseurId !== actor.courierId || pickup.status === PickupStatus.DEMANDE) {
+    if (
+      !pickup ||
+      pickup.ramasseurId !== actor.courierId ||
+      pickup.status === PickupStatus.DEMANDE
+    ) {
       return refusal(ScanRefusal.RAMASSAGE_INTROUVABLE);
     }
     if (pickup.status !== PickupStatus.PLANIFIE) return refusal(ScanRefusal.RAMASSAGE_TERMINE);

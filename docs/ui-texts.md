@@ -459,6 +459,171 @@ Mode names and the refusal messages "Colis déjà livré", "Mauvais mode", "Coli
 | `CHARGE_TYPE_LABELS_FR` (D-2)       | Frais de livraison · Frais de retour · Changement de client · Frais de ramassage                     |
 | `CHAT_THREAD_STATE_LABELS_FR` (Q15) | Ouvert · Lecture seule · Clos                                                                        |
 
+## Application coursier (`apps/courier/src/i18n/messages.ts`, phase 6)
+
+The whole app, in both languages. **The Arabic must be read by a native
+speaker before launch.** The French texts the specs word (Livreur, Ramasseur,
+Ma journée, Ma tournée, Livré, Échec, Terminer le ramassage, Annuler le dernier
+scan, "3 scans en attente d'envoi", Déjà livré ici…) are listed too, so the
+Arabic can be checked against them. Statuses, failure reasons, slots, pay
+plans and the API's refusals have their Arabic in the same file
+(`STATUS_AR`, `FAILURE_REASON_AR`, `REFUSAL_AR`…).
+
+| Key                  | Français                                                                                             | العربية                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `appName`            | Faffa Go Coursier                                                                                    | فافا قو - الموزّعون                                                 |
+| `loginTitle`         | Connexion                                                                                            | تسجيل الدخول                                                        |
+| `loginSteps`         | 1 · Livreur ou Ramasseur › 2 · Téléphone › 3 · Mot de passe                                          | ١ · موزّع أو جامع طرود › ٢ · الهاتف › ٣ · كلمة السرّ                |
+| `roleLivreur`        | Livreur                                                                                              | موزّع                                                               |
+| `roleRamasseur`      | Ramasseur                                                                                            | جامع طرود                                                           |
+| `phone`              | Téléphone                                                                                            | رقم الهاتف                                                          |
+| `password`           | Mot de passe                                                                                         | كلمة السرّ                                                          |
+| `login`              | Se connecter                                                                                         | تسجيل الدخول                                                        |
+| `chooseRoleFirst`    | Choisissez Livreur ou Ramasseur                                                                      | اختر موزّع أو جامع طرود                                             |
+| `networkError`       | Pas de connexion. Réessayez quand le réseau revient.                                                 | لا يوجد اتصال. أعد المحاولة عند عودة الشبكة.                        |
+| `sessionExpired`     | Session expirée : reconnectez-vous. Vos scans en attente sont conservés.                             | انتهت الجلسة: سجّل الدخول من جديد. عمليات المسح غير المرسلة محفوظة. |
+| `pinCreate`          | Choisissez un code PIN à 4 chiffres                                                                  | اختر رمزًا سريًا من 4 أرقام                                         |
+| `pinConfirm`         | Confirmez le code PIN                                                                                | أكّد الرمز السري                                                    |
+| `pinEnter`           | Entrez votre code PIN                                                                                | أدخل رمزك السري                                                     |
+| `pinMismatch`        | Les deux codes ne sont pas identiques                                                                | الرمزان غير متطابقين                                                |
+| `pinWrong`           | Code PIN incorrect                                                                                   | الرمز السري غير صحيح                                                |
+| `pinForgotten`       | Code PIN oublié ? Se déconnecter                                                                     | نسيت الرمز؟ تسجيل الخروج                                            |
+| `erase`              | Effacer                                                                                              | مسح                                                                 |
+| `locationNeeded`     | La position du téléphone est enregistrée avec chaque scan. Autorisez la localisation pour continuer. | يُسجَّل موقع الهاتف مع كل عملية مسح. اسمح بتحديد الموقع للمتابعة.   |
+| `allow`              | Autoriser                                                                                            | السماح                                                              |
+| `openSettings`       | Ouvrir les réglages                                                                                  | فتح الإعدادات                                                       |
+| `updateTitle`        | Mise à jour obligatoire                                                                              | تحديث إجباري                                                        |
+| `updateSending`      | Envoi des scans en attente avant la mise à jour : {count} restant(s).                                | إرسال عمليات المسح المعلّقة قبل التحديث: بقي {count}.               |
+| `updateInstall`      | Installez la nouvelle version de l’application pour continuer.                                       | ثبّت النسخة الجديدة من التطبيق للمتابعة.                            |
+| `tabJournee`         | Journée                                                                                              | اليوم                                                               |
+| `tabTournee`         | Tournée                                                                                              | الجولة                                                              |
+| `tabScanner`         | Scanner                                                                                              | مسح                                                                 |
+| `tabRamassages`      | Ramassages                                                                                           | الاستلام                                                            |
+| `tabCaisse`          | Caisse                                                                                               | الصندوق                                                             |
+| `tabMenu`            | Menu                                                                                                 | القائمة                                                             |
+| `pendingScans`       | {count} scans en attente d’envoi                                                                     | {count} عمليات مسح في انتظار الإرسال                                |
+| `offline`            | Hors ligne                                                                                           | غير متصل                                                            |
+| `refusedScans`       | Scans refusés                                                                                        | عمليات مسح مرفوضة                                                   |
+| `maJournee`          | Ma journée                                                                                           | يومي                                                                |
+| `aLivrer`            | À livrer                                                                                             | للتوصيل                                                             |
+| `ramassages`         | Ramassages                                                                                           | الاستلام                                                            |
+| `bonsEtRetours`      | Bons et retours                                                                                      | الوصولات والمرتجعات                                                 |
+| `cashPorte`          | Cash porté                                                                                           | النقود المحمولة                                                     |
+| `progress`           | {done} faits sur {total}                                                                             | {done} من {total}                                                   |
+| `avantDeRentrer`     | Avant de rentrer                                                                                     | قبل العودة                                                          |
+| `toBringBackCount`   | {count} colis à rapporter au dépôt                                                                   | {count} طرود يجب إرجاعها إلى المستودع                               |
+| `cashToHandIn`       | Cash à remettre : {amount}                                                                           | نقود يجب تسليمها: {amount}                                          |
+| `nothingOpen`        | Rien d’ouvert : bonne soirée.                                                                        | لا شيء معلّق: مساء الخير.                                           |
+| `refresh`            | Actualiser                                                                                           | تحديث                                                               |
+| `lastUpdate`         | Mis à jour à {time}                                                                                  | آخر تحديث {time}                                                    |
+| `maTournee`          | Ma tournée                                                                                           | جولتي                                                               |
+| `noStops`            | Aucun colis à livrer.                                                                                | لا توجد طرود للتوصيل.                                               |
+| `attempt`            | Tentative {n}/{m}                                                                                    | المحاولة {n}/{m}                                                    |
+| `exchange`           | Échange                                                                                              | استبدال                                                             |
+| `openingAllowed`     | Ouverture autorisée                                                                                  | مسموح بالفتح                                                        |
+| `deliveredHere`      | Déjà livré ici                                                                                       | سبق التوصيل هنا                                                     |
+| `call`               | Appeler                                                                                              | اتصال                                                               |
+| `callPhone2`         | Appeler le 2e numéro                                                                                 | الاتصال بالرقم الثاني                                               |
+| `callSeller`         | Appeler le vendeur                                                                                   | الاتصال بالبائع                                                     |
+| `whatsapp`           | WhatsApp                                                                                             | واتساب                                                              |
+| `scan`               | Scanner                                                                                              | مسح                                                                 |
+| `moveUp`             | Monter                                                                                               | إلى الأعلى                                                          |
+| `moveDown`           | Descendre                                                                                            | إلى الأسفل                                                          |
+| `postponedTo`        | Reporté au {date}                                                                                    | مؤجّل إلى {date}                                                    |
+| `relaunchedTo`       | Relancé pour le {date}                                                                               | أُعيد إرساله ليوم {date}                                            |
+| `sellerNote`         | Note du vendeur                                                                                      | ملاحظة البائع                                                       |
+| `landmark`           | Repère                                                                                               | معلم                                                                |
+| `meetingPoint`       | Point de rendez-vous                                                                                 | نقطة اللقاء                                                         |
+| `addressNote`        | Note d’adresse                                                                                       | ملاحظة العنوان                                                      |
+| `saveMeetingPoint`   | Enregistrer le point de rendez-vous                                                                  | حفظ نقطة اللقاء                                                     |
+| `meetingPointSaved`  | Point de rendez-vous enregistré                                                                      | تم حفظ نقطة اللقاء                                                  |
+| `retourAuDepot`      | Retour au dépôt                                                                                      | الإرجاع إلى المستودع                                                |
+| `bringBackTonight`   | À rapporter au dépôt ce soir                                                                         | يجب إرجاعها إلى المستودع هذا المساء                                 |
+| `nothingToBringBack` | Aucun colis à rapporter.                                                                             | لا توجد طرود للإرجاع.                                               |
+| `scanTitle`          | Scannez l’étiquette                                                                                  | امسح الملصق                                                         |
+| `typeCode`           | Saisir le code                                                                                       | إدخال الرمز                                                         |
+| `typeCodeHint`       | Étiquette abîmée : tapez le code du colis (signalé à l’admin)                                        | ملصق تالف: اكتب رمز الطرد (يُبلَّغ به المشرف)                       |
+| `parcelCode`         | Code du colis                                                                                        | رمز الطرد                                                           |
+| `validate`           | Valider                                                                                              | تأكيد                                                               |
+| `cameraNeeded`       | Autorisez la caméra pour scanner les étiquettes.                                                     | اسمح باستعمال الكاميرا لمسح الملصقات.                               |
+| `notInTour`          | Ce colis n’est pas dans votre tournée.                                                               | هذا الطرد ليس في جولتك.                                             |
+| `unreadableCode`     | Code illisible : ce n’est pas une étiquette Faffa Go.                                                | رمز غير مقروء: ليس ملصق فافا قو.                                    |
+| `alreadyScanned`     | Déjà scanné — {action} à {time}                                                                      | تم مسحه من قبل — {action} على الساعة {time}                         |
+| `choosePickupFirst`  | Ouvrez d’abord un ramassage pour y scanner les colis.                                                | افتح عملية استلام أولًا لمسح طرودها.                                |
+| `livre`              | Livré                                                                                                | تم التسليم                                                          |
+| `echec`              | Échec                                                                                                | فشل                                                                 |
+| `amountToCollect`    | Montant à encaisser                                                                                  | المبلغ الواجب تحصيله                                                |
+| `confirmAmount`      | J’ai encaissé exactement {amount}                                                                    | حصّلت بالضبط {amount}                                               |
+| `confirmExchange`    | J’ai récupéré l’ancien article                                                                       | استرجعت القطعة القديمة                                              |
+| `confirmDelivery`    | Confirmer la livraison                                                                               | تأكيد التسليم                                                       |
+| `chooseReason`       | Choisissez le motif                                                                                  | اختر السبب                                                          |
+| `postponeDate`       | Date demandée par le client                                                                          | التاريخ الذي طلبه الحريف                                            |
+| `slotOptional`       | Créneau (facultatif)                                                                                 | الفترة (اختياري)                                                    |
+| `noteOptional`       | Note (facultatif)                                                                                    | ملاحظة (اختياري)                                                    |
+| `confirmFailure`     | Confirmer l’échec                                                                                    | تأكيد الفشل                                                         |
+| `back`               | Retour                                                                                               | رجوع                                                                |
+| `close`              | Fermer                                                                                               | إغلاق                                                               |
+| `scanSaved`          | Scan enregistré                                                                                      | تم تسجيل المسح                                                      |
+| `scanQueued`         | Scan enregistré : il partira dès qu’il y a du réseau                                                 | تم تسجيل المسح: سيُرسل عند توفّر الشبكة                             |
+| `cancelLastScan`     | Annuler le dernier scan                                                                              | إلغاء آخر مسح                                                       |
+| `scanCancelled`      | Scan annulé                                                                                          | تم إلغاء المسح                                                      |
+| `cancelTooLate`      | Délai d’annulation dépassé : seul l’admin peut corriger                                              | انتهت مهلة الإلغاء: المشرف وحده يمكنه التصحيح                       |
+| `addressNoteHint`    | Immeuble, étage, porte… pour le prochain livreur                                                     | العمارة، الطابق، الباب… للموزّع القادم                              |
+| `saveNote`           | Enregistrer la note                                                                                  | حفظ الملاحظة                                                        |
+| `noteSaved`          | Note d’adresse enregistrée                                                                           | تم حفظ ملاحظة العنوان                                               |
+| `maCaisse`           | Ma caisse                                                                                            | صندوقي                                                              |
+| `aRemettre`          | À remettre ce soir                                                                                   | للتسليم هذا المساء                                                  |
+| `ofWhichPending`     | dont {amount} en attente d’envoi                                                                     | منها {amount} في انتظار الإرسال                                     |
+| `nothingToHandIn`    | Rien à remettre pour le moment.                                                                      | لا شيء للتسليم حاليًا.                                              |
+| `mesRamassages`      | Mes ramassages                                                                                       | عمليات الاستلام                                                     |
+| `noPickups`          | Aucun ramassage prévu.                                                                               | لا توجد عمليات استلام مبرمجة.                                       |
+| `doneToday`          | Terminés aujourd’hui                                                                                 | المنتهية اليوم                                                      |
+| `contact`            | Contact : {name}                                                                                     | المسؤول: {name}                                                     |
+| `cashOnlyToContact`  | Argent et retours uniquement à cette personne. Vous pouvez vérifier sa CIN.                          | النقود والمرتجعات لهذا الشخص فقط. يمكنك التثبّت من بطاقة تعريفه.    |
+| `expected`           | Attendus                                                                                             | المنتظرة                                                            |
+| `scanned`            | Scannés                                                                                              | الممسوحة                                                            |
+| `missing`            | Pas encore scannés                                                                                   | لم تُمسح بعد                                                        |
+| `extra`              | En plus de la demande                                                                                | زيادة على الطلب                                                     |
+| `declared`           | {count} colis annoncés                                                                               | {count} طرود معلن عنها                                              |
+| `scanParcels`        | Scanner les colis                                                                                    | مسح الطرود                                                          |
+| `finishPickup`       | Terminer le ramassage                                                                                | إنهاء الاستلام                                                      |
+| `finishConfirm`      | Terminer avec {count} colis scanné(s) ?                                                              | إنهاء بـ {count} طرد ممسوح؟                                         |
+| `finishFee`          | Moins de 5 colis : frais de ramassage pour le vendeur.                                               | أقل من 5 طرود: معلوم استلام على البائع.                             |
+| `finishNone`         | Aucun colis : le ramassage sera clôturé sans frais.                                                  | لا طرود: سيُغلق الاستلام بدون معلوم.                                |
+| `confirm`            | Confirmer                                                                                            | تأكيد                                                               |
+| `aEmporterNone`      | À emporter : rien                                                                                    | للحمل: لا شيء                                                       |
+| `planned`            | Prévu le {date}                                                                                      | مبرمج يوم {date}                                                    |
+| `menu`               | Menu                                                                                                 | القائمة                                                             |
+| `profil`             | Profil                                                                                               | الملف الشخصي                                                        |
+| `role`               | Rôle                                                                                                 | الدور                                                               |
+| `zones`              | Zones                                                                                                | المناطق                                                             |
+| `payPlan`            | Plan de paie                                                                                         | نظام الخلاص                                                         |
+| `payPlanChange`      | Pour changer de plan de paie, demandez-le à l’admin.                                                 | لتغيير نظام الخلاص، اطلب ذلك من المشرف.                             |
+| `language`           | Langue                                                                                               | اللغة                                                               |
+| `french`             | Français                                                                                             | Français                                                            |
+| `arabic`             | العربية                                                                                              | العربية                                                             |
+| `changePin`          | Changer le code PIN                                                                                  | تغيير الرمز السري                                                   |
+| `passwordAdminOnly`  | Le mot de passe ne se change que par l’admin.                                                        | كلمة السرّ لا يغيّرها إلا المشرف.                                   |
+| `logout`             | Se déconnecter                                                                                       | تسجيل الخروج                                                        |
+| `logoutPending`      | Il reste {count} scan(s) à envoyer : ils seront envoyés à votre prochaine connexion.                 | بقي {count} مسح للإرسال: سيُرسل عند دخولك القادم.                   |
+| `appVersion`         | Version {version}                                                                                    | النسخة {version}                                                    |
+| `noZone`             | Aucune zone                                                                                          | لا توجد منطقة                                                       |
+
+### Written by the API or the web for phase 6
+
+| Key                                   | Français                                                                                                                                                                                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API, Terminer le ramassage            | Ramassage terminé : {n} colis, frais de ramassage {montant} · Ramassage terminé : {n} colis · Ramassage clôturé sans colis : aucun frais                                                                                                  |
+| API, note d'adresse                   | Mémoire d’adresse enregistrée                                                                                                                                                                                                             |
+| `COURIER_OPERATION_ERROR_MESSAGES_FR` | Opération illisible : elle a été retirée de la file · Identifiant déjà utilisé par une autre opération · Écrivez une note ou un point de rendez-vous · La note d’adresse s’enregistre après une livraison réussie                         |
+| `SCAN_REFUSAL_MESSAGES_FR`, phase 6   | Ramassage introuvable, ou confié à un autre ramasseur · Ce ramassage est déjà terminé · Ce colis appartient à un autre vendeur · Le montant encaissé doit être exactement le COD du colis · Confirmez que l’ancien article a été récupéré |
+| `SCAN_CANCEL_REFUSAL_MESSAGES_FR`     | Ramassage terminé : ce scan ne peut plus être annulé                                                                                                                                                                                      |
+| `SCAN_ACTION_LABELS_FR`               | Ramassage · Entrée dépôt · Sortie coursier · Livré · Échec · Retour de tournée · Préparation retours · Retour reçu · Bon de versement remis · Archivage bon                                                                               |
+| web Colis, journal (D-63)             | Sans position                                                                                                                                                                                                                             |
+| web Colis, destinataire               | Mémoire d’adresse · Point de rendez-vous : {texte}                                                                                                                                                                                        |
+| web Exceptions (D-59)                 | Marquer comme traité                                                                                                                                                                                                                      |
+| app.json, permissions                 | La caméra sert à scanner les étiquettes des colis. · La position est enregistrée avec chaque scan.                                                                                                                                        |
+
 ## Terminal (équipe technique uniquement)
 
 `admin:reset`, `db:seed`, `db:seed:demo` and `documents:verify` print short French messages

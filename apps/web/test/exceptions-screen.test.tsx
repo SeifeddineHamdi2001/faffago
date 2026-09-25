@@ -129,7 +129,9 @@ describe('ExceptionsScreen (Admin 4.7, D-50)', () => {
 
   it('lets Admin and Dépôt mark a manual entry as treated, but not Service client', async () => {
     const user = userEvent.setup();
-    render(<ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
+    render(
+      <ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />,
+    );
     expect(screen.queryByRole('button', { name: 'Marquer comme traité' })).toBeNull();
 
     bff.mockResolvedValueOnce({ ok: true, data: { scanId: 's1', treated: true } });

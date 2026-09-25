@@ -7,11 +7,7 @@ import {
   courierSyncSchema,
   type CourierSyncValues,
 } from '@faffago/shared';
-import {
-  AllowOutdatedCourierApp,
-  CurrentPrincipal,
-  RequirePermission,
-} from '../auth/decorators';
+import { AllowOutdatedCourierApp, CurrentPrincipal, RequirePermission } from '../auth/decorators';
 import type { Principal, UserPrincipal } from '../auth/principal';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CourierDayService } from './courier-day.service';

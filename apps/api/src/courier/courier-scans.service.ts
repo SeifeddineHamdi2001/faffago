@@ -119,7 +119,9 @@ export class CourierScansService {
     op: CourierScanOperation,
     meta: CourierRequestMeta,
   ): Promise<CourierOperationResult> {
-    const existing = await this.prisma.scan.findUnique({ where: { clientScanId: op.clientScanId } });
+    const existing = await this.prisma.scan.findUnique({
+      where: { clientScanId: op.clientScanId },
+    });
     if (existing) return this.replay(existing, actor, op);
     try {
       return await this.prisma.$transaction((tx) => this.record(tx, actor, op, meta));
@@ -271,7 +273,13 @@ export class CourierScansService {
       await tx.pickupParcel.upsert({
         where: { pickupId_parcelId: { pickupId: pickup!.id, parcelId: parcel.id } },
         // Not announced by the seller: an extra parcel, counted like the others (D-47).
-        create: { pickupId: pickup!.id, parcelId: parcel.id, expected: false, scannedAt: now, scanId },
+        create: {
+          pickupId: pickup!.id,
+          parcelId: parcel.id,
+          expected: false,
+          scannedAt: now,
+          scanId,
+        },
         update: { scannedAt: now, scanId },
       });
       await this.recountPickup(tx, pickup!.id);
@@ -294,7 +302,11 @@ export class CourierScansService {
     actor: UserPrincipal,
     op: CourierScanOperation,
   ): Promise<CourierOperationResult> {
-    if (row.actorUserId !== actor.userId || row.action !== op.action || row.rawCode !== op.rawCode) {
+    if (
+      row.actorUserId !== actor.userId ||
+      row.action !== op.action ||
+      row.rawCode !== op.rawCode
+    ) {
       return scanResult(op.clientScanId, {
         ok: false,
         code: ScanRefusal.SCAN_ID_REUTILISE,
@@ -331,7 +343,10 @@ export class CourierScansService {
    * happened to the parcel. Asked again, it answers the same.
    */
   async cancel(actor: UserPrincipal, op: CourierCancelOperation): Promise<CourierOperationResult> {
-    const refused = (refusal: ScanCancelRefusal, parcel: { code: string; status: ParcelStatus } | null) =>
+    const refused = (
+      refusal: ScanCancelRefusal,
+      parcel: { code: string; status: ParcelStatus } | null,
+    ) =>
       scanResult(op.clientScanId, {
         kind: CourierOperationKind.ANNULATION,
         ok: false,

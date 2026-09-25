@@ -1,20 +1,53 @@
 {
   "name": "@faffago/courier",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "license": "UNLICENSED",
+  "main": "index.ts",
   "scripts": {
-    "build": "echo \"apps/courier est créé en phase 6 (docs/PROGRESS.md)\"",
-    "dev": "echo \"apps/courier est créé en phase 6 (docs/PROGRESS.md)\"",
-    "test": "echo \"aucun test pour l'instant\"",
-    "lint": "echo \"aucun code pour l'instant\"",
-    "typecheck": "echo \"aucun code pour l'instant\""
+    "dev": "expo start --dev-client",
+    "android": "expo run:android",
+    "build": "expo export --platform android --output-dir dist --no-minify",
+    "test": "jest",
+    "lint": "eslint src test index.ts App.tsx",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@faffago/shared": "workspace:*"
+    "@faffago/shared": "workspace:*",
+    "@react-native-community/netinfo": "12.0.1",
+    "@react-navigation/bottom-tabs": "^7.19.2",
+    "@react-navigation/native": "^7.4.1",
+    "@react-navigation/native-stack": "^7.19.2",
+    "expo": "~57.0.25",
+    "expo-camera": "~57.0.5",
+    "expo-constants": "~57.0.19",
+    "expo-crypto": "~57.0.3",
+    "expo-location": "~57.0.20",
+    "expo-secure-store": "~57.0.4",
+    "expo-sqlite": "~57.0.3",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0"
   },
   "devDependencies": {
     "@faffago/config": "workspace:*",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.1.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react-hooks": "^5",
+    "jest": "^29.7.0",
+    "jest-expo": "^57.0.5",
     "typescript": "^5.7.3"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "typescript",
+        "@types/react"
+      ]
+    }
   }
 }

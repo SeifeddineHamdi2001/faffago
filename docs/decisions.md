@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-58** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-58 are rules |
+| **D-1 … D-69** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-69 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-58**
+**Rules decided during the build — D-4 to D-69**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -92,6 +92,12 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-61 · The ramasseur's bon scan steps wait for phase 8](#d-61--the-ramasseurs-bon-scan-steps-wait-for-phase-8)
 - [D-62 · Mes gains (livreur) waits for phase 8](#d-62--mes-gains-livreur-waits-for-phase-8)
 - [D-63 · GPS: required to open the app, never blocks a scan](#d-63--gps-required-to-open-the-app-never-blocks-a-scan)
+- [D-64 · One queue, one route](#d-64--one-queue-one-route)
+- [D-65 · Cancelling a courier's scan](#d-65--cancelling-a-couriers-scan)
+- [D-66 · What Livré confirms](#d-66--what-livré-confirms)
+- [D-67 · Pickup scans and Terminer le ramassage](#d-67--pickup-scans-and-terminer-le-ramassage)
+- [D-68 · Mémoire d'adresse](#d-68--mémoire-dadresse)
+- [D-69 · The courier app's technical choices](#d-69--the-courier-apps-technical-choices)
 
 **Money — A-1 to A-5**
 
@@ -1268,6 +1274,113 @@ tech-stack 4).
   `gpsLng` null, same as a depot scan already tolerates. The staff log
   already shows GPS when it has it (Colis, D-11); a null value now reads
   **"Sans position"** there, no new column needed — the absence is the flag.
+
+### D-64 · One queue, one route
+
+Decided 2026-09-25, building phase 6 (Coursier 4.9, D-14).
+
+- **Every courier operation goes through `POST /scans/courier`**, in the order
+  the phone recorded it: a scan (Ramassage, Livré, Échec), a cancellation,
+  Terminer le ramassage, a note d'adresse. It is the one route an outdated app
+  reaches (D-14), so nothing the courier did offline is stuck behind a forced
+  update.
+- **Each operation gets its own answer** and its own transaction. An
+  operation the API cannot read is answered `OPERATION_INVALIDE` and the phone
+  drops it; the ones after it still go through. A scan missing what its action
+  needs is stored as refused, with the reason.
+- **Idempotent by the phone's id**: a scan by its UUID (`scans.clientScanId`),
+  Terminer and a note by theirs (`courier_operations`, new table). Sent again,
+  the first answer comes back and nothing is written.
+- **`Permission.APP_COURSIER`** (Livreur, Ramasseur) guards the routes both
+  couriers use; each service narrows by role. No new capability: it is the
+  app Coursier 2 gives both.
+
+**Where.** `apps/api/src/courier`, `packages/shared/src/courier.ts`,
+migration `20261008000000_courier_scans`.
+
+### D-65 · Cancelling a courier's scan
+
+Decided 2026-09-25, building phase 6, applying A-11 and A-1.
+
+- **His own last scan, within the window measured between the two phone
+  times** (the scan's and the Annuler's), so a scan cancelled offline is
+  cancelled however late both reach the server. A scan never sent is simply
+  taken off the phone's queue.
+- **Everything the scan wrote is put back**: status, place, attempts, cash
+  status, delivery and pickup times, the frozen courier rate, the 48-hour
+  deadline, the failure reason, the échange item.
+- **The charges the scan created become ANNULEE**: the delivery fee of a
+  Livré, the return fee of a third failure. A fee is owed only for what
+  happened (A-1). Each charge now records its scan (`seller_charges.scanId`).
+  Delivered again for real, a new scan owes a new fee.
+- **Refused** once anything else happened to the parcel, once one of its
+  charges left EN_ATTENTE, or — for a pickup scan — once Terminer counted it.
+
+### D-66 · What Livré confirms
+
+Decided 2026-09-25, building phase 6 (Coursier 4.4, A-10, A-24).
+
+- The amount sent with Livré must be **exactly the COD** frozen on the parcel,
+  or the scan is refused (`MONTANT_DIFFERENT`): there is no partial payment.
+- On an **échange**, Livré requires the old item confirmed collected
+  (`ECHANGE_NON_CONFIRME` otherwise). Not collected is an Échec.
+- A code typed from a damaged label is accepted and **flagged**
+  (`SAISIE_MANUELLE`), and lands in Exceptions like the depot's (A-22, D-59).
+
+### D-67 · Pickup scans and Terminer le ramassage
+
+Decided 2026-09-25, building phase 6 (Coursier 4.6, A-13, D-47, D-61).
+
+- A pickup scan names **his own pickup, Planifié**. An extra parcel must be
+  **Créé and of the same seller** (`COLIS_AUTRE_VENDEUR` otherwise).
+- **Terminer** counts the parcels scanned, extra ones included, and closes
+  the pickup: **Effectué** with the pickup fee as a `RAMASSAGE` charge
+  (EN_ATTENTE, deducted from the next bon) below 5, none from 5; **Annulé** at
+  zero, at no cost, cancelled by the ramasseur with "Aucun colis ramassé" —
+  A-13's "treated as cancelled". Parcels announced but not scanned stay Créé,
+  free for a new request.
+- After Terminer, a scan for that pickup is refused (`RAMASSAGE_TERMINE`).
+- The ramasseur's day lists his pickups planned for today **or earlier** and
+  still open, then those he closed today.
+
+### D-68 · Mémoire d'adresse
+
+Decided 2026-09-25, building phase 6 (Coursier 4.3).
+
+- **One memory per customer phone**; the latest note replaces the previous
+  one. A note is saved **after a successful delivery**, by the livreur who
+  delivered; a **meeting point** on any parcel he carries or delivered, written
+  on the parcel and in the memory.
+- **"Déjà livré ici"** shows when a parcel to that number has been delivered,
+  note or not.
+- Read by **couriers and staff** (the Colis page shows it); no seller route
+  ever reads it, nor the parcel's meeting point.
+
+### D-69 · The courier app's technical choices
+
+Decided 2026-09-25, building phase 6.
+
+- **`expo-camera` reads the labels, not `react-native-vision-camera`**
+  (tech-stack 4 named it): its version 5, current for this Expo SDK, scans
+  codes on iOS only. `expo-camera` uses ML Kit on Android and follows the SDK.
+- **Stops are reordered with Monter / Descendre**, kept on the phone, rather
+  than by dragging: large buttons work one-handed with gloves; a drag in a long
+  list does not.
+- **Arabic right to left per component**, not by flipping the whole app,
+  which on Android needs a restart.
+- **The PIN is asked at start and after 5 minutes in the background**
+  (`PIN_RELOCK_AFTER_MS`). A GPS fix is waited for **4 seconds** at a scan.
+- **TypeScript stays at the monorepo's version** (5.9); Expo's check is told
+  to skip it.
+- **APK signing, hosting and OTA updates move to phase 11** (deployment):
+  they need the production keys and server. The forced update itself is built.
+- The app has **no Chat, Notifications or Mes gains tab**: post-launch
+  (CLAUDE.md) and D-62.
+- **One React version for the whole monorepo, pinned exactly** (19.2.3, the
+  one React Native 0.86 embeds). With `node-linker=hoisted` two versions put
+  the web's `react-dom` beside the app's `react` and broke every web test;
+  the web app steps back from 19.3.0. React moves in both apps together, when
+  the Expo SDK moves.
 
 ---
 

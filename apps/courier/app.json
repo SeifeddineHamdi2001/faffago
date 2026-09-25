@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Faffa Go Coursier",
+    "slug": "faffago-coursier",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["android"],
+    "android": {
+      "package": "tn.faffago.coursier",
+      "versionCode": 1,
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "blockedPermissions": ["ACCESS_BACKGROUND_LOCATION"]
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-status-bar",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La caméra sert à scanner les étiquettes des colis.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "La position est enregistrée avec chaque scan.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "@faffago/config/tsconfig/react-native.json",
+  "compilerOptions": {
+    "customConditions": ["react-native"],
+    "types": ["jest"],
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["index.ts", "App.tsx", "src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "android", "ios"]
+}

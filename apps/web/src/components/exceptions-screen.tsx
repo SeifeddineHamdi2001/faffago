@@ -168,8 +168,7 @@ export function ExceptionsScreen({
                   <span className="font-mono font-semibold">Code inconnu</span>
                 )}
                 <span className="block">
-                  {row.rawCode} ·{' '}
-                  {SCAN_ACTION_LABELS_FR[row.action as ScanAction] ?? row.action} ·{' '}
+                  {row.rawCode} · {SCAN_ACTION_LABELS_FR[row.action as ScanAction] ?? row.action} ·{' '}
                   {row.actor.name} ({ROLE_LABELS_FR[row.actor.role as Role]})
                   {!row.accepted && ' · refusé'}
                 </span>

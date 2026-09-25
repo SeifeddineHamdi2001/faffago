@@ -73,7 +73,11 @@ export class CourierDayService {
     const courierId = actor.courierId ?? '';
     const carried = await this.prisma.parcel.findMany({
       where: { currentLivreurId: courierId, location: ParcelLocation.AVEC_LE_LIVREUR },
-      orderBy: [{ delegation: { nameFr: 'asc' } }, { localite: { nameFr: 'asc' } }, { code: 'asc' }],
+      orderBy: [
+        { delegation: { nameFr: 'asc' } },
+        { localite: { nameFr: 'asc' } },
+        { code: 'asc' },
+      ],
       include: {
         seller: { select: { shopName: true, contactPhone: true } },
         localite: { select: { nameFr: true, nameAr: true } },

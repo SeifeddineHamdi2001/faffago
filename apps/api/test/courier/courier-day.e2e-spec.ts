@@ -139,7 +139,10 @@ describe('Ramassage (Coursier 4.6, D-47)', () => {
     const extra = await parcel(seller, 'CREE');
     const p = await pickup([listed]);
 
-    const results = await sync([pickupScan(p.id, listed.code), pickupScan(p.id, extra.code)], hediToken);
+    const results = await sync(
+      [pickupScan(p.id, listed.code), pickupScan(p.id, extra.code)],
+      hediToken,
+    );
 
     expect(results.map((r) => [r.ok, r.parcel?.status])).toEqual([
       [true, 'RAMASSE'],
@@ -173,7 +176,9 @@ describe('Ramassage (Coursier 4.6, D-47)', () => {
       hediToken,
     );
     expect(results.map((r) => r.code)).toEqual(['COLIS_AUTRE_VENDEUR', 'RAMASSAGE_INTROUVABLE']);
-    expect((await t.prisma.parcel.findUniqueOrThrow({ where: { id: own.id } })).status).toBe('CREE');
+    expect((await t.prisma.parcel.findUniqueOrThrow({ where: { id: own.id } })).status).toBe(
+      'CREE',
+    );
   });
 
   it('takes back an extra parcel scanned by mistake, within the minute (A-11)', async () => {
@@ -200,7 +205,11 @@ describe('Terminer le ramassage (A-13, D-61)', () => {
     const parcels = [];
     for (let i = 0; i < count; i++) parcels.push(await parcel(seller, 'CREE'));
     const p = await pickup(parcels);
-    if (count > 0) await sync(parcels.map((x) => pickupScan(p.id, x.code)), hediToken);
+    if (count > 0)
+      await sync(
+        parcels.map((x) => pickupScan(p.id, x.code)),
+        hediToken,
+      );
     return p;
   }
 
@@ -331,7 +340,9 @@ describe('Ma tournée and Retour au dépôt (Coursier 4.2, 4.5)', () => {
     expect(codes(response.body.toBringBack)).toContain(failed.code);
     const notHisCode = (await t.prisma.parcel.findUniqueOrThrow({ where: { id: notHis } })).code;
     expect(codes(response.body.toDeliver)).not.toContain(notHisCode);
-    expect(response.body.toDeliver.find((s: { code: string }) => s.code === stop.code)).toMatchObject({
+    expect(
+      response.body.toDeliver.find((s: { code: string }) => s.code === stop.code),
+    ).toMatchObject({
       recipientName: 'Client',
       landmark: 'Près de la mosquée',
       sellerNote: 'Appeler avant',
@@ -441,10 +452,12 @@ describe('Mémoire d’adresse (Coursier 4.3)', () => {
 
     const next = await parcel(seller, 'EN_LIVRAISON', { recipientPhone: phone });
     const tour = (await get('/coursier/tournee', aliToken)).body;
-    expect(tour.toDeliver.find((s: { code: string }) => s.code === next.code).memory).toMatchObject({
-      note: 'Immeuble bleu à côté de la pharmacie, 2e étage',
-      deliveredHere: true,
-    });
+    expect(tour.toDeliver.find((s: { code: string }) => s.code === next.code).memory).toMatchObject(
+      {
+        note: 'Immeuble bleu à côté de la pharmacie, 2e étage',
+        deliveredHere: true,
+      },
+    );
 
     // Staff read it on the parcel; the seller never does.
     const depot = await createUser(t.prisma, { role: 'DEPOT', username: 'memoire.depot' });
@@ -462,10 +475,7 @@ describe('Mémoire d’adresse (Coursier 4.3)', () => {
   it('keeps a note for after the delivery, but takes a meeting point on the way', async () => {
     const stop = await parcel(seller, 'EN_LIVRAISON', { recipientPhone: '97333444' });
     const [early, meeting] = await sync(
-      [
-        note(stop.code, { note: 'Trop tôt' }),
-        note(stop.code, { meetingPoint: 'Café de la gare' }),
-      ],
+      [note(stop.code, { note: 'Trop tôt' }), note(stop.code, { meetingPoint: 'Café de la gare' })],
       aliToken,
     );
     expect(early).toMatchObject({ ok: false, code: 'NOTE_APRES_LIVRAISON' });

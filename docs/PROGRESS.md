@@ -395,29 +395,45 @@ ramasseur's bon steps and Mes gains wait for phase 8; GPS required to open
 the app, never blocks a scan). Chat and notifications are post-launch
 (CLAUDE.md).
 
-Steps:
+Steps, all done:
 
-1. [ ] Shared: courier scan schema and rules (Livré, Échec with the fixed
-       reasons and D-9's date, Ramassage), address memory, Ma caisse totals
-2. [ ] API: `POST /scans/courier` — idempotent by the phone's UUID, open to
-       outdated apps (D-14), business day and skew flag from the device
-       (A-12), GPS optional (D-63), through the parcel event service
-3. [ ] API: cancelling a courier scan within the window, on device time,
-       by the courier who made it (A-11)
-4. [ ] API: the courier's own day — Ma tournée (livreur), today's pickups
-       and Terminer le ramassage with the pickup fee (ramasseur, A-13,
-       D-47, D-61), Ma caisse, Profil
-5. [ ] API: Mémoire d'adresse (Coursier 4.3): a note and a meeting point per
-       customer phone, couriers and staff only, never the seller
-6. [ ] App: Expo scaffold, theme, French and Arabic (RTL), login (role,
-       phone, password), PIN on the phone, 90-day session (Q7, Q11, D-7)
-7. [ ] App: SQLite scan queue, sync, no double scan on the phone, kept
-       across a forced logout (Q12), forced update only once the queue is
-       empty (tech-stack 5)
-8. [ ] App: livreur — Ma journée, Ma tournée, Trouver le client, Livrer /
-       Échec, Retour au dépôt, Ma caisse, Profil
-9. [ ] App: ramasseur — Ma journée, Ramassages (Colis scan, extra parcels,
-       Terminer), Profil; checks, docs, merge
+1. [x] Shared (`courier.ts`): the four queue operations and their shapes,
+       the device-time cancel rule, postponement days, Ma caisse, the
+       WhatsApp message and links; `APP_COURSIER`; refusal codes — 18 shared
+       tests
+2. [x] API: `POST /scans/courier`, the one route open to outdated apps
+       (D-14): scans stored under the phone's UUID, business day and skew
+       flag from the phone (A-12), GPS optional (D-63), Livré confirming the
+       exact COD and the échange item (D-66), manual entry flagged. Migration
+       `20261008000000_courier_scans` (`seller_charges.scanId`,
+       `courier_operations`, four CHECKs) — D-64
+3. [x] API: Annuler le dernier scan on the phone's clock, the scan's charges
+       ANNULEE (D-65)
+4. [x] API: `/coursier/tournee` (Ma tournée, Retour au dépôt, stops done
+       today), `/coursier/ramassages` and Terminer le ramassage with the
+       pickup fee (D-67), `/coursier/caisse`, `/coursier/moi`,
+       `PATCH /coursier/moi/langue`
+5. [x] API: Mémoire d'adresse (D-68); the Colis page shows it, the meeting
+       point and "Sans position" (D-63); Exceptions names every scan action —
+       36 API e2e, 1 schema test, 1 web test
+6. [x] App: Expo SDK 57 / React Native 0.86 in `apps/courier`, theme (navy on
+       orange, 56 px), French and Arabic with right-to-left per component,
+       login (role, phone, password; last role pre-selected), PIN on the
+       phone, session refreshed before expiry (D-69)
+7. [x] App: SQLite `scan_queue`, sync in order every 15 s and when the
+       network returns, "Déjà scanné — Livré à 14:32", refused scans listed
+       with why, queue kept per courier across a forced logout (Q12), forced
+       update once the queue is empty
+8. [x] App, livreur: Ma journée (numbers, progress, Avant de rentrer),
+       Ma tournée (Monter / Descendre, Appeler, WhatsApp, Scanner), Trouver
+       le client, Scanner (camera or typed code), Livré / Échec with the
+       fixed reasons and D-9's days, Annuler, note d'adresse, Retour au
+       dépôt, Ma caisse with pending scans, Profil
+9. [x] App, ramasseur: Ramassages, the pickup (contact to hand cash to,
+       expected, missing, extra), continuous pickup scans, Terminer — 37 app
+       tests (queue, API client, texts, the provider through a logout, one per
+       screen); `expo export` bundles the Android app (967 modules);
+       `expo-doctor` 21/21
 
 ## Phase 7 — À vérifier
 
@@ -428,6 +444,12 @@ Steps:
 
 ## Phase 8 — Money
 
+- [ ] The ramasseur's Bon de versement (QR, Remis) and Retours (Retour reçu)
+      scans in the app, with À emporter on the pickup (D-61)
+- [ ] Mes gains in the app, debts included (D-62)
+- [ ] A-11 for courier scans: none cancelled once the caisse session of its
+      day is Clôturée (`courierScanCancelRefusal` gets that fact)
+- [ ] Ma caisse: the depot's count, conforme or écart; the ramasseur's bon cash
 - [ ] Caisse sessions (attendu / compté / écart), courier debts
 - [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
 - [ ] Tableau de bord, money part (D-39): À recevoir, and Taux de livraison
@@ -462,7 +484,12 @@ page, tarifs, SEO) is post-launch (see below, CLAUDE.md launch scope).
 - [ ] The VPS has limited memory: CI and test runs there use fewer workers
       than the development machine (API tests are already capped at half the
       cores; lower it further, or run in band, on a small VPS or CI runner)
-- [ ] Full real-day test with real scans on a low-cost Android phone
+- [ ] Courier app release: signing key kept in two places (tech-stack 5), the
+      signed APK hosted over HTTPS with its checksum, `EXPO_PUBLIC_API_URL`
+      set, OTA updates (EAS Update or equivalent) for JavaScript changes (D-69)
+- [ ] Full real-day test with real scans on a low-cost Android phone: the
+      camera on thermal labels, a scan with no GPS fix, a day offline then
+      synced, a forced logout with scans waiting, the Arabic screens
 - [ ] The depot's scan station (phase 5), before launch: with a real USB
       barcode scanner — confirm `GUN_MAX_MEAN_KEY_INTERVAL_MS` (35 ms) tells
       it apart from typing — and with the camera on a phone over HTTPS
@@ -1134,6 +1161,24 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
   the server's time only once a scan is flagged for clock skew; staff keep
   both, unchanged.
 
+- 2026-09-25 — **Phase 6 plan**: answers recorded as **D-61 to D-63**
+  (Terminer now, the bon steps with phase 8; Mes gains with phase 8; location
+  required to open the app, a missing fix never blocks a scan).
+- 2026-09-25 — **Phase 6, the courier app.** Choices made while building,
+  recorded as **D-64 to D-69**: one queue and one route for every operation;
+  a cancelled courier scan cancels its charges; Livré confirms the exact COD
+  and the échange item; Terminer at zero parcels is Annulé at no cost; one
+  address memory per phone; \`expo-camera\` instead of vision-camera (v5 scans
+  codes on iOS only); Monter / Descendre instead of drag; RTL per component;
+  PIN again after 5 minutes away; APK, signing and OTA moved to phase 11. Also:
+  - **Older test fixtures** that inserted accepted courier scans by hand now
+    carry what the new CHECKs require (\`parcelBefore\`, the amount of a Livré).
+  - **The API's courier tests log in once per file**: argon2 on PGlite in
+    parallel workers ran out of memory once (the phase 2 note), and a failed
+    hash reads as a wrong password.
+  - **\`node-linker=hoisted\`** already in \`.npmrc\` lets Metro and Jest find the
+    React Native packages; React 19.2 for the app beside the web's 19.1.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -1146,8 +1191,10 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
   Géographie; the seed no longer overwrites them.
 - **UI texts**: approved for now; the full review before launch works from
   `docs/ui-texts.md`.
-- Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
-  Nothing enforces that yet — it is a rule for the phase 6 implementation.
+- ~~Q12: the courier app must keep its SQLite `scan_queue` across a forced logout.
+  Nothing enforces that yet — it is a rule for the phase 6 implementation.~~
+  **Closed 2026-09-25 (phase 6)**: each row carries its courier; a logout clears
+  the session and the PIN, never the queue; tested through the app's provider.
 - **Relancer without a date** (D-29): the message is neutral for now; the
   wording the seller reads comes with the phase 7 screen.
 - **Off-server backup destination** (D-32): open until phase 11, pending a

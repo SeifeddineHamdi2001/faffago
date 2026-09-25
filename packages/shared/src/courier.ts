@@ -33,7 +33,11 @@ import {
  * The scans of phase 6. Retour reçu and the bon de versement come with the
  * bons in phase 8 (D-61).
  */
-export const COURIER_SCAN_ACTIONS = [ScanAction.RAMASSAGE, ScanAction.LIVRE, ScanAction.ECHEC] as const;
+export const COURIER_SCAN_ACTIONS = [
+  ScanAction.RAMASSAGE,
+  ScanAction.LIVRE,
+  ScanAction.ECHEC,
+] as const;
 export type CourierScanAction = (typeof COURIER_SCAN_ACTIONS)[number];
 
 export const PARCEL_ACTION_BY_COURIER_SCAN: Record<CourierScanAction, ParcelAction> = {
@@ -212,7 +216,8 @@ export const CourierOperationError = {
   /** The note d'adresse is written after a successful delivery (Coursier 4.3). */
   NOTE_APRES_LIVRAISON: 'NOTE_APRES_LIVRAISON',
 } as const;
-export type CourierOperationError = (typeof CourierOperationError)[keyof typeof CourierOperationError];
+export type CourierOperationError =
+  (typeof CourierOperationError)[keyof typeof CourierOperationError];
 
 export const COURIER_OPERATION_ERROR_MESSAGES_FR: Record<CourierOperationError, string> = {
   OPERATION_INVALIDE: 'Opération illisible : elle a été retirée de la file',
@@ -278,7 +283,11 @@ export function courierScanCancelRefusal(facts: CourierScanCancelFacts): ScanCan
 }
 
 /** Whether the phone still offers Annuler on a scan it made (A-11). */
-export function isWithinCancelWindow(scanDeviceTime: Date, now: Date, windowSeconds: number): boolean {
+export function isWithinCancelWindow(
+  scanDeviceTime: Date,
+  now: Date,
+  windowSeconds: number,
+): boolean {
   const elapsed = now.getTime() - scanDeviceTime.getTime();
   return elapsed >= 0 && elapsed <= windowSeconds * 1000;
 }

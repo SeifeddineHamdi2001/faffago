@@ -72,8 +72,12 @@ export class AddressMemoryService {
   /** Saves the note or the meeting point, once per id the phone drew. */
   save(actor: UserPrincipal, op: CourierAddressNoteOperation): Promise<CourierOperationResult> {
     const now = this.clock.now();
-    return applyOnce(this.prisma, actor, { ...op, kind: CourierOperationKind.NOTE_ADRESSE }, now, (tx) =>
-      this.write(tx, actor, op),
+    return applyOnce(
+      this.prisma,
+      actor,
+      { ...op, kind: CourierOperationKind.NOTE_ADRESSE },
+      now,
+      (tx) => this.write(tx, actor, op),
     );
   }
 
@@ -99,7 +103,8 @@ export class AddressMemoryService {
     const parcel = code ? await tx.parcel.findUnique({ where: { code } }) : null;
     if (!parcel) return refused(ScanRefusal.CODE_INCONNU);
     // His parcel: the one he carries, or the one he delivered.
-    if (parcel.currentLivreurId !== actor.courierId) return refused(ScanRefusal.COLIS_AUTRE_COURSIER);
+    if (parcel.currentLivreurId !== actor.courierId)
+      return refused(ScanRefusal.COLIS_AUTRE_COURSIER);
     if (op.note && parcel.status !== ParcelStatus.LIVRE) {
       return {
         ok: false,

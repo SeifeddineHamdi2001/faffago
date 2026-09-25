@@ -113,7 +113,9 @@ describe('Livré (Coursier 4.4)', () => {
       attemptCount: 1,
       courierRateMillimes: 3500n,
     });
-    const scan = await t.prisma.scan.findUniqueOrThrow({ where: { clientScanId: op.clientScanId } });
+    const scan = await t.prisma.scan.findUniqueOrThrow({
+      where: { clientScanId: op.clientScanId },
+    });
     expect(scan).toMatchObject({
       action: 'LIVRE',
       accepted: true,
@@ -262,7 +264,9 @@ describe('Échec (Coursier 4.4, D-9)', () => {
     const op = scanOp({ action: 'ECHEC', rawCode: p.code, failureReason: 'REFUSE' });
     const [result] = await sync([op]);
     expect(result).toMatchObject({ ok: true, parcel: { status: 'RETOUR_AU_DEPOT' } });
-    const scan = await t.prisma.scan.findUniqueOrThrow({ where: { clientScanId: op.clientScanId } });
+    const scan = await t.prisma.scan.findUniqueOrThrow({
+      where: { clientScanId: op.clientScanId },
+    });
     expect(await t.prisma.sellerCharge.findMany({ where: { parcelId: p.id } })).toEqual([
       expect.objectContaining({ type: 'RETOUR', scanId: scan.id, status: 'EN_ATTENTE' }),
     ]);

@@ -355,9 +355,9 @@ describe('scans', () => {
       );
     const before = '{"status":"EN_LIVRAISON","location":"AVEC_LE_LIVREUR"}';
 
-    await expect(
-      courierScan('99999999-9999-9999-9999-99999999a001', 'ECHEC', {}),
-    ).rejects.toThrow(/scans_courier_scan_keeps_parcel_before/);
+    await expect(courierScan('99999999-9999-9999-9999-99999999a001', 'ECHEC', {})).rejects.toThrow(
+      /scans_courier_scan_keeps_parcel_before/,
+    );
     await expect(
       courierScan('99999999-9999-9999-9999-99999999a002', 'LIVRE', { parcelBefore: before }),
     ).rejects.toThrow(/scans_delivery_keeps_amount/);

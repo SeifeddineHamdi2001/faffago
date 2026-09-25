@@ -256,9 +256,9 @@ describe('Marquer comme traité (A-22)', () => {
       treatedAt: NOW,
       treatedByUserId: depot.id,
     });
-    expect((await exceptions()).manualEntries.map((r: { scanId: string }) => r.scanId)).not.toContain(
-      scan.id,
-    );
+    expect(
+      (await exceptions()).manualEntries.map((r: { scanId: string }) => r.scanId),
+    ).not.toContain(scan.id);
   });
 
   it('asked twice, answers the same and keeps the first time', async () => {
@@ -287,11 +287,9 @@ describe('Marquer comme traité (A-22)', () => {
   });
 
   it('refuses an unknown scan', async () => {
-    const response = await t.request(
-      'POST',
-      `/exceptions/manual-entries/${randomUUID()}/treat`,
-      { token: depotToken },
-    );
+    const response = await t.request('POST', `/exceptions/manual-entries/${randomUUID()}/treat`, {
+      token: depotToken,
+    });
     expect(response.status).toBe(404);
   });
 

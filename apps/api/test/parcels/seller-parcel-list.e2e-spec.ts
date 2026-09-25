@@ -259,7 +259,9 @@ describe('Détail du colis (Vendeur 4.8, D-38)', () => {
       },
     });
     const first = await t.request('GET', `/parcels/${code}`, { token });
-    const entreeDepot = first.body.timeline.find((e: { type: string }) => e.type === 'ENTREE_DEPOT');
+    const entreeDepot = first.body.timeline.find(
+      (e: { type: string }) => e.type === 'ENTREE_DEPOT',
+    );
     expect(entreeDepot.at).toBe(onTime.toISOString());
 
     // A skewed scan (more than 15 minutes off, A-12): the server's time instead.

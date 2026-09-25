@@ -361,7 +361,8 @@ export class ColisService {
       courierNote: parcel.courierNote,
       meetingPoint: parcel.meetingPoint,
       // Couriers and staff only, never the seller (Coursier 4.3).
-      addressMemory: (await this.memory.forPhones([parcel.recipientPhone])).get(parcel.recipientPhone) ?? null,
+      addressMemory:
+        (await this.memory.forPhones([parcel.recipientPhone])).get(parcel.recipientPhone) ?? null,
       status: parcel.status,
       location: parcel.location,
       labelReprintNeeded: parcel.labelReprintNeeded,
