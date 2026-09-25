@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-85** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-85 are rules |
+| **D-1 … D-86** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-86 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-85**
+**Rules decided during the build — D-4 to D-86**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -114,6 +114,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-83 · What the seller sees of the money](#d-83--what-the-seller-sees-of-the-money)
 - [D-84 · The ramasseur's visit](#d-84--the-ramasseurs-visit)
 - [D-85 · Forcer un statut on money](#d-85--forcer-un-statut-on-money)
+- [D-86 · Choices made building phase 8](#d-86--choices-made-building-phase-8)
 
 **Money — A-1 to A-5**
 
@@ -1564,8 +1565,8 @@ money"). The development machine has no Docker, so Testcontainers is out.
 ### D-79 · The Caisse
 
 Decided 2026-09-25, answering the phase 8 questions 1 to 3 (Admin 4.9, A-11,
-A-12). **Changes Admin 4.9**: its "the day cannot be closed while a courier …
-has not been counted" becomes the daily summary below.
+A-12). **Changes Admin 4.9**, now **v1.13**: its "the day cannot be closed
+while a courier … has not been counted" becomes the daily summary below.
 
 - **One session per courier and business day**, counted and closed **on its
   own**, by Admin or Dépôt (`CAISSE`). **Compter** writes the amount handed
@@ -1631,8 +1632,9 @@ and 5).
   Préparé again), a reason, audited. Its parcels are free again
   (`bon_versement_parcels.releasedAt`: one unreleased line per parcel), its
   charges back to En attente, the number never reused.
-- **PDF**: two copies on one A4, each with the QR, the parcels, the fee lines,
-  the retenue on its own line and the net. Built on request, never stored.
+- **PDF**: two copies (Exemplaire vendeur, Exemplaire Faffa Go), each on its
+  own A4 pages with the QR, the parcels, the fee lines, the retenue on its own
+  line and the net. Built on request, never stored (D-86).
 
 ### D-81 · Bons de retour
 
@@ -1711,6 +1713,38 @@ back to En livraison with its livreur, the attempt it counted taken back; the
 delivery fee becomes Annulée, the frozen courier rate is removed, the cash
 status and the échange item cleared. Everything else touching Livré, a return,
 Annulé or a charge stays refused.
+
+### D-86 · Choices made building phase 8
+
+Decided 2026-09-25, building phase 8 (none touches a fee, a status or a
+permission beyond D-79 to D-85).
+
+- **The scan tardif is claimed by the first session counted.** A late Livré
+  belongs to any later open session of its courier; the first one counted
+  writes it into its lines, and no other session counts it after that.
+- **Bon steps are not undone.** A Remis or Retour reçu scan, and an
+  Archivage, are corrected by the admin (`ANNULATION_BON`); a Préparation
+  retours scan is cancelled like any depot scan, the line leaving the bon.
+- **Handing out a bon** needs a ramasseur active and taking work (D-12), and
+  his caisse of today not closed; it opens that session if needed.
+- **The fiche de paie** stores the Paramètres rate of the day it is prepared
+  for the record, and prints the parcels grouped by the rate frozen on them
+  (A-15). A fiche cannot be cancelled.
+- **Money documents**: A4, two copies of each bon (Exemplaire vendeur,
+  Exemplaire Faffa Go), each on its own pages with its QR; the fiche de paie
+  once. Built on request, never stored.
+- **The delivery rate chart**: one bar per day, 0–100 % scale, when the
+  period has 2 to 31 days.
+- **Under Voir comme le vendeur**, Paiements and Retours show no print link:
+  printing goes through the seller's own session (D-5, D-15).
+- **The courier app** shows days as `JJ/MM`, like the rest of the app.
+- **API tests**: 40 % of the cores instead of 50 %, and a worker past 768 MB
+  replaced between files (`workerIdleMemoryLimit`): with the money files the
+  suite ran out of memory (PGlite, then argon2) beside the web and app tests.
+  Two older tests depended on the time of day and are fixed: one sorted
+  events by server time, mixing the test clock and the real one (now by the
+  event sequence); one looked for the GPS "36.8" in a text that holds the
+  real creation time (now distinctive coordinates).
 
 ---
 

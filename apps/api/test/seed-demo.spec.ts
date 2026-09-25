@@ -13,6 +13,9 @@ import {
   seedDemoFailures,
   demoFailureRequestId,
   DEMO_FAILURES,
+  DEMO_DELIVERIES,
+  demoDeliveryRequestId,
+  seedDemoDeliveries,
 } from '../prisma/seed-demo';
 import { pgliteAdapter } from './support/pglite-adapter';
 import { applyMigrations } from './migrations';
@@ -179,6 +182,36 @@ describe('seedDemoOperations: work for the back office screens (D-50)', () => {
       },
     });
     expect(slot.courierId).toBe(other.courier!.id);
+  });
+
+  it('adds two parcels delivered today, with the Livré scans the Caisse counts (phase 8)', async () => {
+    const now = new Date('2026-09-25T08:00:00.000Z');
+    await expect(seedDemoDeliveries(client, { nodeEnv: 'production', now })).rejects.toThrow(
+      /production/,
+    );
+    expect(await seedDemoDeliveries(client, { nodeEnv: 'development', now })).toBe(2);
+    expect(await seedDemoDeliveries(client, { nodeEnv: 'development', now })).toBe(0);
+    for (const [index, demo] of DEMO_DELIVERIES.entries()) {
+      const parcel = await client.parcel.findUniqueOrThrow({
+        where: { clientRequestId: demoDeliveryRequestId(index) },
+        include: { scans: true, charges: true },
+      });
+      expect(parcel).toMatchObject({
+        status: 'LIVRE',
+        cashStatus: 'CHEZ_LE_COURSIER',
+        codAmountMillimes: demo.codMillimes,
+      });
+      expect(parcel.scans).toEqual([
+        expect.objectContaining({
+          action: 'LIVRE',
+          accepted: true,
+          businessDate: new Date('2026-09-25T00:00:00.000Z'),
+        }),
+      ]);
+      expect(parcel.charges).toEqual([
+        expect.objectContaining({ type: 'LIVRAISON', status: 'EN_ATTENTE' }),
+      ]);
+    }
   });
 
   it('adds two failed deliveries for À vérifier, one back at the depot under 24 hours (phase 7)', async () => {

@@ -70,7 +70,7 @@ test('the admin logs in with his username; a wrong password is refused', async (
 });
 
 test('Créer un coursier, then Copier les identifiants (Admin 4.15, A-20)', async () => {
-  await admin.getByRole('link', { name: 'Coursiers' }).click();
+  await admin.getByRole('link', { name: 'Coursiers', exact: true }).click();
   await admin.getByRole('button', { name: 'Créer un coursier' }).click();
   const form = admin.getByRole('dialog', { name: 'Créer un coursier' });
   await form.getByLabel('Prénom').fill('Oussama');
@@ -101,7 +101,7 @@ test('Paramètres › Utilisateurs: a Dépôt account (Admin 4.16)', async () =>
 });
 
 test('Créer un vendeur with his documents (Admin 4.14, D-33)', async () => {
-  await admin.getByRole('link', { name: 'Vendeurs' }).click();
+  await admin.getByRole('link', { name: 'Vendeurs', exact: true }).click();
   await admin.getByRole('button', { name: 'Créer un vendeur' }).click();
   const form = admin.getByRole('dialog', { name: 'Créer un vendeur' });
   await form.getByLabel('Nom de la boutique').fill(SHOP);
@@ -268,7 +268,7 @@ test('the Dépôt sees the shop, not the email nor the documents, and has no act
   const depot = await context.newPage();
   await loginStaff(depot, DEPOT_USERNAME, depotPassword);
 
-  await depot.getByRole('link', { name: 'Vendeurs' }).click();
+  await depot.getByRole('link', { name: 'Vendeurs', exact: true }).click();
   const main = depot.getByRole('main');
   await expect(main.getByRole('link', { name: SHOP })).toBeVisible();
   await expect(main.getByText(SELLER_EMAIL)).toHaveCount(0);

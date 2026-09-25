@@ -9,6 +9,7 @@ import {
   ParcelStatus,
   Role as SharedRole,
   applyParcelAction,
+  businessDateOf,
   generateParcelCode,
   generatePassword,
   parcelWriteFor,
@@ -277,6 +278,7 @@ async function main(): Promise<void> {
     const results = await seedDemo(prisma, { nodeEnv: process.env.NODE_ENV });
     const work = await seedDemoOperations(prisma, { nodeEnv: process.env.NODE_ENV });
     const failures = await seedDemoFailures(prisma, { nodeEnv: process.env.NODE_ENV });
+    const deliveries = await seedDemoDeliveries(prisma, { nodeEnv: process.env.NODE_ENV });
     console.log('\n─────────────────────────────────────────────');
     console.log('  Comptes de démonstration. Mots de passe affichés une seule fois.');
     for (const r of results) {
@@ -286,7 +288,7 @@ async function main(): Promise<void> {
     console.log(
       `  Affectations de zone : ${work.assignments} · colis ramassés : ${work.parcels} · demandes de ramassage : ${work.pickups}`,
     );
-    console.log(`  Colis à vérifier : ${failures}`);
+    console.log(`  Colis à vérifier : ${failures} · colis livrés aujourd'hui : ${deliveries}`);
     console.log('─────────────────────────────────────────────\n');
   } finally {
     await prisma.$disconnect();
@@ -713,6 +715,164 @@ export async function seedDemoFailures(
       if (demo.backAtDepot) {
         await step(asDepot, { action: ParcelAction.SCAN_RETOUR_DE_TOURNEE }, shifted(2));
       }
+    });
+    added += 1;
+  }
+  return added;
+}
+
+/**
+ * Two parcels of Boutique Démo delivered by the demo livreur today, each with
+ * the Livré scan the Caisse counts from and its delivery fee waiting (D-84):
+ * enough to count a caisse, prepare a bon and hand it out in the browser.
+ * Development and browser tests only.
+ */
+export const DEMO_DELIVERIES: ReadonlyArray<{
+  recipientName: string;
+  recipientPhone: string;
+  address: string;
+  codMillimes: bigint;
+}> = [
+  {
+    recipientName: 'Salma Démo',
+    recipientPhone: '29990011',
+    address: 'Rue du Lac Léman, imm. 4',
+    codMillimes: 60_000n,
+  },
+  {
+    recipientName: 'Karim Démo',
+    recipientPhone: '29990012',
+    address: 'Avenue Habib Bourguiba 12',
+    codMillimes: 45_500n,
+  },
+];
+
+export function demoDeliveryRequestId(index: number): string {
+  return `d0000000-0000-4000-8000-${String(index + 201).padStart(12, '0')}`;
+}
+
+/** Returns how many delivered parcels were added; a second run adds none. */
+export async function seedDemoDeliveries(
+  prisma: PrismaClient,
+  options: { nodeEnv: string | undefined; now?: Date },
+): Promise<number> {
+  if (options.nodeEnv === 'production') {
+    throw new Error('db:seed:demo refuse de tourner en production (NODE_ENV=production).');
+  }
+  const now = options.now ?? new Date();
+  const seller = await prisma.seller.findFirst({ where: { user: { email: DEMO_SELLER_EMAIL } } });
+  const depot = await prisma.user.findFirst({ where: { username: 'demo.depot' } });
+  const person = (phone: string, role: Role) =>
+    prisma.user.findUnique({ where: { phone_role: { phone, role } }, include: { courier: true } });
+  const livreur = await person('50990004', 'LIVREUR');
+  const ramasseur = await person('50990005', 'RAMASSEUR');
+  if (!seller || !depot || !livreur?.courier || !ramasseur?.courier) {
+    throw new Error('Comptes de démonstration absents : lancez seedDemo avant.');
+  }
+  const delegation = await prisma.delegation.findUnique({ where: { code: 'TUN-MARSA' } });
+  if (!delegation) {
+    throw new Error("Géographie absente : lancez d'abord `pnpm --filter @faffago/api db:seed`.");
+  }
+  const localite = await prisma.localite.findFirstOrThrow({
+    where: { delegationId: delegation.id, isOther: false, isActive: true },
+    orderBy: { nameFr: 'asc' },
+  });
+  const { settings } = readPlatformSettings(
+    Object.fromEntries((await prisma.setting.findMany()).map((row) => [row.key, row.value])),
+  );
+  const HOUR = 3_600_000;
+  const asRamasseur: DemoActor = {
+    userId: ramasseur.id,
+    role: 'RAMASSEUR',
+    courierId: ramasseur.courier.id,
+  };
+  const asDepot: DemoActor = { userId: depot.id, role: 'DEPOT' };
+  const asLivreur: DemoActor = {
+    userId: livreur.id,
+    role: 'LIVREUR',
+    courierId: livreur.courier.id,
+  };
+  const livreurCourierId = livreur.courier.id;
+
+  let added = 0;
+  for (const [index, demo] of DEMO_DELIVERIES.entries()) {
+    const clientRequestId = demoDeliveryRequestId(index);
+    if (await prisma.parcel.findUnique({ where: { clientRequestId } })) continue;
+    // Delivered an hour ago, and a minute apart: the same Tunis day as `now`.
+    const deliveredAt = new Date(now.getTime() - HOUR + index * 60_000);
+    const shifted = (hours: number) => new Date(deliveredAt.getTime() + hours * HOUR);
+
+    await prisma.$transaction(async (tx) => {
+      const parcel = await tx.parcel.create({
+        data: {
+          code: generateParcelCode(randomBytes),
+          sellerId: seller.id,
+          recipientName: demo.recipientName,
+          recipientPhone: demo.recipientPhone,
+          delegationId: delegation.id,
+          localiteId: localite.id,
+          address: demo.address,
+          productDescription: 'Article de démonstration',
+          codAmountMillimes: demo.codMillimes,
+          deliveryFeeMillimes: settings.deliveryFeeMillimes,
+          returnFeeMillimes: settings.returnFeeMillimes,
+          changeClientFeeMillimes: settings.changeClientFeeMillimes,
+          createdByUserId: seller.userId,
+          clientRequestId,
+          createdAt: shifted(-26),
+        },
+      });
+      await tx.parcelEvent.create({
+        data: {
+          parcelId: parcel.id,
+          type: ParcelEventType.CREATION,
+          newStatus: ParcelStatus.CREE,
+          newLocation: ParcelLocation.CHEZ_LE_VENDEUR,
+          actorUserId: seller.userId,
+          actorRole: 'VENDEUR',
+          serverTime: shifted(-26),
+        },
+      });
+      const step = (
+        actor: DemoActor,
+        command: Pick<ParcelActionCommand, 'action' | 'assignToCourierId' | 'failureReason'>,
+        at: Date,
+      ) => demoStep(tx, parcel.id, settings, actor, command, at);
+      await step(asRamasseur, { action: ParcelAction.SCAN_RAMASSAGE }, shifted(-24));
+      await step(asDepot, { action: ParcelAction.SCAN_ENTREE_DEPOT }, shifted(-20));
+      await step(
+        asDepot,
+        { action: ParcelAction.SCAN_SORTIE_COURSIER, assignToCourierId: livreurCourierId },
+        shifted(-3),
+      );
+      await step(asLivreur, { action: ParcelAction.SCAN_LIVRE }, deliveredAt);
+      // The Livré scan the Caisse counts from (A-12), and the fee it owes (A-1).
+      const scan = await tx.scan.create({
+        data: {
+          clientScanId: demoDeliveryRequestId(index + 50),
+          action: 'LIVRE',
+          rawCode: parcel.code,
+          parcelId: parcel.id,
+          actorUserId: livreur.id,
+          source: 'APP_COURSIER',
+          accepted: true,
+          collectedMillimes: demo.codMillimes,
+          parcelBefore: { status: 'EN_LIVRAISON', location: 'AVEC_LE_LIVREUR' },
+          deviceTime: deliveredAt,
+          receivedAt: deliveredAt,
+          businessDate: businessDateOf(deliveredAt),
+        },
+      });
+      await tx.sellerCharge.create({
+        data: {
+          sellerId: seller.id,
+          parcelId: parcel.id,
+          type: 'LIVRAISON',
+          amountMillimes: settings.deliveryFeeMillimes,
+          scanId: scan.id,
+          createdAt: deliveredAt,
+        },
+      });
     });
     added += 1;
   }

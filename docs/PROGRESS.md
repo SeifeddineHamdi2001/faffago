@@ -481,49 +481,48 @@ Steps, all done:
 
 ## Phase 8 — Money
 
-Branch `phase-8` (2026-09-25). The eleven money questions were answered the
-same day and recorded as D-79 to D-85 (Caisse per courier with a daily
-summary, bons de versement and de retour, livreur pay, what the seller sees,
-the ramasseur's visit, Forcer un statut on a Livré).
+Done on branch `phase-8` (2026-09-25); merged into `main` once `pnpm lint`,
+`pnpm typecheck`, `pnpm test` (751 API, 264 web, 608 shared, 42 app tests)
+and `pnpm e2e` (34 browser tests) passed through turbo. The eleven money
+questions were answered the same day and recorded as D-79 to D-85; the
+choices made while building are D-86. Not yet run on a real phone or with
+real bons printed: see phase 11.
 
 0. [x] Real PostgreSQL: two Livré scans at once, the D-21 COMMIT error through
        the production Prisma setup, `faffago_app` with its password — 7 tests
        (D-78)
-1. [ ] Shared, tests first: caisse (attendu, écart, debt), bon de versement
-       (existing `buildBonVersement`), fiche de paie and periods with a plan
-       change, À recevoir, delivery rate, bon numbers
-2. [ ] API: Caisse sessions (compter, clôturer, debts, positive écart
-       flagged), A-11 for courier scans, D-12's three phase 8 checks
-3. [ ] API: bons de versement (prepare, PDF with QR, En route, Remis scan,
-       not remis back to the caisse, Archivage, admin cancellation)
-4. [ ] API: bons de retour (Préparation retours, the exchange item, En route,
-       Retour reçu scan, Archivage)
-5. [ ] API: courier pay (plan change at next period, fiches de paie, Payée,
-       debt cancellation), Mes gains
-6. [ ] API: seller Paiements, Retours, À recevoir and delivery rate (D-48)
-7. [ ] Web, back office: Caisse, Paiements vendeurs, Retours, Paie coursiers,
-       scan station modes Préparation retours and Archivage bons (D-50)
-8. [ ] Web, seller: Paiements, Retours, Tableau de bord money part
-9. [ ] App: ramasseur Bon de versement and Retours scans, À emporter; Ma
-       caisse result; Mes gains (D-61, D-62)
-10. [ ] Demo data, browser tests, decisions, ui-texts
-
-Scope, from before:
-
-- [ ] The ramasseur's Bon de versement (QR, Remis) and Retours (Retour reçu)
-      scans in the app, with À emporter on the pickup (D-61)
-- [ ] Mes gains in the app, debts included (D-62)
-- [ ] A-11 for courier scans: none cancelled once the caisse session of its
-      day is Clôturée (`courierScanCancelRefusal` gets that fact)
-- [ ] Ma caisse: the depot's count, conforme or écart; the ramasseur's bon cash
-- [ ] Caisse sessions (attendu / compté / écart), courier debts
-- [ ] Bons de versement (selection, fees, retenue, PDF + QR, Préparé › En route › Remis › Archivé)
-- [ ] Tableau de bord, money part (D-39): À recevoir, and Taux de livraison
-      with **the same period selector as the Aujourd'hui counts** (D-48:
-      Aujourd'hui, Hier, 7 derniers jours, Ce mois, custom range up to 366
-      days, Tunis days)
-- [ ] Bons de retour
-- [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
+1. [x] Shared, tests first (`caisse.ts`, `bons.ts`, `payroll.ts`,
+       `seller-money.ts`): attendu and scan tardif, close outcome (debt, HR,
+       flag), bon QR and numbers, what a bon may pay, who carries a bon, pay
+       periods with a plan change, fiche due, Mes gains, À recevoir, delivery
+       rate; the RETOUR_NON_REMIS transition, the Livré undo (D-85), A-11's
+       closed caisse, the station's five modes, `CAISSE_ECARTS` — 56 new tests
+2. [x] API: the Caisse per courier and day, its daily summary, Compter and
+       Clôturer in one transaction, debts, surpluses checked by the admin, A-11
+       for courier scans, D-12's three blockers. Migration
+       `20261010000000_money`
+3. [x] API: bons de versement — prepare (A-2, A-3, D-34), attach to the
+       pickup or assign a visit, hand out with the cash, Remis scan (Payé,
+       closed), not remis back at the ramasseur's Clôturer, Archivage, admin
+       cancellation (A-5), PDF with QR
+4. [x] API: bons de retour — Préparation retours with the échange item (A-10),
+       hand out, Retour reçu, not handed over back to the depot (answer 6),
+       Archivage, PDF
+5. [x] API: livreur pay — plan change from the next period, fiche due and
+       prepared with its deductions, Payée, debt cancellation, Mes gains
+6. [x] API: the seller's Paiements, Retours, badges, and the Tableau de bord's
+       À recevoir, À traiter and Taux de livraison over its period (D-48)
+7. [x] Web, back office: Caisse (day, session, Départ ramasseur, écarts),
+       Paiements vendeurs with the live preview, Retours, Paie coursiers; the
+       Livré undo in Forcer un statut; the station's two new modes
+8. [x] Web, seller: Paiements, Retours, the menu badges, the Tableau de bord's
+       money part
+9. [x] App: À emporter on the pickup and bon-only visits, the Bon de versement
+       and Retours scan steps, Ma caisse with the bon cash and the depot's
+       count, Mes gains (French and Arabic)
+10. [x] Demo data (two deliveries of the day, D-16), browser test
+        `phase-8.spec.ts` (5 tests), decisions D-78 to D-86, Admin v1.13,
+        ui-texts
 
 ## Phase 9 — Public site
 
@@ -564,6 +563,8 @@ launch scope).
 - [ ] VPS setup, HTTPS, environment variables
 - [ ] Verify the API connects as `faffago_app` with its password, and that an
       UPDATE on `parcel_events` fails on the production database.
+      (Proved on a local PostgreSQL 17 in `pnpm test` since phase 8, D-78;
+      still to check on the server itself.)
       The tests prove the grants with `SET ROLE`; PGlite has no connection
       layer, so the authentication path is only ever exercised here.
 - [ ] Daily off-server backups + tested restore
@@ -574,6 +575,9 @@ launch scope).
 - [ ] Courier app release: signing key kept in two places (tech-stack 5), the
       signed APK hosted over HTTPS with its checksum, `EXPO_PUBLIC_API_URL`
       set, OTA updates (EAS Update or equivalent) for JavaScript changes (D-69)
+- [ ] Money, before launch: print a bon de versement and a bon de retour on
+      the depot's printer and scan their QR with the ramasseur's phone and
+      the station (Archivage); a full day with a real Caisse count (D-79, D-80)
 - [ ] Full real-day test with real scans on a low-cost Android phone: the
       camera on thermal labels, a scan with no GPS fix, a day offline then
       synced, a forced logout with scans waiting, the Arabic screens
@@ -1250,8 +1254,25 @@ launch scope).
   the full Exceptions queue, reports, retenue certificates); phase 11,
   deployment, unchanged. The Post-lancement section is removed; CLAUDE.md,
   Launch scope, updated.
+- 2026-09-25 — **Phase 8, money**: D-78 (real PostgreSQL in the tests, without
+  Docker), D-79 to D-85 from the eleven answers (Caisse per courier with a
+  daily summary, bons de versement and de retour, livreur pay, the seller's
+  money, the ramasseur's visit, the Livré undo), D-86 for the choices made
+  while building. Admin 4.9 amended (v1.13).
+- 2026-09-25 — **Phase 8 merged into `main`** (fast-forward) after lint,
+  typecheck, test and the 34 browser tests passed.
 
 ## Open questions
+
+- **Retenue à la source certificates**: phase 10, before launch and **before
+  the first tax declaration deadline for the retenue**. The date comes from
+  the accountant.
+- **The Arabic of the courier app's phase 8 texts** (À emporter, Mes gains,
+  Ma caisse) is to be read by a native speaker with the rest (ui-texts).
+- **A Remis scan synced after the ramasseur's Clôturer** is refused (the bon
+  is Préparé again, its cash counted as brought back). The ramasseur must sync
+  before being counted; the depot sees his pending scans only on his phone.
+  Fine for launch; watch it on the real day test.
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
   half-up at the millime" (A-3), still to be signed off by the accountant.

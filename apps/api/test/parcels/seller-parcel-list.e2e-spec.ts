@@ -199,14 +199,14 @@ describe('Détail du colis (Vendeur 4.8, D-38)', () => {
       });
       expect(result.ok).toBe(true);
     };
-    await act(ramasseur, ParcelAction.SCAN_RAMASSAGE, {}, { gps: { lat: 36.8, lng: 10.18 } });
+    await act(ramasseur, ParcelAction.SCAN_RAMASSAGE, {}, { gps: { lat: 36.8123, lng: 10.1789 } });
     await act(depot, ParcelAction.SCAN_ENTREE_DEPOT);
     await act(depot, ParcelAction.SCAN_SORTIE_COURSIER, { assignToCourierId: livreur.courierId });
     await act(
       livreur,
       ParcelAction.SCAN_ECHEC,
       { failureReason: 'NE_REPOND_PAS' },
-      { gps: { lat: 36.81, lng: 10.19 }, note: 'Personne à la porte' },
+      { gps: { lat: 36.8456, lng: 10.1901 }, note: 'Personne à la porte' },
     );
 
     const response = await t.request('GET', `/parcels/${created.body.code}`, { token });
@@ -232,7 +232,15 @@ describe('Détail du colis (Vendeur 4.8, D-38)', () => {
     expect(detail.lastFailureNote).toBe('Personne à la porte');
 
     const text = JSON.stringify(detail);
-    for (const secret of ['Trabelsi', 'Gharbi', livreur.phone, '36.8', 'gps']) {
+    for (const secret of [
+      'Trabelsi',
+      'Gharbi',
+      livreur.phone,
+      '36.8123',
+      '36.8456',
+      '10.1789',
+      'gps',
+    ]) {
       expect(text).not.toContain(secret);
     }
   });

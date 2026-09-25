@@ -1,4 +1,4 @@
-# Faffa Go — Interface Admin (spécification v1.12)
+# Faffa Go — Interface Admin (spécification v1.13)
 
 > **How to read this document.** Screen names, buttons and statuses are in French, as the team will see them. Explanations are in English. This document completes the seller specification (Interface Vendeur v1.5); both follow the same statuses and rules. Items marked **TO CONFIRM** were adopted as defaults and still need a final yes (see section 8).
 
@@ -165,7 +165,7 @@ Every courier hands over all the cash from his delivered parcels **every day**. 
 - **Positive écart**: recorded and flagged for the admin to check; never absorbed silently.
 - An écart does not delay sellers: once the session is closed, all the day's parcels are payable, and the shortfall is the courier's debt.
 - **Ramasseur and bons**: cash for bons de versement is handed to the ramasseur when he leaves (bon **En route**). In the evening, every bon must be **Remis** (scanned at the seller) or brought back with its full cash; any missing amount is recorded as an écart on the ramasseur and reported to HR (his pay is not managed in the app).
-- The day cannot be closed while a courier who delivered or carried bons today has not been counted.
+- Each courier's session is counted (recounted until closed) and closed **on its own**; a **daily summary** lists every courier with money that day — counted, closed or still open — with the totals (v1.13, D-79).
 
 ### 4.10 Paiements vendeurs
 
