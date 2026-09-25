@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-77** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-77 are rules |
+| **D-1 … D-78** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-78 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-77**
+**Rules decided during the build — D-4 to D-78**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -106,6 +106,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-75 · The 48-hour job](#d-75--the-48-hour-job)
 - [D-76 · The in-app alert, the lists and the wording](#d-76--the-in-app-alert-the-lists-and-the-wording)
 - [D-77 · Demo parcels waiting on the seller](#d-77--demo-parcels-waiting-on-the-seller)
+- [D-78 · Real PostgreSQL in the tests, without Docker](#d-78--real-postgresql-in-the-tests-without-docker)
 
 **Money — A-1 to A-5**
 
@@ -1527,6 +1528,31 @@ ago (under 24 hours left). Development and browser tests only, never in
 production.
 
 **Where.** `seedDemoFailures` in `apps/api/prisma/seed-demo.ts`.
+
+### D-78 · Real PostgreSQL in the tests, without Docker
+
+Decided 2026-09-25, before phase 8 (PROGRESS, phase 3: "required before
+money"). The development machine has no Docker, so Testcontainers is out.
+
+- **`embedded-postgres`** (dev dependency of the API) ships the official
+  PostgreSQL **17** binaries for every platform through npm. A test starts a
+  throwaway server in its own process, initialised in **UTF-8**, applies the
+  migrations with **`prisma migrate deploy`**, and runs the API on the
+  **unmodified `PrismaService`** (real driver, no adapter), connected as
+  **`faffago_app` with its password**.
+- **What it proves**, in `pnpm test`: two Livré scans of one parcel at the
+  same instant — held behind a row lock until both have queued — deliver
+  once, with one event and one fee; the same, unassisted, over ten parcels;
+  the same scan UUID twice at once is written once; Livré and the seller's
+  Annuler at once never charge both fees (A-1); an error the D-21 trigger
+  raises at COMMIT reaches the caller as a failure (interactive, batch and
+  single statement); `faffago_app` cannot UPDATE `parcel_events`.
+- **Everything else stays on PGlite**, which is faster and needs nothing.
+- The `test` task passes `TEMP`, `TMP` and the profile folders through turbo,
+  as `e2e` already did: without them `initdb` crashes on Windows.
+
+**Where.** `apps/api/test/real-postgres/`, `test/support/real-postgres.ts`,
+`test/support/real-postgres-server.mjs`; `createTestApp(…, { databaseUrl })`.
 
 ---
 

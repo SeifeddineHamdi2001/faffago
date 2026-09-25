@@ -14,7 +14,8 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["LOCALAPPDATA", "APPDATA", "USERPROFILE", "TEMP", "TMP", "CI"]
     },
     "lint": {
       "dependsOn": ["^build"]

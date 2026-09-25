@@ -70,29 +70,43 @@ export const TEST_SECRETS = {
   STORAGE_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString('base64'),
 };
 
-export async function createTestApp(extraControllers: Type[] = []): Promise<TestApp> {
+export interface TestAppOptions {
+  /**
+   * A real PostgreSQL server, already migrated (`startRealPostgres`). The API
+   * then runs on the production Prisma setup, the unmodified `PrismaService`
+   * with the real driver, instead of PGlite through the test adapter.
+   */
+  databaseUrl?: string;
+}
+
+export async function createTestApp(
+  extraControllers: Type[] = [],
+  options: TestAppOptions = {},
+): Promise<TestApp> {
   const storageDir = mkdtempSync(join(tmpdir(), 'faffago-documents-'));
   Object.assign(process.env, TEST_SECRETS, { STORAGE_LOCAL_PATH: storageDir });
 
-  const db = await PGlite.create();
-  await applyMigrations(db);
-  const adapter = pgliteAdapter(db);
-  const prisma = new PrismaClient({ adapter });
+  let db: PGlite | null = null;
   const clock = new TestClock();
-
-  const moduleRef = await Test.createTestingModule({
+  let builder = Test.createTestingModule({
     imports: [AppModule],
     controllers: extraControllers,
-  })
-    .overrideProvider(PrismaService)
-    .useValue(prisma)
-    .overrideProvider(CLOCK)
-    .useValue(clock)
-    .compile();
+  });
+  if (options.databaseUrl) {
+    process.env.DATABASE_URL = options.databaseUrl;
+  } else {
+    db = await PGlite.create();
+    await applyMigrations(db);
+    builder = builder
+      .overrideProvider(PrismaService)
+      .useValue(new PrismaClient({ adapter: pgliteAdapter(db) }));
+  }
+  const moduleRef = await builder.overrideProvider(CLOCK).useValue(clock).compile();
 
   const app = moduleRef.createNestApplication({ logger: false });
   configureApp(app);
   await app.listen(0, '127.0.0.1');
+  const prisma: PrismaClient = app.get(PrismaService);
   const base = (await app.getUrl()).replace('[::1]', '127.0.0.1');
 
   async function request(
@@ -140,7 +154,7 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
     async close() {
       await app.close();
       await prisma.$disconnect();
-      await db.close();
+      await db?.close();
       rmSync(storageDir, { recursive: true, force: true });
     },
   };

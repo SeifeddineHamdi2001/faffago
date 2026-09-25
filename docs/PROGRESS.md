@@ -101,9 +101,10 @@ only, no HTTP endpoint (D-22).
 - [x] No status change without its event, enforced by a deferred trigger
       (D-21) — 10 schema tests
 - [x] Append-only audit log (trigger + revoked privileges + tests)
-- [ ] **Required before phase 8 (money)**: two actions on the same parcel at
+- [x] **Required before phase 8 (money)**, done 2026-09-25 (D-78, on
+      embedded PostgreSQL 17 rather than Testcontainers): two actions on the same parcel at
       the same instant — above all two Livré scans — tested on a real
-      PostgreSQL server (Testcontainers). The service takes a
+      PostgreSQL server. The service takes a
       `SELECT … FOR UPDATE` lock; PGlite has a single connection and cannot
       prove it. The same run proves that, with the production Prisma setup
       (real driver, no test adapter), an error raised at COMMIT by the D-21
@@ -479,6 +480,34 @@ Steps, all done:
        test `phase-7.spec.ts` (6 tests); decisions, ui-texts
 
 ## Phase 8 — Money
+
+Branch `phase-8` (2026-09-25). Step 0 done; the money questions decisions.md
+does not answer were sent in one message, and the steps below that depend on
+them wait for the answers.
+
+0. [x] Real PostgreSQL: two Livré scans at once, the D-21 COMMIT error through
+       the production Prisma setup, `faffago_app` with its password — 7 tests
+       (D-78)
+1. [ ] Shared, tests first: caisse (attendu, écart, debt), bon de versement
+       (existing `buildBonVersement`), fiche de paie and periods with a plan
+       change, À recevoir, delivery rate, bon numbers
+2. [ ] API: Caisse sessions (compter, clôturer, debts, positive écart
+       flagged), A-11 for courier scans, D-12's three phase 8 checks
+3. [ ] API: bons de versement (prepare, PDF with QR, En route, Remis scan,
+       not remis back to the caisse, Archivage, admin cancellation)
+4. [ ] API: bons de retour (Préparation retours, the exchange item, En route,
+       Retour reçu scan, Archivage)
+5. [ ] API: courier pay (plan change at next period, fiches de paie, Payée,
+       debt cancellation), Mes gains
+6. [ ] API: seller Paiements, Retours, À recevoir and delivery rate (D-48)
+7. [ ] Web, back office: Caisse, Paiements vendeurs, Retours, Paie coursiers,
+       scan station modes Préparation retours and Archivage bons (D-50)
+8. [ ] Web, seller: Paiements, Retours, Tableau de bord money part
+9. [ ] App: ramasseur Bon de versement and Retours scans, À emporter; Ma
+       caisse result; Mes gains (D-61, D-62)
+10. [ ] Demo data, browser tests, decisions, ui-texts
+
+Scope, from before:
 
 - [ ] The ramasseur's Bon de versement (QR, Remis) and Retours (Retour reçu)
       scans in the app, with À emporter on the pickup (D-61)
