@@ -114,8 +114,18 @@ describe('permission matrix — outside the Admin 2 table', () => {
 
   it('gives each non-staff role its own space and nothing else', () => {
     expect(PERMISSIONS_BY_ROLE[Role.VENDEUR]).toEqual([Permission.ESPACE_VENDEUR]);
-    expect(PERMISSIONS_BY_ROLE[Role.LIVREUR]).toEqual([Permission.APP_LIVREUR]);
-    expect(PERMISSIONS_BY_ROLE[Role.RAMASSEUR]).toEqual([Permission.APP_RAMASSEUR]);
+    expect(PERMISSIONS_BY_ROLE[Role.LIVREUR]).toEqual([
+      Permission.APP_LIVREUR,
+      Permission.APP_COURSIER,
+    ]);
+    expect(PERMISSIONS_BY_ROLE[Role.RAMASSEUR]).toEqual([
+      Permission.APP_RAMASSEUR,
+      Permission.APP_COURSIER,
+    ]);
+  });
+
+  it('gives the courier app to the two couriers only', () => {
+    expect(ROLES_BY_PERMISSION[Permission.APP_COURSIER]).toEqual([Role.LIVREUR, Role.RAMASSEUR]);
   });
 
   it('keeps staff out of the seller space; the admin only enters it read-only (D-5)', () => {
@@ -140,6 +150,7 @@ describe('permission matrix — deny by default', () => {
       Permission.ESPACE_VENDEUR,
       Permission.APP_LIVREUR,
       Permission.APP_RAMASSEUR,
+      Permission.APP_COURSIER,
     ]);
     expect(new Set(ALL_PERMISSIONS)).toEqual(covered);
   });

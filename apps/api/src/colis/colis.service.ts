@@ -11,6 +11,7 @@ import {
   PARCEL_MESSAGES,
   PARCEL_STATUS_LABELS_FR,
   ParcelErrorCode,
+  Role,
   SANS_ZONE_FILTER,
   addTunisDays,
   csvLine,
@@ -22,6 +23,7 @@ import {
 } from '@faffago/shared';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { AddressMemoryService } from '../courier/address-memory.service';
 import { ChangeRequestsService } from '../demandes/change-requests.service';
 import { localDateTime } from '../parcels/parcel-queries.service';
 
@@ -66,6 +68,8 @@ export interface StaffEvent {
   reasonCode: string | null;
   reasonText: string | null;
   gps: { lat: number; lng: number; accuracyM: number | null } | null;
+  /** A courier's scan recorded without a GPS fix (D-63). */
+  positionMissing: boolean;
   /**
    * The scan behind the event: typed by hand, cancelled, a device clock off;
    * and, for a depot scan still the parcel's last, the admin can cancel it
@@ -132,6 +136,7 @@ export class ColisService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly changeRequests: ChangeRequestsService,
+    private readonly memory: AddressMemoryService,
   ) {}
 
   async list(query: StaffParcelQuery) {
@@ -311,6 +316,12 @@ export class ColisService {
                 accuracyM: event.gpsAccuracyM,
               }
             : null,
+        // A courier's scan with no GPS fix reads "Sans position" (D-63).
+        positionMissing:
+          scan !== undefined &&
+          (event.actorRole === Role.LIVREUR || event.actorRole === Role.RAMASSEUR) &&
+          event.type !== 'ANNULATION_SCAN' &&
+          !(event.gpsLat && event.gpsLng),
         scan: scan
           ? {
               id: scan.id,
@@ -348,6 +359,9 @@ export class ColisService {
       isExchange: parcel.isExchange,
       openingAllowed: parcel.openingAllowed,
       courierNote: parcel.courierNote,
+      meetingPoint: parcel.meetingPoint,
+      // Couriers and staff only, never the seller (Coursier 4.3).
+      addressMemory: (await this.memory.forPhones([parcel.recipientPhone])).get(parcel.recipientPhone) ?? null,
       status: parcel.status,
       location: parcel.location,
       labelReprintNeeded: parcel.labelReprintNeeded,

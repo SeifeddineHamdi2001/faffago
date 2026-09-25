@@ -1018,6 +1018,9 @@ model SellerCharge {
   bonVersementId  String?      @db.Uuid
   note            String?
   createdByUserId String?      @db.Uuid
+  /// The scan whose event owed this charge; cancelling the scan within its
+  /// minute marks it ANNULEE (A-1, A-11). Foreign key in the migration.
+  scanId          String?      @db.Uuid
   createdAt       DateTime     @default(now())
 
   seller       Seller        @relation(fields: [sellerId], references: [id])
@@ -1027,6 +1030,7 @@ model SellerCharge {
   @@index([sellerId, status, createdAt])
   @@index([parcelId])
   @@index([bonVersementId])
+  @@index([scanId])
   @@map("seller_charges")
 }
 
@@ -1400,6 +1404,21 @@ model Notification {
 // ─────────────────────────────────────────────────────────────
 // ADDRESS MEMORY — couriers and staff only, never sellers (Coursier 4.3)
 // ─────────────────────────────────────────────────────────────
+
+/// A courier operation that is not a scan — Terminer le ramassage, a note
+/// d'adresse — under the id the phone drew: sent again, it answers the same.
+model CourierOperation {
+  id          String   @id @db.Uuid
+  actorUserId String   @db.Uuid
+  kind        String
+  deviceTime  DateTime
+  receivedAt  DateTime @default(now())
+  ok          Boolean
+  code        String?
+  message     String
+
+  @@map("courier_operations")
+}
 
 model AddressMemory {
   id                String   @id @default(uuid()) @db.Uuid

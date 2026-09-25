@@ -288,8 +288,9 @@ describe('scans', () => {
     const insert = () =>
       db.query(
         `insert into scans (id,"clientScanId",action,"rawCode","parcelId","actorUserId",source,
-           accepted,"deviceTime","businessDate")
-         values (gen_random_uuid(),$1,'LIVRE','FG-8K2QX7AB',$2,$3,'APP_COURSIER',true,now(),current_date)`,
+           accepted,"parcelBefore","collectedMillimes","deviceTime","businessDate")
+         values (gen_random_uuid(),$1,'LIVRE','FG-8K2QX7AB',$2,$3,'APP_COURSIER',true,
+                 '{"status":"EN_LIVRAISON"}'::jsonb,85000,now(),current_date)`,
         [clientScanId, PARCEL_ID, USER_ID],
       );
 
@@ -301,9 +302,9 @@ describe('scans', () => {
     const failure = (clientScanId: string) =>
       db.query(
         `insert into scans (id,"clientScanId",action,"rawCode","parcelId","actorUserId",source,
-           accepted,"failureReason","deviceTime","businessDate")
+           accepted,"failureReason","parcelBefore","deviceTime","businessDate")
          values (gen_random_uuid(),$1,'ECHEC','FG-8K2QX7AB',$2,$3,'APP_COURSIER',true,
-                 'NE_REPOND_PAS',now(),current_date)`,
+                 'NE_REPOND_PAS','{"status":"EN_LIVRAISON"}'::jsonb,now(),current_date)`,
         [clientScanId, PARCEL_ID, USER_ID],
       );
 
@@ -329,6 +330,45 @@ describe('scans', () => {
         '99999999-9999-9999-9999-999999999992',
         '{"status":"RAMASSE","location":"AVEC_LE_RAMASSEUR"}',
       ),
+    ).resolves.toBeDefined();
+  });
+
+  it('keeps what a courier scan needs to be cancelled and to count (A-11, A-24, phase 6)', async () => {
+    const courierScan = (
+      clientScanId: string,
+      action: string,
+      fields: { parcelBefore?: string; collected?: number },
+    ) =>
+      db.query(
+        `insert into scans (id,"clientScanId",action,"rawCode","parcelId","actorUserId",source,
+           accepted,"parcelBefore","collectedMillimes","deviceTime","businessDate")
+         values (gen_random_uuid(),$1,$2::"ScanAction",'FG-8K2QX7AB',$3,$4,'APP_COURSIER',true,
+                 $5::jsonb,$6,now(),current_date)`,
+        [
+          clientScanId,
+          action,
+          PARCEL_ID,
+          USER_ID,
+          fields.parcelBefore ?? null,
+          fields.collected ?? null,
+        ],
+      );
+    const before = '{"status":"EN_LIVRAISON","location":"AVEC_LE_LIVREUR"}';
+
+    await expect(
+      courierScan('99999999-9999-9999-9999-99999999a001', 'ECHEC', {}),
+    ).rejects.toThrow(/scans_courier_scan_keeps_parcel_before/);
+    await expect(
+      courierScan('99999999-9999-9999-9999-99999999a002', 'LIVRE', { parcelBefore: before }),
+    ).rejects.toThrow(/scans_delivery_keeps_amount/);
+    await expect(
+      courierScan('99999999-9999-9999-9999-99999999a003', 'RAMASSAGE', { parcelBefore: before }),
+    ).rejects.toThrow(/scans_pickup_scan_names_pickup/);
+    await expect(
+      courierScan('99999999-9999-9999-9999-99999999a004', 'LIVRE', {
+        parcelBefore: before,
+        collected: 85000,
+      }),
     ).resolves.toBeDefined();
   });
 

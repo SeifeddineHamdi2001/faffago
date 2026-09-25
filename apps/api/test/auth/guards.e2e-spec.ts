@@ -99,8 +99,8 @@ describe('every route declares who may call it', () => {
         }
       }
     }
-    // The scan upload arrives in phase 6; until then, no route at all.
-    expect(outdatedAllowed.filter((route) => route !== 'ScansController.upload')).toEqual([]);
+    // Exactly one: the courier app's queue upload (phase 6).
+    expect(outdatedAllowed).toEqual(['CourierSyncController.upload']);
   });
 
   it('refuses an undeclared route even to the admin', async () => {

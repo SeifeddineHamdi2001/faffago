@@ -6,6 +6,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { ColisModule } from './colis/colis.module';
 import { ClockModule } from './common/clock.module';
+import { CourierModule } from './courier/courier.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DemandesModule } from './demandes/demandes.module';
 import { ExceptionsModule } from './exceptions/exceptions.module';
@@ -56,6 +57,7 @@ import { ZonesModule } from './zones/zones.module';
     DemandesModule,
     ExceptionsModule,
     DashboardModule,
+    CourierModule,
   ],
 })
 export class AppModule {}

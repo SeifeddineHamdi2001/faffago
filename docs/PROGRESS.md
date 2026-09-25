@@ -390,17 +390,34 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
 
 ## Phase 6 — Courier app
 
-- [ ] Expo dev build, login with role choice, PIN
-- [ ] Livreur: Ma journée, Ma tournée, Trouver le client, Livrer / Échec
-- [ ] Mémoire d'adresse (linked to customer phone)
-- [ ] Ramasseur: pickups, parcel scans, bon Remis scan, Retour reçu scans.
-      Extra parcels (D-47): the ramasseur can scan Créé parcels of the same
-      seller that the request did not list (`PickupParcel.expected = false`);
-      they are picked up normally and count toward the 5-parcel free
-      threshold
-- [ ] SQLite scan queue + sync + no double scan + conflict handling
-- [ ] Ma caisse, notifications, profile
-- [ ] APK distribution, forced update (only with empty queue), OTA updates
+Branch `phase-6`. Plan 2026-09-25; answers recorded as D-61 to D-63 (the
+ramasseur's bon steps and Mes gains wait for phase 8; GPS required to open
+the app, never blocks a scan). Chat and notifications are post-launch
+(CLAUDE.md).
+
+Steps:
+
+1. [ ] Shared: courier scan schema and rules (Livré, Échec with the fixed
+       reasons and D-9's date, Ramassage), address memory, Ma caisse totals
+2. [ ] API: `POST /scans/courier` — idempotent by the phone's UUID, open to
+       outdated apps (D-14), business day and skew flag from the device
+       (A-12), GPS optional (D-63), through the parcel event service
+3. [ ] API: cancelling a courier scan within the window, on device time,
+       by the courier who made it (A-11)
+4. [ ] API: the courier's own day — Ma tournée (livreur), today's pickups
+       and Terminer le ramassage with the pickup fee (ramasseur, A-13,
+       D-47, D-61), Ma caisse, Profil
+5. [ ] API: Mémoire d'adresse (Coursier 4.3): a note and a meeting point per
+       customer phone, couriers and staff only, never the seller
+6. [ ] App: Expo scaffold, theme, French and Arabic (RTL), login (role,
+       phone, password), PIN on the phone, 90-day session (Q7, Q11, D-7)
+7. [ ] App: SQLite scan queue, sync, no double scan on the phone, kept
+       across a forced logout (Q12), forced update only once the queue is
+       empty (tech-stack 5)
+8. [ ] App: livreur — Ma journée, Ma tournée, Trouver le client, Livrer /
+       Échec, Retour au dépôt, Ma caisse, Profil
+9. [ ] App: ramasseur — Ma journée, Ramassages (Colis scan, extra parcels,
+       Terminer), Profil; checks, docs, merge
 
 ## Phase 7 — À vérifier
 

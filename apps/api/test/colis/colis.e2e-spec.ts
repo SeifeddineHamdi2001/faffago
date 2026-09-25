@@ -256,6 +256,7 @@ describe('GET /colis/:code (Admin 4.3)', () => {
         manualEntry: true,
         accepted: true,
         failureReason: 'NE_REPOND_PAS',
+        parcelBefore: { status: 'EN_LIVRAISON', location: 'AVEC_LE_LIVREUR' },
         deviceTime: new Date('2026-09-25T08:00:00.000Z'),
         businessDate: new Date('2026-09-25T00:00:00.000Z'),
       },

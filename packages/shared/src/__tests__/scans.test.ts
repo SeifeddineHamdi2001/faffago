@@ -170,6 +170,7 @@ describe('Annuler le dernier scan (A-11, D-54)', () => {
       ANNULATION_PAS_DERNIER: 'Seul votre dernier scan peut être annulé',
       ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
       ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
+      ANNULATION_RAMASSAGE_TERMINE: 'Ramassage terminé : ce scan ne peut plus être annulé',
     });
   });
 });

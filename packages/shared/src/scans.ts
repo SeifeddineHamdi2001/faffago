@@ -32,6 +32,20 @@ export const ScanSource = {
 } as const;
 export type ScanSource = (typeof ScanSource)[keyof typeof ScanSource];
 
+/** Every scan action, as the team reads it in logs and Exceptions. */
+export const SCAN_ACTION_LABELS_FR: Record<ScanAction, string> = {
+  RAMASSAGE: 'Ramassage',
+  ENTREE_DEPOT: 'Entrée dépôt',
+  SORTIE_COURSIER: 'Sortie coursier',
+  LIVRE: 'Livré',
+  ECHEC: 'Échec',
+  RETOUR_DE_TOURNEE: 'Retour de tournée',
+  PREPARATION_RETOURS: 'Préparation retours',
+  RETOUR_RECU: 'Retour reçu',
+  BON_VERSEMENT_REMIS: 'Bon de versement remis',
+  ARCHIVAGE_BON: 'Archivage bon',
+};
+
 export const SCAN_SOURCE_LABELS_FR: Record<ScanSource, string> = {
   APP_COURSIER: 'Application coursier',
   WEB_CAMERA: 'Caméra',
@@ -157,6 +171,8 @@ export const ScanCancelRefusal = {
   ANNULATION_PAS_DERNIER: 'ANNULATION_PAS_DERNIER',
   ANNULATION_HORS_DELAI: 'ANNULATION_HORS_DELAI',
   ANNULATION_COLIS_MODIFIE: 'ANNULATION_COLIS_MODIFIE',
+  /** A pickup scan once Terminer le ramassage has counted it (A-13, D-61). */
+  ANNULATION_RAMASSAGE_TERMINE: 'ANNULATION_RAMASSAGE_TERMINE',
 } as const;
 export type ScanCancelRefusal = (typeof ScanCancelRefusal)[keyof typeof ScanCancelRefusal];
 
@@ -167,6 +183,7 @@ export const SCAN_CANCEL_REFUSAL_MESSAGES_FR: Record<ScanCancelRefusal, string> 
   ANNULATION_PAS_DERNIER: 'Seul votre dernier scan peut être annulé',
   ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
   ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
+  ANNULATION_RAMASSAGE_TERMINE: 'Ramassage terminé : ce scan ne peut plus être annulé',
 };
 
 export interface DepotScanCancelFacts {

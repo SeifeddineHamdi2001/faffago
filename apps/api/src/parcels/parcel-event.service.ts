@@ -13,6 +13,7 @@ import {
   SCAN_REFUSAL_MESSAGES_FR,
   ScanRefusal,
   SYSTEM_ACTOR,
+  type CourierParcelBefore,
   type FailureReason,
   type ParcelAction,
   type ParcelBefore,
@@ -211,6 +212,7 @@ export class ParcelEventService {
             type: charge.type,
             amountMillimes: charge.amountMillimes,
             createdByUserId: user?.userId ?? null,
+            scanId: context.scanId ?? null,
             createdAt: now,
           },
         }),
@@ -310,6 +312,76 @@ export class ParcelEventService {
         actorRole: input.actor.role,
         scanId: input.scanId,
         reasonText: input.reason ?? null,
+        serverTime: this.clock.now(),
+        metadata: { scanAnnule: input.scanAction },
+      },
+    });
+    return restored;
+  }
+
+  /**
+   * Puts a parcel back as it was before a courier's scan (A-11): every column
+   * Ramassage, Livré or Échec wrote, from what the scan kept, and one
+   * ANNULATION_SCAN event naming the scan. The charges the scan's events
+   * created — a delivery fee, the return fee of a third failure — become
+   * ANNULEE: a fee is owed only for what really happened (A-1). The caller
+   * has checked the window and that nothing happened since.
+   */
+  async restoreBeforeCourierScan(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      scanId: string;
+      scanAction: string;
+      before: CourierParcelBefore;
+      deviceTime: Date;
+    },
+  ): Promise<Parcel> {
+    const { before } = input;
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const current = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    const date = (iso: string | null) => (iso ? new Date(iso) : null);
+    const restored = await tx.parcel.update({
+      where: { id: current.id },
+      data: {
+        status: before.status,
+        location: before.location,
+        currentLivreurId: before.currentLivreurId,
+        plannedLivreurId: before.plannedLivreurId,
+        relaunchDate: before.relaunchDate ? new Date(`${before.relaunchDate}T00:00:00.000Z`) : null,
+        relaunchSlot: before.relaunchSlot,
+        relaunchOrigin: before.relaunchOrigin,
+        cashStatus: before.cashStatus,
+        attemptCount: before.attemptCount,
+        verifyDeadlineAt: date(before.verifyDeadlineAt),
+        lastFailureReason: before.lastFailureReason,
+        lastFailureNote: before.lastFailureNote,
+        courierRateMillimes:
+          before.courierRateMillimes === null ? null : BigInt(before.courierRateMillimes),
+        pickedUpAt: date(before.pickedUpAt),
+        deliveredAt: date(before.deliveredAt),
+        exchangeItemCollected: before.exchangeItemCollected,
+        exchangeItemStatus: before.exchangeItemStatus,
+      },
+    });
+    await tx.sellerCharge.updateMany({
+      where: { scanId: input.scanId, status: 'EN_ATTENTE' },
+      data: { status: 'ANNULEE' },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: current.id,
+        type: ParcelEventType.ANNULATION_SCAN,
+        previousStatus: current.status,
+        newStatus: restored.status,
+        previousLocation: current.location,
+        newLocation: restored.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        source: 'APP_COURSIER',
+        scanId: input.scanId,
+        deviceTime: input.deviceTime,
         serverTime: this.clock.now(),
         metadata: { scanAnnule: input.scanAction },
       },

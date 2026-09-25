@@ -4,16 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useState } from 'react';
 import {
-  DEPOT_SCAN_MODE_LABELS_FR,
   EXCEPTION_KIND_LABELS_FR,
   ExceptionKind,
   PICKUP_SLOT_LABELS_FR,
   Permission,
   ROLE_LABELS_FR,
+  SCAN_ACTION_LABELS_FR,
   formatTunisDay,
-  type DepotScanMode,
   type PickupSlot,
   type Role,
+  type ScanAction,
 } from '@faffago/shared';
 import { bff } from '@/lib/client/call';
 import type { ExceptionsQueue } from '@/lib/types';
@@ -169,7 +169,7 @@ export function ExceptionsScreen({
                 )}
                 <span className="block">
                   {row.rawCode} ·{' '}
-                  {DEPOT_SCAN_MODE_LABELS_FR[row.action as DepotScanMode] ?? row.action} ·{' '}
+                  {SCAN_ACTION_LABELS_FR[row.action as ScanAction] ?? row.action} ·{' '}
                   {row.actor.name} ({ROLE_LABELS_FR[row.actor.role as Role]})
                   {!row.accepted && ' · refusé'}
                 </span>

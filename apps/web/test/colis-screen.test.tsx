@@ -139,6 +139,8 @@ const detail: StaffParcelDetail = {
   isExchange: false,
   openingAllowed: true,
   courierNote: null,
+  meetingPoint: null,
+  addressMemory: null,
   status: 'A_VERIFIER',
   location: 'AVEC_LE_LIVREUR',
   labelReprintNeeded: false,
@@ -175,6 +177,7 @@ const detail: StaffParcelDetail = {
       reasonCode: 'NE_REPOND_PAS',
       reasonText: 'Sonné trois fois',
       gps: { lat: 36.8765, lng: 10.3245, accuracyM: 12 },
+      positionMissing: false,
       scan: {
         id: 's1',
         manualEntry: true,
@@ -198,6 +201,7 @@ const detail: StaffParcelDetail = {
       reasonCode: null,
       reasonText: null,
       gps: null,
+      positionMissing: false,
       scan: null,
       plannedFor: 'Ali Ben Salah',
       cancelledAfterPickup: false,
@@ -215,6 +219,7 @@ const detail: StaffParcelDetail = {
       reasonCode: null,
       reasonText: null,
       gps: null,
+      positionMissing: false,
       scan: null,
       plannedFor: null,
       cancelledAfterPickup: false,
@@ -264,6 +269,33 @@ describe('ColisDetailScreen (Admin 4.3)', () => {
     expect(failure).toHaveTextContent('Horloge décalée');
     expect(move).toHaveTextContent('Prévu pour Ali Ben Salah');
     expect(auto).toHaveTextContent('Règle automatique');
+  });
+
+  it('shows the address memory and a courier scan made without position (Coursier 4.3, D-63)', () => {
+    const [failure, ...rest] = detail.events;
+    render(
+      <ColisDetailScreen
+        parcel={{
+          ...detail,
+          meetingPoint: 'Café de la gare',
+          addressMemory: {
+            note: 'Immeuble bleu, 2e étage',
+            meetingPoint: null,
+            deliveredHere: true,
+            updatedAt: '2026-09-20T10:00:00.000Z',
+          },
+          events: [{ ...failure!, gps: null, positionMissing: true }, ...rest],
+        }}
+        permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]}
+      />,
+    );
+    const customer = screen.getByRole('region', { name: 'Destinataire' });
+    expect(customer).toHaveTextContent('Point de rendez-vous : Café de la gare');
+    expect(customer).toHaveTextContent('Mémoire d’adresse');
+    expect(customer).toHaveTextContent('Déjà livré ici');
+    expect(customer).toHaveTextContent('Immeuble bleu, 2e étage');
+    const log = screen.getByRole('list', { name: 'Journal du colis' });
+    expect(within(log).getAllByRole('listitem')[0]).toHaveTextContent('Sans position');
   });
 
   it('warns that the label must be reprinted, and lists the change requests (D-57)', () => {

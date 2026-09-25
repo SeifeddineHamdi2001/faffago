@@ -34,3 +34,4 @@ export * from './tournees.js';
 export * from './colis.js';
 export * from './forcage.js';
 export * from './exceptions.js';
+export * from './courier.js';

@@ -415,6 +415,21 @@ export function ColisDetailScreen({
             {parcel.localiteNameFr}, {parcel.delegationNameFr} ·{' '}
             {parcel.zoneName ?? SANS_ZONE_LABEL}
           </p>
+          {parcel.meetingPoint && <p>Point de rendez-vous : {parcel.meetingPoint}</p>}
+          {parcel.addressMemory && (
+            <div className="mt-2 rounded border border-navy/15 p-2">
+              <p className="font-semibold text-navy">
+                Mémoire d’adresse
+                {parcel.addressMemory.deliveredHere && (
+                  <span className="badge-warn ms-2">Déjà livré ici</span>
+                )}
+              </p>
+              {parcel.addressMemory.note && <p>{parcel.addressMemory.note}</p>}
+              {parcel.addressMemory.meetingPoint && (
+                <p>Point de rendez-vous : {parcel.addressMemory.meetingPoint}</p>
+              )}
+            </div>
+          )}
         </Section>
 
         <Section title="Colis">
@@ -559,6 +574,7 @@ export function ColisDetailScreen({
                 {event.scan.manualEntry && <span className="badge-warn">Saisie manuelle</span>}
                 {event.scan.cancelled && <span className="badge-muted">Scan annulé</span>}
                 {event.scan.clockSkewFlagged && <span className="badge-warn">Horloge décalée</span>}
+                {event.positionMissing && <span className="badge-warn">Sans position</span>}
               </p>
             )}
             {event.scan?.adminCancellable && (

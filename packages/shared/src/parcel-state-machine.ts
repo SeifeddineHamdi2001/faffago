@@ -139,6 +139,17 @@ export const ScanRefusal = {
   COURSIER_INDISPONIBLE: 'COURSIER_INDISPONIBLE',
   /** The same scan UUID sent for another parcel or mode (D-53). */
   SCAN_ID_REUTILISE: 'SCAN_ID_REUTILISE',
+  // ── The courier app (phase 6) ──
+  /** A pickup scan names a pickup that is not this ramasseur's, or unknown. */
+  RAMASSAGE_INTROUVABLE: 'RAMASSAGE_INTROUVABLE',
+  /** The pickup was already closed with Terminer le ramassage. */
+  RAMASSAGE_TERMINE: 'RAMASSAGE_TERMINE',
+  /** An extra parcel must be the pickup seller's own (D-47). */
+  COLIS_AUTRE_VENDEUR: 'COLIS_AUTRE_VENDEUR',
+  /** Livré confirms exactly the COD: there is no partial payment (A-24). */
+  MONTANT_DIFFERENT: 'MONTANT_DIFFERENT',
+  /** Livré on an échange confirms the old item was collected (Coursier 4.4, A-10). */
+  ECHANGE_NON_CONFIRME: 'ECHANGE_NON_CONFIRME',
 } as const;
 export type ScanRefusal = (typeof ScanRefusal)[keyof typeof ScanRefusal];
 
@@ -161,6 +172,11 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   DATE_RELANCE_REQUISE: 'Date de relance obligatoire',
   COURSIER_INDISPONIBLE: 'Coursier indisponible : absent, inactif ou ne reçoit plus de travail',
   SCAN_ID_REUTILISE: 'Identifiant de scan déjà utilisé pour un autre scan',
+  RAMASSAGE_INTROUVABLE: 'Ramassage introuvable, ou confié à un autre ramasseur',
+  RAMASSAGE_TERMINE: 'Ce ramassage est déjà terminé',
+  COLIS_AUTRE_VENDEUR: 'Ce colis appartient à un autre vendeur',
+  MONTANT_DIFFERENT: 'Le montant encaissé doit être exactement le COD du colis',
+  ECHANGE_NON_CONFIRME: 'Confirmez que l’ancien article a été récupéré',
 };
 
 // ─────────────────────────────────────────────────────────────

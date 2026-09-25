@@ -89,6 +89,9 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-58 · Planning pickups](#d-58--planning-pickups)
 - [D-59 · Marquer comme traité on Saisie manuelle](#d-59--marquer-comme-traité-on-saisie-manuelle)
 - [D-60 · The seller's timeline shows the phone's time](#d-60--the-sellers-timeline-shows-the-phones-time)
+- [D-61 · The ramasseur's bon scan steps wait for phase 8](#d-61--the-ramasseurs-bon-scan-steps-wait-for-phase-8)
+- [D-62 · Mes gains (livreur) waits for phase 8](#d-62--mes-gains-livreur-waits-for-phase-8)
+- [D-63 · GPS: required to open the app, never blocks a scan](#d-63--gps-required-to-open-the-app-never-blocks-a-scan)
 
 **Money — A-1 to A-5**
 
@@ -1221,6 +1224,50 @@ Decided 2026-09-25, closing the open question left after phase 5 step 5
 
 **Where.** `sellerTimelineTime` in `packages/shared/src/seller-parcels.ts`,
 used by `ParcelQueriesService.detail`.
+
+### D-61 · The ramasseur's bon scan steps wait for phase 8
+
+Decided 2026-09-25, with the phase 6 plan (Coursier 4.6).
+
+The ramasseur's flow has three scan steps: **Colis** (pickup), **Bon de
+versement** (scan the bon's QR, marking Remis) and **Retours** (scan a
+returned parcel, Retour reçu, the bon de retour signed on paper). The last
+two need a bon that only exists once phase 8 builds bon preparation — there
+is nothing to scan yet.
+
+- **Phase 6 builds Colis** (the pickup scan, D-47's extra parcels included)
+  **and Terminer le ramassage**, which closes the pickup and charges the
+  pickup fee (A-13): that rule needs no bon, only the count scanned.
+- **Bon de versement and Retours join with phase 8**, the way the depot's
+  scan station shipped three of its five modes in phase 5 and gained the
+  rest with the bons (D-50).
+- **`PickupStatus.EFFECTUE`** is written by Terminer, with the pickup fee
+  charge (`EN_ATTENTE`) if fewer than 5 parcels were scanned, none at 0 or
+  5+ (A-13).
+
+### D-62 · Mes gains (livreur) waits for phase 8
+
+Decided 2026-09-25, with the phase 6 plan (Coursier 4.10).
+
+Mes gains reads "parcels livrés × rate − debts = amount due"; debts
+(`CourierDebt`, an écart) are only created once phase 8 builds Caisse
+session closing. Phase 6 ships **without Mes gains**: the tab, and the
+figure, come whole with phase 8, debts included, rather than showing a
+number that always reads "no debt yet" for weeks.
+
+### D-63 · GPS: required to open the app, never blocks a scan
+
+Decided 2026-09-25, with the phase 6 plan (Coursier §2, §6 rule 2,
+tech-stack 4).
+
+- **Location permission is required to use the app**: asked at login,
+  refused entry to the scanner without it, matching the spec's plain
+  wording ("Location permission is required").
+- **A scan is never blocked for lack of a GPS fix.** Permission granted but
+  no fix yet (indoors, weak signal): the scan is recorded with `gpsLat` /
+  `gpsLng` null, same as a depot scan already tolerates. The staff log
+  already shows GPS when it has it (Colis, D-11); a null value now reads
+  **"Sans position"** there, no new column needed — the absence is the flag.
 
 ---
 

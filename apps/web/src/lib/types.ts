@@ -506,6 +506,8 @@ export interface StaffEventRow {
   reasonCode: string | null;
   reasonText: string | null;
   gps: { lat: number; lng: number; accuracyM: number | null } | null;
+  /** A courier's scan recorded without a GPS fix (D-63). */
+  positionMissing: boolean;
   scan: {
     id: string;
     manualEntry: boolean;
@@ -536,6 +538,15 @@ export interface StaffParcelDetail {
   isExchange: boolean;
   openingAllowed: boolean;
   courierNote: string | null;
+  /** Recorded by the livreur (Coursier 4.3). */
+  meetingPoint: string | null;
+  /** Mémoire d'adresse of the customer's phone: couriers and staff only (Coursier 4.3). */
+  addressMemory: {
+    note: string | null;
+    meetingPoint: string | null;
+    deliveredHere: boolean;
+    updatedAt: string | null;
+  } | null;
   status: string;
   location: string;
   labelReprintNeeded: boolean;

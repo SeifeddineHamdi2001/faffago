@@ -69,6 +69,8 @@ async function happened(
         actorUserId: livreur.id,
         source: 'APP_COURSIER',
         accepted: true,
+        parcelBefore: { status: 'EN_LIVRAISON', location: 'AVEC_LE_LIVREUR' },
+        collectedMillimes: 85000n,
         deviceTime: new Date(at),
         businessDate: new Date(`${at.slice(0, 10)}T00:00:00.000Z`),
         ...(options.cancelledScan

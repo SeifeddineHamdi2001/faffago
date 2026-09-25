@@ -72,6 +72,8 @@ export const Permission = {
   ESPACE_VENDEUR: 'ESPACE_VENDEUR',
   APP_LIVREUR: 'APP_LIVREUR',
   APP_RAMASSEUR: 'APP_RAMASSEUR',
+  /** What both couriers use: the scan queue, Profil. Each service narrows by role. */
+  APP_COURSIER: 'APP_COURSIER',
 } as const;
 export type Permission = (typeof Permission)[keyof typeof Permission];
 
@@ -115,6 +117,7 @@ export const ROLES_BY_PERMISSION: Readonly<Record<Permission, readonly Role[]>> 
   ESPACE_VENDEUR: frozen([VENDEUR]),
   APP_LIVREUR: frozen([LIVREUR]),
   APP_RAMASSEUR: frozen([RAMASSEUR]),
+  APP_COURSIER: frozen([LIVREUR, RAMASSEUR]),
 });
 
 /** The same matrix read by role, for the menus ("each role only sees…", Admin 3). */
