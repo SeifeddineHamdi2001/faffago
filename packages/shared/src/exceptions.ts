@@ -35,6 +35,18 @@ export function waitedTooLongAtDepot(since: Date, now: Date): boolean {
   return now.getTime() - since.getTime() > DEPOT_WAIT_EXCEPTION_HOURS * 3_600_000;
 }
 
+export const ManualEntryTreatRefusal = {
+  SCAN_INTROUVABLE: 'SCAN_INTROUVABLE',
+  PAS_UNE_SAISIE_MANUELLE: 'PAS_UNE_SAISIE_MANUELLE',
+} as const;
+export type ManualEntryTreatRefusal =
+  (typeof ManualEntryTreatRefusal)[keyof typeof ManualEntryTreatRefusal];
+
+export const MANUAL_ENTRY_TREAT_REFUSAL_MESSAGES_FR: Record<ManualEntryTreatRefusal, string> = {
+  SCAN_INTROUVABLE: 'Scan introuvable',
+  PAS_UNE_SAISIE_MANUELLE: "Ce scan n'est pas une saisie manuelle",
+};
+
 /** Planned for a Tunis day before today and still not done. */
 export function isPickupLate(plannedDayKey: string, todayKey: string): boolean {
   return plannedDayKey < todayKey;

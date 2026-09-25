@@ -1,6 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   MANUAL_ENTRY_EXCEPTION_DAYS,
+  MANUAL_ENTRY_TREAT_REFUSAL_MESSAGES_FR,
+  ManualEntryTreatRefusal,
   ParcelLocation,
   ParcelStatus,
   PickupStatus,
@@ -14,9 +16,19 @@ import {
   type ParcelSnapshot,
 } from '@faffago/shared';
 import { CLOCK, type Clock } from '../common/clock';
+import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import type { UserPrincipal } from '../auth/principal';
 import { ChangeRequestsService } from '../demandes/change-requests.service';
 import { dateColumnOf } from '../zones/zone-coverage.service';
+
+function treatRefused(refusal: ManualEntryTreatRefusal) {
+  return apiError(
+    refusal === ManualEntryTreatRefusal.SCAN_INTROUVABLE ? 404 : 409,
+    refusal,
+    MANUAL_ENTRY_TREAT_REFUSAL_MESSAGES_FR[refusal],
+  );
+}
 
 /**
  * Exceptions, first rows (Admin 4.7, A-22, D-50). Each row leads to the
@@ -123,11 +135,14 @@ export class ExceptionsService {
       }));
   }
 
-  /** Codes typed by hand in the last days (A-22), newest first. */
+  /**
+   * Codes typed by hand in the last days (A-22), newest first. A treated
+   * entry (`treatedAt` set) has left the queue.
+   */
   private async manualEntries(todayKey: string) {
     const from = tunisDayStart(addTunisDays(todayKey, -(MANUAL_ENTRY_EXCEPTION_DAYS - 1)));
     const scans = await this.prisma.scan.findMany({
-      where: { manualEntry: true, receivedAt: { gte: from } },
+      where: { manualEntry: true, receivedAt: { gte: from }, treatedAt: null },
       orderBy: { receivedAt: 'desc' },
       take: 200,
       include: {
@@ -144,5 +159,22 @@ export class ExceptionsService {
       parcelCode: s.parcel?.code ?? null,
       actor: { name: `${s.actor.firstName} ${s.actor.lastName}`, role: s.actor.role },
     }));
+  }
+
+  /**
+   * Marquer comme traité (Admin and Dépôt, A-22): the manual entry leaves
+   * the queue. Who and when are stored; asked twice, it answers the same.
+   */
+  async treatManualEntry(actor: UserPrincipal, scanId: string) {
+    const scan = await this.prisma.scan.findUnique({ where: { id: scanId } });
+    if (!scan) throw treatRefused(ManualEntryTreatRefusal.SCAN_INTROUVABLE);
+    if (!scan.manualEntry) throw treatRefused(ManualEntryTreatRefusal.PAS_UNE_SAISIE_MANUELLE);
+    const treated = scan.treatedAt
+      ? scan
+      : await this.prisma.scan.update({
+          where: { id: scanId },
+          data: { treatedAt: this.clock.now(), treatedByUserId: actor.userId },
+        });
+    return { scanId: treated.id, treated: true as const, treatedAt: treated.treatedAt! };
   }
 }

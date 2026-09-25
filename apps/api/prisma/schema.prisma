@@ -923,6 +923,11 @@ model Scan {
   cancelledByUserId String?   @db.Uuid
   cancelReason      String?
 
+  /// "Marquer comme traité" on a Saisie manuelle exception (A-22): who and
+  /// when, so the entry leaves the Exceptions queue.
+  treatedAt       DateTime?
+  treatedByUserId String?   @db.Uuid
+
   parcel        Parcel?  @relation(fields: [parcelId], references: [id])
   actor         User     @relation(fields: [actorUserId], references: [id])
   targetCourier Courier? @relation("ScanTargetCourier", fields: [targetCourierId], references: [id])

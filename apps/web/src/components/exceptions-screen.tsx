@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
-import { useId } from 'react';
+import { useRouter } from 'next/navigation';
+import { useId, useState } from 'react';
 import {
   DEPOT_SCAN_MODE_LABELS_FR,
   EXCEPTION_KIND_LABELS_FR,
@@ -12,6 +15,7 @@ import {
   type PickupSlot,
   type Role,
 } from '@faffago/shared';
+import { bff } from '@/lib/client/call';
 import type { ExceptionsQueue } from '@/lib/types';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', {
@@ -55,8 +59,24 @@ export function ExceptionsScreen({
   queue: ExceptionsQueue;
   permissions: Permission[];
 }) {
+  const router = useRouter();
   const canPlan = permissions.includes(Permission.PLANIFIER_RAMASSAGES_TOURNEES);
   const canApply = permissions.includes(Permission.DEMANDES_VENDEUR);
+  const canTreat = permissions.includes(Permission.SCAN_DEPOT);
+  const [treating, setTreating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function treat(scanId: string) {
+    setTreating(scanId);
+    setError(null);
+    const response = await bff('POST', `exceptions/manual-entries/${scanId}/treat`);
+    setTreating(null);
+    if (!response.ok) {
+      setError(response.error.message);
+      return;
+    }
+    router.refresh();
+  }
 
   return (
     <section>
@@ -128,26 +148,43 @@ export function ExceptionsScreen({
       </Row>
 
       <Row kind={ExceptionKind.SAISIE_MANUELLE} count={queue.manualEntries.length}>
+        {error && (
+          <p role="alert" className="mb-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
         <ul className="divide-y divide-navy/10 text-sm">
           {queue.manualEntries.map((row) => (
-            <li key={row.scanId} className="py-2">
-              {row.parcelCode ? (
-                <Link
-                  href={`/admin/colis/${row.parcelCode}`}
-                  className="font-mono font-semibold text-orange-dark underline"
-                >
-                  {row.parcelCode}
-                </Link>
-              ) : (
-                <span className="font-mono font-semibold">Code inconnu</span>
-              )}
-              <span className="block">
-                {row.rawCode} ·{' '}
-                {DEPOT_SCAN_MODE_LABELS_FR[row.action as DepotScanMode] ?? row.action} ·{' '}
-                {row.actor.name} ({ROLE_LABELS_FR[row.actor.role as Role]})
-                {!row.accepted && ' · refusé'}
+            <li key={row.scanId} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span>
+                {row.parcelCode ? (
+                  <Link
+                    href={`/admin/colis/${row.parcelCode}`}
+                    className="font-mono font-semibold text-orange-dark underline"
+                  >
+                    {row.parcelCode}
+                  </Link>
+                ) : (
+                  <span className="font-mono font-semibold">Code inconnu</span>
+                )}
+                <span className="block">
+                  {row.rawCode} ·{' '}
+                  {DEPOT_SCAN_MODE_LABELS_FR[row.action as DepotScanMode] ?? row.action} ·{' '}
+                  {row.actor.name} ({ROLE_LABELS_FR[row.actor.role as Role]})
+                  {!row.accepted && ' · refusé'}
+                </span>
+                <span className="block text-navy/70">{dateTime.format(new Date(row.at))}</span>
               </span>
-              <span className="block text-navy/70">{dateTime.format(new Date(row.at))}</span>
+              {canTreat && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={treating === row.scanId}
+                  onClick={() => void treat(row.scanId)}
+                >
+                  Marquer comme traité
+                </button>
+              )}
             </li>
           ))}
         </ul>

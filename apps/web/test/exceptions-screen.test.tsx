@@ -1,8 +1,15 @@
-import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_BY_ROLE } from '@faffago/shared';
 import { ExceptionsScreen } from '@/components/exceptions-screen';
 import type { ExceptionsQueue } from '@/lib/types';
+
+const refresh = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
+
+const bff = vi.fn();
+vi.mock('@/lib/client/call', () => ({ bff: (...args: unknown[]) => bff(...args) }));
 
 const queue: ExceptionsQueue = {
   depotWaiting: [
@@ -62,6 +69,11 @@ function section(name: string) {
 }
 
 describe('ExceptionsScreen (Admin 4.7, D-50)', () => {
+  beforeEach(() => {
+    refresh.mockReset();
+    bff.mockReset();
+  });
+
   it('shows each row with its count, in the spec’s words', () => {
     render(<ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
@@ -113,6 +125,18 @@ describe('ExceptionsScreen (Admin 4.7, D-50)', () => {
     expect(screen.getByRole('link', { name: 'Assigner' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Appliquer / refuser' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Voir la demande' })).toBeInTheDocument();
+  });
+
+  it('lets Admin and Dépôt mark a manual entry as treated, but not Service client', async () => {
+    const user = userEvent.setup();
+    render(<ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
+    expect(screen.queryByRole('button', { name: 'Marquer comme traité' })).toBeNull();
+
+    bff.mockResolvedValueOnce({ ok: true, data: { scanId: 's1', treated: true } });
+    render(<ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.DEPOT]} />);
+    await user.click(screen.getByRole('button', { name: 'Marquer comme traité' }));
+    expect(bff).toHaveBeenCalledWith('POST', 'exceptions/manual-entries/s1/treat');
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 
   it('says so when a row has nothing', () => {

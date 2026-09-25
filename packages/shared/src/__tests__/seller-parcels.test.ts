@@ -11,6 +11,7 @@ import {
   topGroupOf,
   parcelListQuerySchema,
   parcelMoneyFor,
+  sellerTimelineTime,
   timelineActorLabel,
   trackLineFor,
 } from '../seller-parcels.js';
@@ -165,5 +166,28 @@ describe('the money block (D-40)', () => {
       kind: 'ANNULE',
       cod: 85000n,
     });
+  });
+});
+
+describe('sellerTimelineTime (open question, closed)', () => {
+  const deviceTime = new Date('2026-09-25T08:00:00Z');
+  const serverTime = new Date('2026-09-25T08:05:00Z');
+
+  it('shows the phone time when it happened', () => {
+    expect(sellerTimelineTime({ deviceTime, serverTime, clockSkewFlagged: false })).toBe(
+      deviceTime,
+    );
+  });
+
+  it('shows the server time once the scan is flagged for clock skew', () => {
+    expect(sellerTimelineTime({ deviceTime, serverTime, clockSkewFlagged: true })).toBe(
+      serverTime,
+    );
+  });
+
+  it('falls back to the server time with no device time (a staff or seller action)', () => {
+    expect(
+      sellerTimelineTime({ deviceTime: null, serverTime, clockSkewFlagged: false }),
+    ).toBe(serverTime);
   });
 });

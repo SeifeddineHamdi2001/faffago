@@ -87,6 +87,8 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-56 · Forcer un statut in phase 5](#d-56--forcer-un-statut-in-phase-5)
 - [D-57 · Applying a change request](#d-57--applying-a-change-request)
 - [D-58 · Planning pickups](#d-58--planning-pickups)
+- [D-59 · Marquer comme traité on Saisie manuelle](#d-59--marquer-comme-traité-on-saisie-manuelle)
+- [D-60 · The seller's timeline shows the phone's time](#d-60--the-sellers-timeline-shows-the-phones-time)
 
 **Money — A-1 to A-5**
 
@@ -1177,6 +1179,48 @@ Decided 2026-09-24 (Admin 4.4, A-14).
   pickup's address** that day (A-14, D-52); the team can change it.
 - **Staff cannot cancel a seller's pickup request**; the seller does it
   himself (D-35).
+
+### D-59 · Marquer comme traité on Saisie manuelle
+
+Decided 2026-09-25, closing the open question left after phase 5 step 9
+(A-22).
+
+- **Admin and Dépôt** mark a manual entry as treated, once dealt with.
+  `Scan.treatedAt` and `Scan.treatedByUserId` record who and when; asked
+  twice, it answers the same and keeps the first answer.
+- **A treated entry leaves the Exceptions queue** at once: `manualEntries`
+  excludes any scan with `treatedAt` set, so treating one has the same
+  visible effect as the 7-day window running out, only immediate and
+  deliberate.
+- **Same permission as the station**: `Permission.SCAN_DEPOT`, since the
+  people who scan at the depot are the ones who clear its exceptions.
+  Service client reads the queue (D-11) but cannot treat an entry.
+
+**Where.** `ExceptionsService.treatManualEntry`,
+`POST /exceptions/manual-entries/:scanId/treat`, migration
+`20261007000000_manual_entry_treated`.
+
+### D-60 · The seller's timeline shows the phone's time
+
+Decided 2026-09-25, closing the open question left after phase 5 step 5
+(D-46, D-48).
+
+- **Détail du colis** now shows the seller each event at **the phone's
+  time** (`deviceTime`) — when it actually happened — instead of the
+  server's reception time. This matches the Tableau de bord, which already
+  files a scan under the phone's day (A-12, D-48).
+- **A scan flagged for clock skew** (device clock more than 15 minutes from
+  the server's, A-12) is untrustworthy, so its event still shows the
+  **server's time**, as before.
+- **An event with no device time** (a seller's own action, a staff action, an
+  automatic rule) keeps showing the server's time: there is no phone to read
+  it from.
+- **Staff keep both**, unchanged: Colis already shows `deviceTime` and
+  `clockSkewFlagged` beside the server time in the full event log (phase 5
+  step 6).
+
+**Where.** `sellerTimelineTime` in `packages/shared/src/seller-parcels.ts`,
+used by `ParcelQueriesService.detail`.
 
 ---
 

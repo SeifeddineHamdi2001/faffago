@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ParcelAction } from '@faffago/shared';
 import { ParcelEventService } from '../../src/parcels/parcel-event.service';
 import { principalOf } from '../support/principals';
@@ -238,6 +239,47 @@ describe('Détail du colis (Vendeur 4.8, D-38)', () => {
     ]) {
       expect(text).not.toContain(secret);
     }
+  });
+
+  it('shows the phone time, or the server time once a scan is flagged for clock skew', async () => {
+    const depot = await createUser(t.prisma, { role: 'DEPOT', username: 'depot.horaire' });
+    const depotToken = (await login(t, depot)).accessToken;
+    const code = await inState('RAMASSE', 'AVEC_LE_RAMASSEUR');
+
+    // A normal scan: the seller reads the phone's time, not the server's.
+    const onTime = new Date(t.clock.now().getTime() - 60_000);
+    await t.request('POST', '/scans/depot', {
+      token: depotToken,
+      body: {
+        clientScanId: randomUUID(),
+        mode: 'ENTREE_DEPOT',
+        rawCode: code,
+        source: 'WEB_DOUCHETTE',
+        deviceTime: onTime.toISOString(),
+      },
+    });
+    const first = await t.request('GET', `/parcels/${code}`, { token });
+    const entreeDepot = first.body.timeline.find((e: { type: string }) => e.type === 'ENTREE_DEPOT');
+    expect(entreeDepot.at).toBe(onTime.toISOString());
+
+    // A skewed scan (more than 15 minutes off, A-12): the server's time instead.
+    const scanResp = await t.request('POST', '/scans/depot', {
+      token: depotToken,
+      body: {
+        clientScanId: randomUUID(),
+        mode: 'SORTIE_COURSIER',
+        rawCode: code,
+        courierId: (await createUser(t.prisma, { role: 'LIVREUR' })).id,
+        source: 'WEB_DOUCHETTE',
+        deviceTime: new Date(t.clock.now().getTime() - 20 * 60_000).toISOString(),
+      },
+    });
+    expect(scanResp.body.accepted).toBe(true);
+    const second = await t.request('GET', `/parcels/${code}`, { token });
+    const sortieCoursier = second.body.timeline.find(
+      (e: { type: string }) => e.type === 'SORTIE_COURSIER',
+    );
+    expect(sortieCoursier.at).toBe(t.clock.now().toISOString());
   });
 
   it('keeps the order of events written by one action', async () => {

@@ -15,6 +15,7 @@ import {
   addTunisDays,
   csvLine,
   formatDT,
+  sellerTimelineTime,
   tunisDayStart,
   type FailureReason,
   type ParcelEventType,
@@ -203,6 +204,8 @@ export class ParcelQueriesService {
         select: {
           type: true,
           serverTime: true,
+          deviceTime: true,
+          scanId: true,
           actorUserId: true,
           actorRole: true,
           newLocation: true,
@@ -212,6 +215,18 @@ export class ParcelQueriesService {
       }),
       this.settings.current(),
     ]);
+
+    // The phone's time, unless its scan was flagged for clock skew (open
+    // question, closed): then the server's time, like the full log (D-38).
+    const scanIds = [...new Set(events.map((e) => e.scanId).filter((id): id is string => !!id))];
+    const skewByScan = new Map(
+      (
+        await this.prisma.scan.findMany({
+          where: { id: { in: scanIds } },
+          select: { id: true, clockSkewFlagged: true },
+        })
+      ).map((scan) => [scan.id, scan.clockSkewFlagged]),
+    );
 
     const courierIds = [
       ...new Set(
@@ -247,7 +262,11 @@ export class ParcelQueriesService {
       bonNumber: parcel.bonVersementLine?.bonVersement.number ?? null,
       timeline: events.map((event) => ({
         type: event.type,
-        at: event.serverTime,
+        at: sellerTimelineTime({
+          deviceTime: event.deviceTime,
+          serverTime: event.serverTime,
+          clockSkewFlagged: event.scanId ? (skewByScan.get(event.scanId) ?? false) : false,
+        }),
         actor: actorOf(event.actorRole, event.actorUserId),
         location: event.newLocation,
         failureReason: event.reasonCode,

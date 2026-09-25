@@ -246,6 +246,21 @@ export function timelineActorLabel(actor: TimelineActor): string {
   return 'Faffa Go';
 }
 
+/**
+ * The time the seller reads on Détail du colis (open question, closed): the
+ * phone's time, when the event actually happened. A scan flagged for clock
+ * skew is untrustworthy, so the server's time is shown instead. Staff keep
+ * both in the full log (Colis, `StaffEvent`).
+ */
+export function sellerTimelineTime(event: {
+  deviceTime: Date | null;
+  serverTime: Date;
+  clockSkewFlagged: boolean;
+}): Date {
+  if (event.deviceTime && !event.clockSkewFlagged) return event.deviceTime;
+  return event.serverTime;
+}
+
 // ── The money block (D-40) ──────────────────────────────────
 
 const RETURN_STATUSES: readonly ParcelStatus[] = [

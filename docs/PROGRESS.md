@@ -382,6 +382,11 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
       un statut, a pickup planned with the zone's ramasseur, Exceptions, a
       livreur marked absent. The phase 4 flow now picks its own shop's row
       on Vendeurs. `pnpm e2e`: 23 tests
+- [x] Leftovers, on `main` (D-59, D-60): Marquer comme traité on Saisie
+      manuelle (Admin, Dépôt; `Scan.treatedAt`/`treatedByUserId`, migration
+      `20261007000000_manual_entry_treated`), and Détail du colis shows the
+      seller the phone's time, the server's time only once a scan is flagged
+      for clock skew — 3 shared, 6 API e2e, 1 web test
 
 ## Phase 6 — Courier app
 
@@ -413,13 +418,13 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
       Aujourd'hui, Hier, 7 derniers jours, Ce mois, custom range up to 366
       days, Tunis days)
 - [ ] Bons de retour
-- [ ] Retenue à la source certificates + monthly report
 - [ ] Livreur pay (per parcel, pay plans, fiches de paie); ramasseur écarts report for HR
 
-## Phase 9 — Public site
+## Phase 9 — Public tracking page
 
-- [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md
-- [ ] Tarifs and Zones couvertes read from Paramètres
+Launch needs the tracking page only; the rest of the public site (landing
+page, tarifs, SEO) is post-launch (see below, CLAUDE.md launch scope).
+
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ
       retour and Retour reçu when `cancelledAt` is set (D-31)
@@ -427,15 +432,6 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
       Sortie coursier cancelled at the depot must not read "En cours de
       livraison". The seller's timeline shows both, with "Scan annulé"
       (D-46)
-- [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM)
-- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned)
-
-## Phase 10 — Communication and reporting
-
-- [ ] Chat per parcel (seller ↔ livreur, staff can join)
-- [ ] In-app notifications (all roles)
-- [ ] Exceptions queue
-- [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
 
 ## Phase 11 — Deployment
 
@@ -454,6 +450,42 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
       barcode scanner — confirm `GUN_MAX_MEAN_KEY_INTERVAL_MS` (35 ms) tells
       it apart from typing — and with the camera on a phone over HTTPS
       (browsers only open the camera on a secure page)
+
+## Post-lancement
+
+Not built before launch (CLAUDE.md, Launch scope). The launch path is:
+finish phase 5 (done), courier app, À vérifier, money, public tracking page,
+deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
+
+### Chat
+
+- [ ] Chat per parcel (seller ↔ livreur, staff can join), was phase 10
+
+### Notifications
+
+- [ ] In-app notifications (all roles), was phase 10
+
+### Reports
+
+- [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export, was phase 10
+- [ ] Retenue à la source certificates + monthly report, was phase 8 (the
+      retenue amount itself is computed and stored on every bon at launch,
+      per CLAUDE.md, Money; only the certificate document and the monthly
+      report are deferred)
+
+### The full Exceptions queue
+
+- [ ] Exceptions queue, the rest beyond the phase 5 first rows (D-50), was
+      phase 10. Phase 5 already has: parcels at the depot without a tour,
+      pickups planned but not done, seller change requests waiting, codes
+      typed by hand (with Marquer comme traité, D-59)
+
+### The rest of the public site
+
+- [ ] Landing page (FR + AR, RTL), sections as in docs/landing.md, was phase 9
+- [ ] Tarifs and Zones couvertes read from Paramètres, was phase 9
+- [ ] Open Graph, SEO (/fr, /ar), Meta Pixel (TO CONFIRM), was phase 9
+- [ ] Evaluate upgrading to Next.js 16 (phase 1 stayed on 15, as planned), was phase 9
 
 ## Decisions made during the build
 
@@ -1074,6 +1106,17 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
 - 2026-09-25 — **Phase 5 merged into `main`** (fast-forward) after lint,
   typecheck, test and the 23 browser tests passed.
 
+- 2026-09-25 — **New `CLAUDE.md`**: working rules and launch scope restated
+  for every phase from now on. `docs/PROGRESS.md` gains a **Post-lancement**
+  section (chat, notifications, reports, the full Exceptions queue, the rest
+  of the public site); the launch path is courier app, À vérifier, money,
+  public tracking page, deployment.
+- 2026-09-25 — **Phase 5 leftovers, on `main`**: two open questions closed
+  and recorded as **D-59** and **D-60**. Marquer comme traité on Saisie
+  manuelle (Admin, Dépôt), and the seller's timeline shows the phone's time,
+  the server's time only once a scan is flagged for clock skew; staff keep
+  both, unchanged.
+
 ## Open questions
 
 - Retenue à la source: base and rounding confirmed as "after every Faffa Go fee,
@@ -1096,13 +1139,17 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
   documents: it holds every customer's name, phone and address.
 - **Seller document retention** after a seller leaves (D-32): open, to decide
   with the accountant. Nothing is ever deleted automatically.
-- **Scan time on the timeline**: Détail du colis shows each event at the
+- ~~**Scan time on the timeline**: Détail du colis shows each event at the
   server time, so a scan synced the next morning reads as made then, while
   the Tableau de bord files it under the day the phone made it (D-48, A-12).
-  Show the phone's time on the timeline too? To decide before phase 6.
-- **Exceptions › Saisie manuelle** (A-22): the queue shows the last 7 days.
+  Show the phone's time on the timeline too? To decide before phase 6.~~
+  **Closed 2026-09-25 (D-60)**: yes, the phone's time, unless the scan is
+  flagged for clock skew, then the server's time; staff keep both.
+- ~~**Exceptions › Saisie manuelle** (A-22): the queue shows the last 7 days.
   Should the admin mark a manual entry as seen, so it leaves the queue?
-  That would need a column (who saw it, when). Not built: not in the specs.
+  That would need a column (who saw it, when). Not built: not in the specs.~~
+  **Closed 2026-09-25 (D-59)**: Marquer comme traité, Admin and Dépôt,
+  `Scan.treatedAt` / `treatedByUserId`.
 - **Suggestion (not in the specs): a downloadable list of localités** beside
   the délégation list, for sellers filling the `localite` column. Q5 offers
   the délégation list only.

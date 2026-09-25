@@ -220,6 +220,91 @@ describe('codes typed by hand (A-22)', () => {
   });
 });
 
+describe('Marquer comme traité (A-22)', () => {
+  async function manualScan(manualEntry = true) {
+    const p = await parcel('AU_DEPOT', 'AU_DEPOT');
+    return t.prisma.scan.create({
+      data: {
+        clientScanId: randomUUID(),
+        action: 'ENTREE_DEPOT',
+        rawCode: p.code.toLowerCase(),
+        parcelId: p.id,
+        actorUserId: depot.id,
+        source: manualEntry ? 'SAISIE_MANUELLE' : 'WEB_DOUCHETTE',
+        manualEntry,
+        accepted: true,
+        parcelBefore: { status: 'RAMASSE', location: 'AVEC_LE_RAMASSEUR' },
+        deviceTime: hoursAgo(1),
+        receivedAt: hoursAgo(1),
+        businessDate: new Date(`${hoursAgo(1).toISOString().slice(0, 10)}T00:00:00.000Z`),
+      },
+    });
+  }
+
+  it('records who and when, and the entry leaves the queue', async () => {
+    const scan = await manualScan();
+    expect((await exceptions()).manualEntries.map((r: { scanId: string }) => r.scanId)).toContain(
+      scan.id,
+    );
+
+    const response = await t.request('POST', `/exceptions/manual-entries/${scan.id}/treat`, {
+      token: depotToken,
+    });
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ scanId: scan.id, treated: true });
+    expect(await t.prisma.scan.findUniqueOrThrow({ where: { id: scan.id } })).toMatchObject({
+      treatedAt: NOW,
+      treatedByUserId: depot.id,
+    });
+    expect((await exceptions()).manualEntries.map((r: { scanId: string }) => r.scanId)).not.toContain(
+      scan.id,
+    );
+  });
+
+  it('asked twice, answers the same and keeps the first time', async () => {
+    const scan = await manualScan();
+    const first = await t.request('POST', `/exceptions/manual-entries/${scan.id}/treat`, {
+      token: depotToken,
+    });
+    const other = await createUser(t.prisma, { role: 'ADMIN', username: 'exc.admin.traite' });
+    const second = await t.request('POST', `/exceptions/manual-entries/${scan.id}/treat`, {
+      token: (await login(t, other)).accessToken,
+    });
+    expect(second.status).toBe(200);
+    expect(second.body.treatedAt).toBe(first.body.treatedAt);
+    expect(
+      (await t.prisma.scan.findUniqueOrThrow({ where: { id: scan.id } })).treatedByUserId,
+    ).toBe(depot.id);
+  });
+
+  it('refuses a scan that is not a manual entry', async () => {
+    const scan = await manualScan(false);
+    const response = await t.request('POST', `/exceptions/manual-entries/${scan.id}/treat`, {
+      token: depotToken,
+    });
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe('PAS_UNE_SAISIE_MANUELLE');
+  });
+
+  it('refuses an unknown scan', async () => {
+    const response = await t.request(
+      'POST',
+      `/exceptions/manual-entries/${randomUUID()}/treat`,
+      { token: depotToken },
+    );
+    expect(response.status).toBe(404);
+  });
+
+  it('is Admin and Dépôt only, never Service client', async () => {
+    const scan = await manualScan();
+    const sc = await createUser(t.prisma, { role: 'SERVICE_CLIENT', username: 'exc.sc.traite' });
+    const response = await t.request('POST', `/exceptions/manual-entries/${scan.id}/treat`, {
+      token: (await login(t, sc)).accessToken,
+    });
+    expect(response.status).toBe(403);
+  });
+});
+
 describe('who reads Exceptions (D-11)', () => {
   it('is every staff role, never a seller', async () => {
     const sc = await createUser(t.prisma, { role: 'SERVICE_CLIENT', username: 'exc.sc' });
