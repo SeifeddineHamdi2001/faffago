@@ -390,6 +390,9 @@ approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
 
 ## Phase 6 — Courier app
 
+Done. Merged into `main` on 2026-09-25 after `pnpm lint`, `pnpm typecheck`,
+`pnpm test` (688 API, 243 web, 530 shared, 37 app tests) and `pnpm e2e` (23
+browser tests) passed through turbo. Not yet run on a real phone: see phase 11.
 Branch `phase-6`. Plan 2026-09-25; answers recorded as D-61 to D-63 (the
 ramasseur's bon steps and Mes gains wait for phase 8; GPS required to open
 the app, never blocks a scan). Chat and notifications are post-launch
@@ -1178,6 +1181,9 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
     hash reads as a wrong password.
   - **\`node-linker=hoisted\`** already in \`.npmrc\` lets Metro and Jest find the
     React Native packages; React 19.2 for the app beside the web's 19.1.
+
+- 2026-09-25 — **Phase 6 merged into `main`** (fast-forward) after lint,
+  typecheck, test and the 23 browser tests passed.
 
 ## Open questions
 
