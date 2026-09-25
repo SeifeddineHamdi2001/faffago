@@ -440,6 +440,10 @@ Steps, all done:
 
 ## Phase 7 — À vérifier
 
+Done. Merged into `main` on 2026-09-25 after `pnpm lint`, `pnpm typecheck`,
+`pnpm test` (717 API, 254 web, 552 shared, 37 app tests) and `pnpm e2e` (29
+browser tests) passed through turbo.
+
 Built on branch `phase-7` (2026-09-25). The three open questions were answered
 the same day and recorded as D-70 to D-72: Relancer corrects the parcel
 directly, the seller reads the courier's note, and Changer de client withdraws
@@ -1220,6 +1224,9 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
   customer whole for staff; the 48-hour job runs every minute on the server
   clock; calls are Admin and Service client's, never edited; the badge and the
   banner stand in for notifications until after launch.
+
+- 2026-09-25 — **Phase 7 merged into `main`** (fast-forward) after lint,
+  typecheck, test and the 29 browser tests passed.
 
 ## Open questions
 
