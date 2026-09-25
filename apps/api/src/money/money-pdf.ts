@@ -152,17 +152,24 @@ function totals(
   return top;
 }
 
+/**
+ * A "Reçu par" block per side: caption, then Nom / Date lines and a
+ * signature box, so a signed copy actually names and dates who received it.
+ */
 function signatures(doc: Doc, y: number, left: string, right: string) {
-  const top = Math.min(Math.max(y + 12, BOTTOM - 70), BOTTOM - 70);
+  const top = BOTTOM - 88;
   const half = WIDTH / 2 - 5 * MM;
   for (const [index, title] of [left, right].entries()) {
     const x = MARGIN + index * (half + 10 * MM);
-    line(doc, title, x, top, half, { size: 8, color: GREY });
+    line(doc, title, x, top, half, { size: 8, bold: true, color: GREY });
+    line(doc, 'Nom : ', x, top + 16, half, { size: 8 });
+    line(doc, 'Date : ', x, top + 30, half, { size: 8 });
+    line(doc, 'Signature :', x, top + 44, half, { size: 8, color: GREY });
     doc
       .save()
       .lineWidth(0.5)
       .strokeColor('#8A93A8')
-      .rect(x, top + 14, half, 45)
+      .rect(x, top + 54, half, 30)
       .stroke()
       .restore();
   }
@@ -271,7 +278,7 @@ export async function renderBonVersement(bon: BonVersementPdf): Promise<Buffer> 
       );
       y += 8;
     }
-    if (y + 150 > BOTTOM) y = newPage();
+    if (y + 168 > BOTTOM) y = newPage();
     rule(doc, y);
     y = totals(doc, y + 6, [
       { label: `Total des colis (${bon.parcels.length})`, amount: formatDT(bon.totalCodMillimes) },
@@ -288,12 +295,7 @@ export async function renderBonVersement(bon: BonVersementPdf): Promise<Buffer> 
         : []),
       { label: 'Net payé en espèces', amount: formatDT(bon.netMillimes), bold: true },
     ]);
-    signatures(
-      doc,
-      y,
-      'Remis par (ramasseur Faffa Go)',
-      'Reçu et compté par le contact, signature',
-    );
+    signatures(doc, y, 'Remis par (ramasseur Faffa Go)', 'Reçu par (le contact, pour le vendeur)');
   }
   doc.end();
   return done;
@@ -369,9 +371,9 @@ export async function renderBonRetour(bon: BonRetourPdf): Promise<Buffer> {
       ]),
       newPage,
     );
-    if (y + 90 > BOTTOM) y = newPage();
+    if (y + 108 > BOTTOM) y = newPage();
     line(doc, `${bon.lines.length} article(s) rendu(s)`, MARGIN, y + 8, WIDTH, { bold: true });
-    signatures(doc, y + 20, 'Remis par (ramasseur Faffa Go)', 'Reçu par le contact, signature');
+    signatures(doc, y + 20, 'Remis par (ramasseur Faffa Go)', 'Reçu par (le contact, pour le vendeur)');
   }
   doc.end();
   return done;

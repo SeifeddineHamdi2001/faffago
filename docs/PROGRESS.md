@@ -1261,6 +1261,20 @@ launch scope).
   while building. Admin 4.9 amended (v1.13).
 - 2026-09-25 — **Phase 8 merged into `main`** (fast-forward) after lint,
   typecheck, test and the 34 browser tests passed.
+- 2026-09-25 — **Pre-phase-9 check on the bon PDFs**: the "Reçu par" block on
+  the seller's copy only showed a bare caption and a signing box, with no room
+  to write a name or a date. `signatures()` in `apps/api/src/money/money-pdf.ts`
+  now prints **Nom**, **Date** and **Signature** lines above the box, on both
+  sides (Remis par / Reçu par) and on both documents (bon de versement, bon de
+  retour). No test asserted the PDF's text, so nothing else changed.
+- 2026-09-25 — **Pre-phase-9 check on the bon correction path**: no admin route
+  reverses a bon de versement wrongly scanned Remis or a bon de retour wrongly
+  scanned Retour reçu. `ANNULATION_BON` (D-86) only refuses the courier's own
+  60-second "Annuler le dernier scan" on those two scans with "l'admin
+  corrige" — the correction it points to was never built. `cancel()` in
+  `bons-versement.service.ts` (Annuler le bon, A-5) only accepts a bon still
+  **Préparé**. Proposal sent to the user before building anything (money,
+  CLAUDE.md "When to stop").
 
 ## Open questions
 
