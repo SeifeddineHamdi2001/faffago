@@ -574,6 +574,22 @@ tests. Migration `20261011000000_bon_corrections`.
 - [ ] In-app notifications (all roles)
 - [ ] Chat per parcel (seller ↔ livreur, staff can join), lifecycle as in
       D-23 / Q15
+**Part B plan** (branch `phase-10b`, 2026-09-25; money questions sent first):
+
+1. Shared, tests first: exception rules (48 h À vérifier limit near, cash not
+   handed over, bon en route > 24 h, signed bon not archived > 48 h), the
+   retenue month and certificate rules, report periods and figures, CSV and
+   Excel writers
+2. API: the full Exceptions queue (the four new rows beside phase 5's)
+3. API: retenue certificates per bon and the yearly summary (PDF), the
+   monthly retenue report
+4. API: reports — Retenue, Chiffre d'affaires, Activité, Argent, Paie
+   coursiers, Écarts ramasseurs (D-88 shortfalls included) — each as JSON, CSV
+   and Excel, admin only (`RAPPORTS`)
+5. Web: Exceptions rows, Rapports (period, table, Exporter CSV / Excel), the
+   seller's certificates in Paiements
+6. Browser test, decisions, ui-texts, merge
+
 - [ ] Exceptions queue, the rest beyond the phase 5 first rows (D-50).
       Phase 5 already has: parcels at the depot without a tour, pickups
       planned but not done, seller change requests waiting, codes typed by
