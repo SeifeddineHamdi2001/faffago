@@ -249,6 +249,9 @@ export function DeliverScreen({ route, navigation }: RootScreenProps<'Deliver'>)
           maxLength={FAILURE_NOTE_MAX_LENGTH}
           multiline
         />
+        <T muted testID="note-visible-to-seller">
+          {t('noteVisibleToSeller')}
+        </T>
       </Screen>
     );
   }

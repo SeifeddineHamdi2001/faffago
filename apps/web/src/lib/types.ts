@@ -14,6 +14,9 @@ import type {
   PickupStatus,
   ParcelStatus,
   Permission,
+  RelaunchOrigin,
+  RelaunchSlot,
+  SellerDecisions,
   Role,
   SellerDocumentType,
   TimelineActor,
@@ -154,6 +157,7 @@ export interface SellerParcel {
   courierNote: string | null;
   deliveryFeeMillimes: string;
   returnFeeMillimes: string;
+  changeClientFeeMillimes: string;
   createdAt: string;
   cancelledAt: string | null;
   changeRequests: ParcelChangeRequest[];
@@ -210,7 +214,18 @@ export interface TimelineEntry {
   actor: TimelineActor;
   location: ParcelLocation | null;
   failureReason: FailureReason | null;
+  /** The courier's note on a failure (D-71). */
+  courierNote: string | null;
+  /** The day a relance or postponement plans, AAAA-MM-JJ. */
+  relaunchDate: string | null;
   cancelledAfterPickup: boolean;
+}
+
+/** An Appel Faffa Go as the seller reads it: never who called. */
+export interface SellerCall {
+  calledAt: string;
+  answered: boolean;
+  note: string | null;
 }
 
 /** GET /parcels/:code: Détail du colis (Vendeur 4.8). */
@@ -218,8 +233,79 @@ export interface SellerParcelDetail extends SellerParcel {
   attemptCount: number;
   maxAttempts: number;
   lastFailureReason: FailureReason | null;
+  lastFailureNote: string | null;
+  verifyDeadlineAt: string | null;
+  relaunchDate: string | null;
+  relaunchSlot: RelaunchSlot | null;
+  relaunchOrigin: RelaunchOrigin | null;
+  decisions: SellerDecisions;
+  calls: SellerCall[];
+  now: string;
   bonNumber: string | null;
   timeline: TimelineEntry[];
+}
+
+/** POST /parcels/:code/{relancer,changer-date,retourner,changer-client}. */
+export interface DecisionResult {
+  parcel: SellerParcel;
+  reprintLabel: boolean;
+}
+
+/** GET /a-verifier: the seller's parcels waiting on him (Vendeur 4.9). */
+export interface SellerVerifyList {
+  now: string;
+  items: {
+    code: string;
+    recipientName: string;
+    recipientPhone: string;
+    localiteNameFr: string;
+    delegationNameFr: string;
+    codAmountMillimes: string;
+    failureReason: FailureReason | null;
+    courierFailureNote: string | null;
+    attemptCount: number;
+    maxAttempts: number;
+    location: ParcelLocation;
+    verifyDeadlineAt: string | null;
+    decisions: SellerDecisions;
+    callCount: number;
+  }[];
+}
+
+/** GET /a-verifier/resume: the menu badge and the Tableau de bord banner. */
+export interface SellerVerifySummary {
+  now: string;
+  count: number;
+  urgent: { code: string; recipientName: string; verifyDeadlineAt: string }[];
+}
+
+/** GET /a-verifier/suivi: Service client's follow-up (Admin 4.6). */
+export interface FollowUpList {
+  now: string;
+  items: {
+    code: string;
+    shopName: string;
+    sellerContactName: string;
+    sellerContactPhone: string;
+    recipientName: string;
+    recipientPhone: string;
+    recipientPhone2: string | null;
+    delegationNameFr: string;
+    failureReason: FailureReason | null;
+    courierFailureNote: string | null;
+    attemptCount: number;
+    maxAttempts: number;
+    location: ParcelLocation;
+    verifyDeadlineAt: string | null;
+    lastCall: SellerCall | null;
+    callCount: number;
+  }[];
+}
+
+/** An Appel Faffa Go as the team reads it. */
+export interface StaffCall extends SellerCall {
+  id: string;
+  staffName: string;
 }
 
 /** A pickup address (Vendeur 4.5, 4.14). */
@@ -569,6 +655,20 @@ export interface StaffParcelDetail {
     charges: { type: string; amountMillimes: string; status: string }[];
   };
   changeRequests: ChangeRequestRow[];
+  calls: StaffCall[];
+  /** The customers before a Changer de client (A-17): staff only. */
+  clientChanges: {
+    at: string;
+    previousName: string;
+    previousPhone: string;
+    previousPhone2: string | null;
+    previousPlace: string;
+    previousAddress: string;
+    previousLandmark: string | null;
+    previousCodMillimes: string;
+    newCodMillimes: string;
+    feeMillimes: string;
+  }[];
   events: StaffEventRow[];
 }
 

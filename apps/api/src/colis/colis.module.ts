@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AVerifierModule } from '../a-verifier/a-verifier.module';
 import { CourierModule } from '../courier/courier.module';
 import { DemandesModule } from '../demandes/demandes.module';
 import { ParcelsModule } from '../parcels/parcels.module';
@@ -8,7 +9,7 @@ import { ForcageService } from './forcage.service';
 
 /** Colis, the team's side (Admin 4.3), and Forcer un statut (D-56). */
 @Module({
-  imports: [CourierModule, DemandesModule, ParcelsModule],
+  imports: [AVerifierModule, CourierModule, DemandesModule, ParcelsModule],
   controllers: [ColisController],
   providers: [ColisService, ForcageService],
 })

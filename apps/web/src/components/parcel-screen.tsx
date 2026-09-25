@@ -13,6 +13,9 @@ import {
   PARCEL_LOCATION_LABELS_FR,
   PARCEL_STATUS_LABELS_FR,
   ParcelStatus,
+  RELAUNCH_SLOT_LABELS_FR,
+  RelaunchOrigin,
+  callOutcomeLabelFR,
   canCancelStatus,
   canRequestChange,
   formatDT,
@@ -37,6 +40,8 @@ import { ConfirmDialog, Dialog } from './dialog';
 import { LocalitePicker } from './localite-picker';
 import { ParcelForm } from './parcel-form';
 import { PrintLabels } from './print-labels';
+import { SellerDecisions, dayLabel } from './seller-decisions';
+import { TimeLeft } from './time-left';
 import { TrackLine } from './track-line';
 
 // Tunis time, whether the page is drawn on the server or in the browser.
@@ -48,6 +53,10 @@ const dateTime = new Intl.DateTimeFormat('fr-TN', {
 
 export const REPRINT_WARNING =
   'Colis modifié. Réimprimez l’étiquette : celle déjà imprimée porte les anciennes informations.';
+
+/** After a decision changed a printed field: the parcel is with Faffa Go, which reprints (A-9). */
+export const DEPOT_REPRINT_NOTICE =
+  'Informations mises à jour. Faffa Go réimprime l’étiquette au dépôt, avec le même code.';
 
 /**
  * A parcel for its seller, with what he can do next (Vendeur 4.6): Modifier
@@ -70,6 +79,7 @@ export function ParcelScreen({
     'annuler' | 'demande' | 'modifier-demande' | 'retirer-demande' | null
   >(null);
   const [reprint, setReprint] = useState(false);
+  const [depotReprint, setDepotReprint] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -139,9 +149,18 @@ export function ParcelScreen({
           </span>
         )}
       </p>
+      <WaitingInfo parcel={parcel} />
       <div className="mb-6">
         <TrackLine status={parcel.status} />
       </div>
+      {depotReprint && (
+        <p
+          role="status"
+          className="mb-4 rounded-xl bg-orange/15 p-4 text-sm font-semibold text-navy"
+        >
+          {DEPOT_REPRINT_NOTICE}
+        </p>
+      )}
       {reprint && (
         <div role="status" className="mb-4 space-y-3 rounded-xl bg-orange/15 p-4">
           <p className="text-sm font-semibold text-navy">{REPRINT_WARNING}</p>
@@ -186,6 +205,10 @@ export function ParcelScreen({
         )}
         {parcel.courierNote && <Item label="Note pour le coursier" value={parcel.courierNote} />}
       </dl>
+
+      {!readOnly && (
+        <SellerDecisions parcel={parcel} tree={tree} onReprint={() => setDepotReprint(true)} />
+      )}
 
       <MoneyBlock parcel={parcel} />
 
@@ -251,6 +274,8 @@ export function ParcelScreen({
           </ul>
         </section>
       )}
+
+      <Calls parcel={parcel} />
 
       <Timeline parcel={parcel} />
 
@@ -374,8 +399,12 @@ function Timeline({ parcel }: { parcel: SellerParcelDetail }) {
             <p className="font-semibold text-navy">
               {PARCEL_EVENT_LABELS_FR[entry.type]}
               {entry.failureReason && ` · ${FAILURE_REASON_LABELS_FR[entry.failureReason]}`}
+              {entry.relaunchDate && ` · pour ${dayLabel(entry.relaunchDate)}`}
               {entry.cancelledAfterPickup && ` · ${CANCELLATION_AFTER_PICKUP_LABEL_FR}`}
             </p>
+            {entry.courierNote && (
+              <p className="text-navy">Note du livreur : « {entry.courierNote} »</p>
+            )}
             <p className="text-navy/70">
               {dateTime.format(new Date(entry.at))} · {timelineActorLabel(entry.actor)}
               {entry.location && ` · ${PARCEL_LOCATION_LABELS_FR[entry.location]}`}
@@ -383,6 +412,67 @@ function Timeline({ parcel }: { parcel: SellerParcelDetail }) {
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/**
+ * What the parcel waits for (Vendeur 4.9, D-9, D-71): the reason under the
+ * status with the courier's note and the time left, or the planned day.
+ */
+function WaitingInfo({ parcel }: { parcel: SellerParcelDetail }) {
+  if (parcel.status === ParcelStatus.A_VERIFIER) {
+    return (
+      <div className="mb-4 rounded-xl bg-orange/15 p-4 text-sm text-navy">
+        <p className="font-semibold">
+          {PARCEL_STATUS_LABELS_FR.A_VERIFIER}
+          {parcel.lastFailureReason && ` · ${FAILURE_REASON_LABELS_FR[parcel.lastFailureReason]}`}
+        </p>
+        {parcel.lastFailureNote && <p>Note du livreur : « {parcel.lastFailureNote} »</p>}
+        {parcel.verifyDeadlineAt && (
+          <p className="mt-1">
+            <TimeLeft deadline={parcel.verifyDeadlineAt} serverNow={parcel.now} />
+          </p>
+        )}
+      </div>
+    );
+  }
+  if (parcel.status === ParcelStatus.RELANCE && parcel.relaunchDate) {
+    const slot = parcel.relaunchSlot ? ` (${RELAUNCH_SLOT_LABELS_FR[parcel.relaunchSlot]})` : '';
+    return (
+      <div className="mb-4 rounded-xl bg-navy/5 p-4 text-sm text-navy">
+        <p className="font-semibold">
+          {parcel.relaunchOrigin === RelaunchOrigin.CLIENT
+            ? `Reporté au ${dayLabel(parcel.relaunchDate)}${slot}, à la demande du client`
+            : `Relancé pour ${dayLabel(parcel.relaunchDate)}${slot}`}
+        </p>
+        {parcel.relaunchOrigin === RelaunchOrigin.CLIENT && parcel.lastFailureNote && (
+          <p>Note du livreur : « {parcel.lastFailureNote} »</p>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+/** Appels Faffa Go (Vendeur 4.8): only the team's calls, time and outcome. */
+function Calls({ parcel }: { parcel: SellerParcelDetail }) {
+  if (parcel.calls.length === 0) return null;
+  return (
+    <section aria-labelledby="appels-title" className="mb-8">
+      <h2 id="appels-title" className="mb-3 font-display text-lg font-bold text-navy">
+        Appels Faffa Go
+      </h2>
+      <ul className="space-y-2 text-sm">
+        {parcel.calls.map((call, i) => (
+          <li key={`${call.calledAt}-${i}`} className="card">
+            <p className="font-semibold text-navy">
+              {dateTime.format(new Date(call.calledAt))} · {callOutcomeLabelFR(call.answered)}
+            </p>
+            {call.note && <p className="text-navy/80">{call.note}</p>}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

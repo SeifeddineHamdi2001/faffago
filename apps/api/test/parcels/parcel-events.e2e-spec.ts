@@ -377,7 +377,7 @@ describe('Relancer (D-9, D-29)', () => {
     expect(result).toEqual({
       ok: false,
       refusal: 'DATE_RELANCE_REQUISE',
-      message: 'Date de relance obligatoire',
+      message: 'Choisissez le jour de la nouvelle tentative de livraison',
     });
     expect(await snapshotOf(id)).toEqual(before);
   });

@@ -106,6 +106,8 @@ export const fr = {
   postponeDate: 'Date demandée par le client',
   slotOptional: 'Créneau (facultatif)',
   noteOptional: 'Note (facultatif)',
+  // D-71: the seller reads the courier's note on a failure.
+  noteVisibleToSeller: 'Visible par le vendeur',
   confirmFailure: 'Confirmer l’échec',
   back: 'Retour',
   close: 'Fermer',
@@ -252,6 +254,7 @@ export const ar: Record<MessageKey, string> = {
   postponeDate: 'التاريخ الذي طلبه الحريف',
   slotOptional: 'الفترة (اختياري)',
   noteOptional: 'ملاحظة (اختياري)',
+  noteVisibleToSeller: 'يراها البائع',
   confirmFailure: 'تأكيد الفشل',
   back: 'رجوع',
   close: 'إغلاق',

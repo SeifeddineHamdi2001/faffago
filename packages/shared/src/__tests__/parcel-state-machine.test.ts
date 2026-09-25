@@ -426,7 +426,7 @@ describe('seller decisions on À vérifier', () => {
       if (!result.ok) {
         expect(result.refusal).toBe(ScanRefusal.DATE_RELANCE_REQUISE);
         // Neutral until the phase 7 screen words it for the seller.
-        expect(result.message).toBe('Date de relance obligatoire');
+        expect(result.message).toBe('Choisissez le jour de la nouvelle tentative de livraison');
       }
     }
   });

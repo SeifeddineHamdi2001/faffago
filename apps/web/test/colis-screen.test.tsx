@@ -163,6 +163,8 @@ const detail: StaffParcelDetail = {
     charges: [{ type: 'LIVRAISON', amountMillimes: '7000', status: 'EN_ATTENTE' }],
   },
   changeRequests: [],
+  calls: [],
+  clientChanges: [],
   events: [
     {
       type: 'ECHEC_LIVRAISON',

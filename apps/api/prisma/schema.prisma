@@ -810,20 +810,26 @@ model ParcelImport {
 /// one is kept here. Staff-visible history; the seller and the public tracking
 /// page see only the new customer and a "Changement de client" event (A-17).
 model ParcelClientChange {
-  id                   String   @id @default(uuid()) @db.Uuid
-  parcelId             String   @db.Uuid
-  previousName         String
-  previousPhone        String   @db.VarChar(8)
-  previousDelegationId String   @db.Uuid
+  id                     String   @id @default(uuid()) @db.Uuid
+  parcelId               String   @db.Uuid
+  previousName           String
+  previousPhone          String   @db.VarChar(8)
+  previousDelegationId   String   @db.Uuid
   /// Keyed with previousDelegationId in the migration, like the parcel (D-17).
-  previousLocaliteId   String   @db.Uuid
-  previousAddress      String
-  previousCodMillimes  BigInt
-  newCodMillimes       BigInt
-  feeMillimes          BigInt
-  chargeId             String?  @db.Uuid
-  decidedByUserId      String   @db.Uuid
-  createdAt            DateTime @default(now())
+  previousLocaliteId     String   @db.Uuid
+  previousAddress        String
+  /// The rest of the old customer and his options, kept whole (A-17, D-74).
+  previousPhone2         String?  @db.VarChar(8)
+  previousLandmark       String?
+  previousCourierNote    String?
+  previousIsExchange     Boolean  @default(false)
+  previousOpeningAllowed Boolean  @default(false)
+  previousCodMillimes    BigInt
+  newCodMillimes         BigInt
+  feeMillimes            BigInt
+  chargeId               String?  @db.Uuid
+  decidedByUserId        String   @db.Uuid
+  createdAt              DateTime @default(now())
 
   parcel Parcel @relation(fields: [parcelId], references: [id])
 

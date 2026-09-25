@@ -440,10 +440,33 @@ Steps, all done:
 
 ## Phase 7 — À vérifier
 
-- [ ] Failure reasons (courier only), seller decisions (Relancer / Retourner / Changer de client)
-- [ ] Changer de client only at depot, 1,000 DT fee, attempt counter reset
-- [ ] 48-hour automatic return job, 3rd attempt rule
-- [ ] Service client call log (Appels Faffa Go)
+Branch `phase-7`. Plan 2026-09-25; the three open questions answered the same
+day (D-70 to D-72: Relancer corrects directly, the seller reads the courier's
+note, Changer de client withdraws a waiting request).
+
+Steps:
+
+1. [ ] Shared (`a-verifier.ts`): the decision forms (Relancer with its
+       corrections, Changer la date, Changer de client), time left and the
+       24-hour mark, the Appels Faffa Go form, the seller's wording of
+       DATE_RELANCE_REQUISE, `canChangeClient` / `canRelaunch` from Relancé
+       too — tests first
+2. [ ] API: the seller's decisions — Relancer, Changer la date, Retourner,
+       Changer de client (new customer, `parcel_client_changes`, the fee,
+       `labelReprintNeeded`, a waiting request withdrawn) — through the
+       parcel event service; migration for the client change's extra fields
+3. [ ] API: the 48-hour job (server clock, D-30), idempotent, in batches
+4. [ ] API: the seller's À vérifier list and its count (badge, banner under
+       24 h); Détail du colis gains the courier's note, the planned date,
+       time left and Appels Faffa Go
+5. [ ] API: Service client's follow-up list, sorted by time left, and
+       logging calls (`SUIVI_A_VERIFIER`); Colis shows the calls
+6. [ ] Web, seller: À vérifier screen, the decisions on Détail du colis, the
+       menu badge, the Tableau de bord banner
+7. [ ] Web, back office: À vérifier follow-up with Noter un appel; calls on
+       the Colis page
+8. [ ] Courier app: "Visible par le vendeur" under the failure note
+9. [ ] Browser tests, demo data, docs
 
 ## Phase 8 — Money
 

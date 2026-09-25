@@ -35,3 +35,4 @@ export * from './colis.js';
 export * from './forcage.js';
 export * from './exceptions.js';
 export * from './courier.js';
+export * from './a-verifier.js';

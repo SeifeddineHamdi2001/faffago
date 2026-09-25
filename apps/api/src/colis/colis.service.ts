@@ -21,6 +21,7 @@ import {
   tunisDayStart,
   type StaffParcelQuery,
 } from '@faffago/shared';
+import { CallsService } from '../a-verifier/calls.service';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AddressMemoryService } from '../courier/address-memory.service';
@@ -137,6 +138,7 @@ export class ColisService {
     private readonly prisma: PrismaService,
     private readonly changeRequests: ChangeRequestsService,
     private readonly memory: AddressMemoryService,
+    private readonly calls: CallsService,
   ) {}
 
   async list(query: StaffParcelQuery) {
@@ -385,8 +387,39 @@ export class ColisService {
         charges: parcel.charges,
       },
       changeRequests: await this.changeRequests.forParcel(parcel.id),
+      // Appels Faffa Go (Admin 4.6), with who called.
+      calls: await this.calls.forStaff(parcel.id),
+      // The customers before a Changer de client: staff-visible only (A-17).
+      clientChanges: await this.clientChangesOf(parcel.id),
       events,
     };
+  }
+
+  private async clientChangesOf(parcelId: string) {
+    const rows = await this.prisma.parcelClientChange.findMany({
+      where: { parcelId },
+      orderBy: { createdAt: 'asc' },
+    });
+    const localites = new Map(
+      (
+        await this.prisma.localite.findMany({
+          where: { id: { in: rows.map((r) => r.previousLocaliteId) } },
+          include: { delegation: { select: { nameFr: true } } },
+        })
+      ).map((l) => [l.id, `${l.nameFr} — ${l.delegation.nameFr}`]),
+    );
+    return rows.map((row) => ({
+      at: row.createdAt,
+      previousName: row.previousName,
+      previousPhone: row.previousPhone,
+      previousPhone2: row.previousPhone2,
+      previousPlace: localites.get(row.previousLocaliteId) ?? '',
+      previousAddress: row.previousAddress,
+      previousLandmark: row.previousLandmark,
+      previousCodMillimes: row.previousCodMillimes,
+      newCodMillimes: row.newCodMillimes,
+      feeMillimes: row.feeMillimes,
+    }));
   }
 
   /** The courier id a Tournées move or a Sortie coursier names in its metadata. */

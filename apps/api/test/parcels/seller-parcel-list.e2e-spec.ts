@@ -227,16 +227,12 @@ describe('Détail du colis (Vendeur 4.8, D-38)', () => {
       ['ECHEC_LIVRAISON', { kind: 'COURSIER', firstName: 'Oussama' }, 'AVEC_LE_LIVREUR'],
     ]);
     expect(detail.timeline[4].failureReason).toBe('NE_REPOND_PAS');
+    // The courier's note on a failure is the seller's to read (D-71, reverses D-46).
+    expect(detail.timeline[4].courierNote).toBe('Personne à la porte');
+    expect(detail.lastFailureNote).toBe('Personne à la porte');
 
     const text = JSON.stringify(detail);
-    for (const secret of [
-      'Trabelsi',
-      'Gharbi',
-      livreur.phone,
-      '36.8',
-      'gps',
-      'Personne à la porte',
-    ]) {
+    for (const secret of ['Trabelsi', 'Gharbi', livreur.phone, '36.8', 'gps']) {
       expect(text).not.toContain(secret);
     }
   });

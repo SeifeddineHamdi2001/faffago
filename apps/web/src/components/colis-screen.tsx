@@ -10,6 +10,7 @@ import {
   PARCEL_STATUS_LABELS_FR,
   ParcelCashStatus,
   ParcelStatus,
+  canLogCall,
   Permission,
   RELAUNCH_SLOT_LABELS_FR,
   ROLE_LABELS_FR,
@@ -35,6 +36,7 @@ import type {
   StaffParcelDetail,
   StaffParcelList,
 } from '@/lib/types';
+import { StaffCallsPanel } from './calls-panel';
 import { ChangeRequestsPanel } from './change-requests-panel';
 import { AdminScanCancel, ForcerStatut } from './forcage';
 import { PrintLabels } from './print-labels';
@@ -512,6 +514,41 @@ export function ColisDetailScreen({
           )}
         </Section>
       </div>
+
+      <StaffCallsPanel
+        code={parcel.code}
+        calls={parcel.calls}
+        canLog={
+          permissions.includes(Permission.SUIVI_A_VERIFIER) &&
+          canLogCall(parcel.status as ParcelStatus)
+        }
+      />
+
+      {parcel.clientChanges.length > 0 && (
+        <section aria-labelledby="anciens-clients-title" className="mt-6">
+          <h2 id="anciens-clients-title" className="mb-2 font-display text-lg font-bold text-navy">
+            Changement de client
+          </h2>
+          <ul className="space-y-2 text-sm">
+            {parcel.clientChanges.map((change, index) => (
+              <li key={index} className="card">
+                <p className="font-semibold">
+                  {dateTime.format(new Date(change.at))} · Ancien client : {change.previousName} ·{' '}
+                  {[change.previousPhone, change.previousPhone2].filter(Boolean).join(' · ')}
+                </p>
+                <p>
+                  {change.previousPlace} · {change.previousAddress}
+                  {change.previousLandmark && ` (${change.previousLandmark})`}
+                </p>
+                <p>
+                  COD {money(change.previousCodMillimes)} → {money(change.newCodMillimes)} · Frais{' '}
+                  {money(change.feeMillimes)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {parcel.changeRequests.length > 0 && (
         <>

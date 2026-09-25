@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
   BYTE_ORDER_MARK,
@@ -15,14 +15,19 @@ import {
   addTunisDays,
   csvLine,
   formatDT,
+  sellerDecisionsFor,
   sellerTimelineTime,
   tunisDayStart,
   type FailureReason,
+  type RelaunchOrigin,
+  type RelaunchSlot,
+  type SellerDecisions,
   type ParcelEventType,
   type ParcelListQuery,
   type TimelineActor,
 } from '@faffago/shared';
 import { sellerIdOf, type Principal } from '../auth/principal';
+import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
@@ -58,6 +63,10 @@ export interface TimelineEntry {
   /** Where the parcel was left: the location label only, never GPS (D-38). */
   location: string | null;
   failureReason: FailureReason | null;
+  /** The courier's note on a failure: the seller reads it (D-71). */
+  courierNote: string | null;
+  /** The day a relance or a postponement plans, `AAAA-MM-JJ` (D-9). */
+  relaunchDate: string | null;
   cancelledAfterPickup: boolean;
 }
 
@@ -66,12 +75,31 @@ export interface SellerParcelDetail extends SellerParcelView {
   attemptCount: number;
   maxAttempts: number;
   lastFailureReason: FailureReason | null;
+  /** "Note du livreur" under the reason (D-71). */
+  lastFailureNote: string | null;
+  /** The automatic return, while À vérifier (Vendeur 4.9). */
+  verifyDeadlineAt: Date | null;
+  /** Relancé: the planned day, its slot, and who asked for it (D-9). */
+  relaunchDate: string | null;
+  relaunchSlot: RelaunchSlot | null;
+  relaunchOrigin: RelaunchOrigin | null;
+  /** What the seller may decide now (Vendeur 4.9). */
+  decisions: SellerDecisions;
+  /** Appels Faffa Go (Vendeur 4.8): time, outcome, note; never who. */
+  calls: { calledAt: Date; answered: boolean; note: string | null }[];
+  /** The server's clock, so the countdown starts from the same instant. */
+  now: Date;
   /** Set once the parcel is paid: the bon de versement it was paid in. */
   bonNumber: string | null;
   timeline: TimelineEntry[];
 }
 
 const COURIER_ROLES: readonly Role[] = [Role.LIVREUR, Role.RAMASSEUR];
+
+function relaunchDateOf(metadata: Prisma.JsonValue): string | null {
+  const value = (metadata as Record<string, unknown> | null)?.relaunchDate;
+  return typeof value === 'string' ? value : null;
+}
 
 /** `JJ/MM/AAAA HH:MM` in Tunis time, for the CSV exports. */
 export function localDateTime(date: Date): string {
@@ -91,6 +119,7 @@ export class ParcelQueriesService {
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly parcels: ParcelsService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async list(principal: Principal, query: ParcelListQuery): Promise<ParcelList> {
@@ -191,8 +220,23 @@ export class ParcelQueriesService {
       this.prisma.parcel.findUniqueOrThrow({
         where: { id: view.id },
         select: {
+          status: true,
+          location: true,
+          cashStatus: true,
           attemptCount: true,
+          changeClientCount: true,
+          currentLivreurId: true,
+          isExchange: true,
           lastFailureReason: true,
+          lastFailureNote: true,
+          verifyDeadlineAt: true,
+          relaunchDate: true,
+          relaunchSlot: true,
+          relaunchOrigin: true,
+          calls: {
+            orderBy: { calledAt: 'desc' },
+            select: { calledAt: true, answered: true, note: true },
+          },
           bonVersementLine: { select: { bonVersement: { select: { number: true } } } },
         },
       }),
@@ -210,6 +254,7 @@ export class ParcelQueriesService {
           actorRole: true,
           newLocation: true,
           reasonCode: true,
+          reasonText: true,
           metadata: true,
         },
       }),
@@ -259,6 +304,20 @@ export class ParcelQueriesService {
       attemptCount: parcel.attemptCount,
       maxAttempts: settings.maxDeliveryAttempts,
       lastFailureReason: parcel.lastFailureReason,
+      lastFailureNote: parcel.lastFailureNote,
+      verifyDeadlineAt: parcel.verifyDeadlineAt,
+      relaunchDate: parcel.relaunchDate ? parcel.relaunchDate.toISOString().slice(0, 10) : null,
+      relaunchSlot: parcel.relaunchSlot,
+      relaunchOrigin: parcel.relaunchOrigin,
+      decisions: sellerDecisionsFor(
+        { ...parcel, relaunchDate: parcel.relaunchDate },
+        {
+          maxAttempts: settings.maxDeliveryAttempts,
+          maxClientChanges: settings.maxClientChangesPerParcel,
+        },
+      ),
+      calls: parcel.calls,
+      now: this.clock.now(),
       bonNumber: parcel.bonVersementLine?.bonVersement.number ?? null,
       timeline: events.map((event) => ({
         type: event.type,
@@ -270,6 +329,9 @@ export class ParcelQueriesService {
         actor: actorOf(event.actorRole, event.actorUserId),
         location: event.newLocation,
         failureReason: event.reasonCode,
+        // Only a failure's note: other free text (a correction's reason) stays staff-side.
+        courierNote: event.type === 'ECHEC_LIVRAISON' ? event.reasonText : null,
+        relaunchDate: relaunchDateOf(event.metadata),
         cancelledAfterPickup:
           (event.metadata as Record<string, unknown> | null)?.annulation ===
           CANCELLATION_AFTER_PICKUP,

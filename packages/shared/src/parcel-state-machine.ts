@@ -168,8 +168,8 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   COURSIER_NON_PRECISE: 'Choisissez un coursier avant de scanner',
   DATE_REPORT_REQUISE: 'Choisissez la date de report demandée par le client',
   DATE_REPORT_INVALIDE: 'La date doit être comprise entre demain et 7 jours',
-  // Neutral on purpose: the seller's wording comes with the phase 7 screen (D-29).
-  DATE_RELANCE_REQUISE: 'Date de relance obligatoire',
+  // The seller reads it on the Relancer form (D-29, phase 7).
+  DATE_RELANCE_REQUISE: 'Choisissez le jour de la nouvelle tentative de livraison',
   COURSIER_INDISPONIBLE: 'Coursier indisponible : absent, inactif ou ne reçoit plus de travail',
   SCAN_ID_REUTILISE: 'Identifiant de scan déjà utilisé pour un autre scan',
   RAMASSAGE_INTROUVABLE: 'Ramassage introuvable, ou confié à un autre ramasseur',
@@ -896,10 +896,13 @@ export function applyCashTransition(
 // Helpers the interfaces use to enable or disable buttons
 // ─────────────────────────────────────────────────────────────
 
-/** Vendeur 4.9: the button shows "Disponible au retour au dépôt" until then. */
+/**
+ * Vendeur 4.9: the button shows "Disponible au retour au dépôt" until then.
+ * From Relancé too, once the parcel is back at the depot (D-9).
+ */
 export function canChangeClient(parcel: ParcelSnapshot, maxClientChanges: number): boolean {
   return (
-    parcel.status === ParcelStatus.A_VERIFIER &&
+    (parcel.status === ParcelStatus.A_VERIFIER || parcel.status === ParcelStatus.RELANCE) &&
     parcel.location === ParcelLocation.AU_DEPOT &&
     parcel.changeClientCount < maxClientChanges
   );

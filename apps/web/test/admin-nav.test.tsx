@@ -19,6 +19,7 @@ describe('AdminNav', () => {
       'Colis',
       'Ramassages',
       'Tournées',
+      'À vérifier',
       'Exceptions',
       'Vendeurs',
       'Coursiers',
@@ -39,9 +40,9 @@ describe('AdminNav', () => {
     ]);
   });
 
-  it('gives Service client Colis, Exceptions, Vendeurs and Coursiers, no Scan nor planning (D-11)', () => {
+  it('gives Service client Colis, À vérifier, Exceptions, Vendeurs and Coursiers, no Scan nor planning (D-11)', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
-    expect(links()).toEqual(['Colis', 'Exceptions', 'Vendeurs', 'Coursiers']);
+    expect(links()).toEqual(['Colis', 'À vérifier', 'Exceptions', 'Vendeurs', 'Coursiers']);
   });
 
   it('marks the current screen', () => {

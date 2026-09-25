@@ -113,6 +113,8 @@ export interface SellerParcelView {
   courierNote: string | null;
   deliveryFeeMillimes: bigint;
   returnFeeMillimes: bigint;
+  /** Changer de client, frozen at creation like the others (Vendeur 4.9). */
+  changeClientFeeMillimes: bigint;
   createdAt: Date;
   cancelledAt: Date | null;
   changeRequests: ChangeRequestView[];
@@ -185,6 +187,7 @@ function sellerView(
     courierNote: parcel.courierNote,
     deliveryFeeMillimes: parcel.deliveryFeeMillimes,
     returnFeeMillimes: parcel.returnFeeMillimes,
+    changeClientFeeMillimes: parcel.changeClientFeeMillimes,
     createdAt: parcel.createdAt,
     cancelledAt: parcel.cancelledAt,
     changeRequests: parcel.changeRequests.map((r) => changeRequestView(r, localites)),

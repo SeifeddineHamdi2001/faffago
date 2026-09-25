@@ -3,8 +3,9 @@ import {
   SellerDashboardScreen,
   resolveDashboardPeriod,
 } from '@/components/seller-dashboard-screen';
+import { VerifyBanner } from '@/components/verify-banner';
 import { requireMe, serverGet } from '@/lib/server/session';
-import type { SellerDashboard } from '@/lib/types';
+import type { SellerDashboard, SellerVerifySummary } from '@/lib/types';
 
 /** Tableau de bord (Vendeur 4.1, D-48). The period lives in the address, like the filters of Mes colis. */
 export default async function TableauDeBord({
@@ -24,15 +25,19 @@ export default async function TableauDeBord({
     `/dashboard?${new URLSearchParams({ from: range.from, to: range.to }).toString()}`,
   );
   const suspended = me.seller?.accountState === 'SUSPENDU';
+  const summary = await serverGet<SellerVerifySummary>('vendeur', '/a-verifier/resume');
 
   return (
-    <SellerDashboardScreen
-      dashboard={dashboard}
-      period={period}
-      invalid={invalid}
-      // Suspended: no parcel, no pickup (Vendeur 2.5); "Voir comme le vendeur" writes nothing (D-5).
-      canCreate={!me.readOnly && !suspended}
-      suspended={suspended}
-    />
+    <>
+      <VerifyBanner summary={summary} />
+      <SellerDashboardScreen
+        dashboard={dashboard}
+        period={period}
+        invalid={invalid}
+        // Suspended: no parcel, no pickup (Vendeur 2.5); "Voir comme le vendeur" writes nothing (D-5).
+        canCreate={!me.readOnly && !suspended}
+        suspended={suspended}
+      />
+    </>
   );
 }

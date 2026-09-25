@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AVerifierModule } from './a-verifier/a-verifier.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -25,7 +26,7 @@ import { ZonesModule } from './zones/zones.module';
 /**
  * Domain modules are added one at a time, as each phase of docs/PROGRESS.md is
  * built: auth, users, sellers, couriers, zones, parcels, scans, pickups,
- * verification, caisse, payouts, returns, courier-pay, retenue, chat,
+ * verification (À vérifier), caisse, payouts, returns, courier-pay, retenue, chat,
  * notifications, reports, audit, settings, public.
  *
  * AuthModule registers the three global guards: every route of every module
@@ -58,6 +59,7 @@ import { ZonesModule } from './zones/zones.module';
     ExceptionsModule,
     DashboardModule,
     CourierModule,
+    AVerifierModule,
   ],
 })
 export class AppModule {}

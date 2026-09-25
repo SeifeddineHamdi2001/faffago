@@ -198,6 +198,10 @@ describe('DeliverScreen (Coursier 4.4)', () => {
     );
     await fireEvent.press(await screen.findByTestId('choose-echec'));
     await fireEvent.press(screen.getByTestId('reason-REPORTE_PAR_LE_CLIENT'));
+    // The seller reads the note (D-71): the courier is told so.
+    expect(screen.getByTestId('note-visible-to-seller')).toHaveTextContent(
+      'Visible par le vendeur',
+    );
     const days = screen.getAllByTestId(/^day-/);
     expect(days).toHaveLength(7);
     await fireEvent.press(days[2]!);
