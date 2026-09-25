@@ -107,15 +107,16 @@ describe('Mes colis (Vendeur 4.7)', () => {
   });
 
   it('filters by the Tunisian calendar day', async () => {
-    // 2026-09-25 00:30 in Tunis is 2026-09-24 23:30 UTC.
+    // 2025-03-15 00:30 in Tunis is 2025-03-14 23:30 UTC. A day far from the
+    // real clock, which the other parcels of this file are created at.
     const code = await inState('CREE', 'CHEZ_LE_VENDEUR');
     await t.prisma.parcel.update({
       where: { code },
-      data: { createdAt: new Date('2026-09-24T23:30:00.000Z') },
+      data: { createdAt: new Date('2025-03-14T23:30:00.000Z') },
     });
-    const day = await t.request('GET', '/parcels?from=2026-09-25&to=2026-09-25', { token });
+    const day = await t.request('GET', '/parcels?from=2025-03-15&to=2025-03-15', { token });
     expect(day.body.items.map((p: { code: string }) => p.code)).toEqual([code]);
-    const before = await t.request('GET', '/parcels?to=2026-09-24', { token });
+    const before = await t.request('GET', '/parcels?to=2025-03-14', { token });
     expect(before.body.items.map((p: { code: string }) => p.code)).not.toContain(code);
   });
 

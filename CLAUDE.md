@@ -10,11 +10,19 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
   - `docs/coursier.md` — courier app (Livreur, Ramasseur)
   - `docs/landing.md` — public site: landing page, prices, public parcel tracking (French + Arabic)
   - `docs/tech-stack.md` — architecture and technical rules
-  - `docs/PROGRESS.md` — what is built, what is next
-- Before any task, read the relevant spec sections. The specs win over your assumptions.
-- If a spec is unclear, contradictory, or silent on something you need, **stop and ask**. Never invent a business rule, status, fee, or permission.
+  - `docs/decisions.md` — every decision taken during the build
+  - `docs/PROGRESS.md` — what is built, what is next, launch scope
+- **`docs/decisions.md` is binding.** Read it before any work. Where it differs from a spec, decisions.md wins.
+- Before any task, read the relevant spec sections and decisions. They win over your assumptions.
+- Never invent a business rule, status, fee, or permission. If a spec and decisions.md are silent on one, stop and ask (see "When to stop").
 - Items marked "TO CONFIRM" in the specs are defaults: implement them, but keep them easy to change (settings or one constant).
-- Do not add features that are not in the specs, even if they seem useful. Suggest them instead.
+- Do not add features that are not in the specs or decisions, even if they seem useful. Suggest them in the end-of-phase report instead.
+
+## Launch scope
+
+Build only what launch needs, in this order: finish phase 5 (depot), courier app, À vérifier, money (caisse, bons de versement, bons de retour, courier pay), public tracking page, deployment.
+
+Chat, notifications, reports, the full Exceptions queue and the rest of the public site are **post-launch**. They are listed in the "Post-lancement" section of PROGRESS.md. Don't build them before launch unless asked.
 
 ## Structure
 
@@ -39,7 +47,7 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 - Use only the statuses defined in `packages/shared`. Never add, rename or reuse a status without asking.
 - Every status change goes through the parcel event service, which writes an immutable event (who, when, GPS if any, previous → new, reason). Never update a status column directly.
 - `parcel_events` and `audit_log` are append-only.
-- A failed delivery always goes to À vérifier. Returns only come from: the seller's choice, 48 hours without decision, or the 3rd failed attempt. The Faffa Go team never decides a return.
+- A failed delivery goes to À vérifier, except a customer postponement, which is planned automatically (D-9). Returns only come from: the seller's choice, 48 hours without decision, or the 3rd failed attempt. The Faffa Go team never decides a return.
 - Changer de client is only possible when the parcel is at the depot.
 
 ### Scans
@@ -52,12 +60,12 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 
 - Role check on every endpoint (NestJS guards). Roles: ADMIN, DEPOT, SERVICE_CLIENT, VENDEUR, LIVREUR, RAMASSEUR.
 - A seller only ever sees his own data. A seller sees only the courier's first name.
-- CIN / patente documents: private storage, admin-only access, never a public URL.
+- CIN / patente documents: private encrypted storage, admin-only access, never a public URL.
 - Never commit secrets. Use `.env` files (git-ignored) and document variables in `.env.example`.
 
 ### UI
 
-- All user-facing text in French, using the exact labels from the specs. The public site is French + Arabic (right-to-left layout for Arabic). The courier app also supports Arabic (TO CONFIRM).
+- All user-facing text in French, using the exact labels from the specs. The public site is French + Arabic (right-to-left layout for Arabic). The courier app supports French and Arabic.
 - Orange buttons and surfaces carry **navy text**, never white: white on #FF6B35 fails WCAG AA contrast. Orange text on white uses `orange-dark`.
 - Any user-facing text the specs do not word goes into `docs/ui-texts.md` (screen, key, French text), for review before launch.
 - Public tracking never exposes customer name, phone, address, failure reason or internal notes.
@@ -65,14 +73,27 @@ Faffa Go is a COD (cash on delivery) express delivery company in Grand Tunis, Tu
 
 ## How to work
 
-1. For each task: read the specs, then propose a short plan (data model changes, endpoints, screens, tests) **before writing code**. Wait for approval on anything touching money, statuses or permissions.
-2. Write tests first for money calculations, the status state machine, scan deduplication and permissions.
-3. Keep changes small and focused on the current task. One feature at a time.
-4. Run the tests, lint and type checks before saying a task is done.
-5. At the end of each task, update `docs/PROGRESS.md` (what was done, decisions made, open questions).
-6. Database changes only through Prisma migrations. Never edit a migration that has already been applied.
-7. One branch per phase (`phase-1-auth`, `phase-2-…`). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm e2e` (the browser tests) pass through turbo from the root. After every merge into `main`, push `main` to `origin`.
-8. Never commit when lint, typecheck or tests fail. Commit only after the checks pass, chaining the commands with `&&` so that a failure stops the chain before `git commit`.
+These rules keep the cost of the build down. Follow them.
+
+1. **Run a whole phase without stopping between steps.** At the start of a phase, write a short plan (a list of steps, one line each) into PROGRESS.md and start working. Don't wait for approval of the plan unless it contains a decision covered by "When to stop".
+2. **Decide the small things yourself.** Screen layout, wording, naming, validation limits, UI behaviour, internal structure: choose, record the choice in decisions.md (one or two lines), and list it in the end-of-phase report.
+3. **Reports are short.** Ten lines maximum: what was built, what's left, and the list of choices you made alone. No detailed explanations unless asked.
+4. **Tests.** Tests first for money calculations, the status state machine, scans and permissions. For screens, one test per screen for its main path is enough. No mutation checks or extra verification passes unless the code touches money.
+5. Run the tests, lint and type checks before saying work is done.
+6. Update `docs/PROGRESS.md` at the end of each phase (what was done, decisions made, open questions).
+7. Database changes only through Prisma migrations. Never edit a migration that has already been applied.
+8. One branch per phase (`phase-5`, `phase-6`, …). Commit on it as the work goes; merge into `main` only when the phase is complete and `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm e2e` pass through turbo from the root. After every merge into `main`, push `main` to `origin`.
+9. Never commit when lint, typecheck or tests fail. Chain the checks with `&&` so a failure stops before `git commit`.
+
+## When to stop and ask
+
+Stop only for a decision that decisions.md and the specs don't answer and that touches:
+
+- **money**: a fee, a charge, a payout, the retenue, the caisse, courier pay;
+- **statuses**: a new transition, a new status, a new effect of a transition;
+- **permissions**: who can see or do something.
+
+Ask all your open questions for a phase **in one message**, each with your recommendation, so they can be answered at once. Everything else: decide, record, continue.
 
 ## Commands
 
@@ -93,7 +114,7 @@ Per workspace:
 - Apply migrations: `pnpm --filter @faffago/api prisma:deploy`
 - Prisma client: `pnpm --filter @faffago/api prisma:generate`
 - Seed (idempotent): `pnpm --filter @faffago/api db:seed`
-- Demo accounts, development only (never in production, never by the normal seed): `pnpm --filter @faffago/api db:seed:demo`
+- Demo accounts and demo work (zones, picked-up parcels, a pickup request), development only (never in production, never by the normal seed; run `db:seed` first): `pnpm --filter @faffago/api db:seed:demo`
 
 Notes:
 

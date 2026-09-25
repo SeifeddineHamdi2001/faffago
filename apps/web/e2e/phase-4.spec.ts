@@ -237,7 +237,12 @@ test('Tableau de bord over 7 derniers jours: Créés = 4 (D-48)', async () => {
 
 test('Voir comme le vendeur: his space, read-only, then Quitter (D-5)', async () => {
   await admin.goto('/admin/vendeurs');
-  await admin.getByRole('button', { name: 'Voir comme le vendeur' }).click();
+  // The test API also holds the demo seller (D-50): this shop's row only.
+  await admin
+    .getByRole('listitem')
+    .filter({ hasText: SHOP })
+    .getByRole('button', { name: 'Voir comme le vendeur' })
+    .click();
   await admin.waitForURL('**/vendeur');
 
   const banner = admin.getByRole('region', { name: 'Consultation' });

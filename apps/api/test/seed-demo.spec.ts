@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { DEMO_ACCOUNTS, seedDemo } from '../prisma/seed-demo';
+import { seed } from '../prisma/seed';
+import {
+  DEMO_ACCOUNTS,
+  DEMO_PARCELS,
+  demoParcelRequestId,
+  seedDemo,
+  seedDemoOperations,
+} from '../prisma/seed-demo';
 import { pgliteAdapter } from './support/pglite-adapter';
 import { applyMigrations } from './migrations';
 
@@ -82,6 +89,93 @@ describe('seedDemo', () => {
     await expect(seedDemo(client, { nodeEnv: 'development' })).rejects.toThrow(/db:seed/);
     await client.$disconnect();
     await empty.close();
+  });
+});
+
+describe('seedDemoOperations: work for the back office screens (D-50)', () => {
+  let full: PGlite;
+  let client: PrismaClient;
+
+  beforeAll(async () => {
+    full = await PGlite.create();
+    await applyMigrations(full);
+    client = new PrismaClient({ adapter: pgliteAdapter(full) });
+    await seed(client, { log: () => undefined, adminPassword: 'x-Mot-De-Passe-Admin-42' });
+    await seedDemo(client, { nodeEnv: 'development' });
+  });
+  afterAll(async () => {
+    await client.$disconnect();
+    await full.close();
+  });
+
+  it('refuses to run when NODE_ENV is production', async () => {
+    await expect(seedDemoOperations(client, { nodeEnv: 'production' })).rejects.toThrow(
+      /production/,
+    );
+    expect(await client.parcel.count()).toBe(0);
+  });
+
+  it('assigns the demo couriers to zones, picks up ten parcels and asks one pickup', async () => {
+    const result = await seedDemoOperations(client, { nodeEnv: 'development' });
+
+    expect(result).toEqual({ assignments: 6, parcels: DEMO_PARCELS.length, pickups: 1 });
+    const parcels = await client.parcel.findMany({ include: { events: true } });
+    expect(parcels).toHaveLength(10);
+    for (const parcel of parcels) {
+      expect(parcel).toMatchObject({ status: 'RAMASSE', location: 'AVEC_LE_RAMASSEUR' });
+      expect(parcel.pickedUpAt).not.toBeNull();
+      // Created by the seller, picked up by a ramasseur: one event per step (D-21).
+      expect(parcel.events.map((e) => [e.type, e.actorRole]).sort()).toEqual([
+        ['CREATION', 'VENDEUR'],
+        ['RAMASSAGE', 'RAMASSEUR'],
+      ]);
+    }
+    // Several zones, one of them with no demo courier (Sans coursier in Tournées).
+    const delegations = new Set(parcels.map((p) => p.delegationId));
+    expect(delegations.size).toBe(4);
+
+    const livreur = await client.user.findUniqueOrThrow({
+      where: { phone_role: { phone: '50990004', role: 'LIVREUR' } },
+      include: { courier: { include: { zoneAssignments: true } } },
+    });
+    expect(livreur.courier!.zoneAssignments).toEqual([
+      expect.objectContaining({ role: 'LIVREUR', kind: 'TITULAIRE' }),
+    ]);
+    const pickup = await client.pickup.findFirstOrThrow();
+    expect(pickup).toMatchObject({ status: 'DEMANDE', declaredCount: 3, requestedSlot: 'MATIN' });
+  });
+
+  it('adds nothing the second time, and keeps an assignment the admin changed', async () => {
+    const marsa = await client.delegation.findUniqueOrThrow({ where: { code: 'TUN-MARSA' } });
+    await client.zoneAssignment.deleteMany({
+      where: { zoneId: marsa.zoneId!, role: 'LIVREUR' },
+    });
+    const other = await client.user.findUniqueOrThrow({
+      where: { phone_role: { phone: '50990007', role: 'LIVREUR' } },
+      include: { courier: true },
+    });
+    await client.zoneAssignment.create({
+      data: {
+        zoneId: marsa.zoneId!,
+        courierId: other.courier!.id,
+        role: 'LIVREUR',
+        kind: 'TITULAIRE',
+      },
+    });
+
+    const again = await seedDemoOperations(client, { nodeEnv: 'development' });
+
+    expect(again).toEqual({ assignments: 0, parcels: 0, pickups: 0 });
+    expect(await client.parcel.count()).toBe(10);
+    expect(
+      await client.parcel.findUnique({ where: { clientRequestId: demoParcelRequestId(0) } }),
+    ).not.toBeNull();
+    const slot = await client.zoneAssignment.findUniqueOrThrow({
+      where: {
+        zoneId_role_kind: { zoneId: marsa.zoneId!, role: 'LIVREUR', kind: 'TITULAIRE' },
+      },
+    });
+    expect(slot.courierId).toBe(other.courier!.id);
   });
 });
 

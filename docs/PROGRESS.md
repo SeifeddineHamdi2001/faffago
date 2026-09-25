@@ -240,8 +240,10 @@ reported and approved before the next.
 
 ## Phase 5 — Back office operations
 
-In progress on branch `phase-5`. Plan approved 2026-09-24; answers recorded as
-D-50 to D-58. Built in steps, each reported and approved before the next.
+Done. Merged into `main` on 2026-09-25 after `pnpm lint`, `pnpm typecheck`,
+`pnpm test` and `pnpm e2e` (23 browser tests) passed through turbo. Plan
+approved 2026-09-24; answers recorded as D-50 to D-58. Built in steps 1 to
+10, each reported before the next.
 
 - [x] Zones (livreur + ramasseur, titular + backup) and absence switch;
       screens for zones, délégations and localités, with courier zone
@@ -366,9 +368,20 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
       each row leading to Tournées, the pickup, or the parcel's Colis page;
       a link to act only for the roles that may. No migration — 4 shared,
       6 API e2e, 6 web tests
-- [ ] Demo data, Playwright, merge — step 10. The demo seed (development
-      only, D-16, D-50) adds about 10 demo parcels in Ramassé across several
-      zones, and demo livreurs active and assigned to those zones
+- [x] Demo data, Playwright, merge — step 10. `db:seed:demo` (development
+      only, D-16, D-50) now adds two livreurs and a ramasseur, assigns the
+      demo couriers to three zones (Ben Arous Côte left without, to show
+      "Sans coursier"), creates ten demo parcels picked up across four
+      délégations — through the shared state machine, one event per step,
+      as the ramasseur's scan will in phase 6 — and one pickup request to
+      plan (`seedDemoOperations`, idempotent by request id). The test API
+      seeds the same data. Playwright `phase-5.spec.ts`, 9 tests in order:
+      the zones and délégations, a demo parcel found in Colis, Entrée dépôt
+      scanned, cancelled and scanned again, moved in Tournées, Sortie
+      coursier with "Prévu pour" and Retour de tournée, the log and Forcer
+      un statut, a pickup planned with the zone's ramasseur, Exceptions, a
+      livreur marked absent. The phase 4 flow now picks its own shop's row
+      on Vendeurs. `pnpm e2e`: 23 tests
 
 ## Phase 6 — Courier app
 
@@ -1039,6 +1052,27 @@ D-50 to D-58. Built in steps, each reported and approved before the next.
     apply them, gets "Voir la demande".
   - **Pickups late**: planned for a Tunis day before today and still
     Planifié.
+
+- 2026-09-25 — **Phase 5, step 10 (demo data, browser tests).** Choices made
+  while building:
+  - **The demo parcels go through the shared state machine**
+    (`applyParcelAction`, `parcelWriteFor`) inside the demo seed rather than
+    through the Nest service, which the seed script does not start; the
+    events are the same, and the D-21 trigger checks them.
+  - **The test API seeds the demo data** on every run, beside the normal
+    seed: the phase 5 screens need picked-up parcels, and only phase 6's
+    app can pick them up for real.
+  - **The flow runs as the admin**, who holds every right of the back
+    office; the role checks are in the API and unit tests of each step.
+  - **The browser types the codes as a gun would** (one burst, then Enter);
+    the camera is not exercised: see the pre-launch test in phase 11.
+  - **A phase 4 test fixed**: "filters by the Tunisian calendar day" set one
+    parcel on 2026-09-25 while the file's other parcels take the
+    database's real clock; on 25 September 2026 they all matched. It now
+    uses a day in 2025, far from any real clock.
+
+- 2026-09-25 — **Phase 5 merged into `main`** (fast-forward) after lint,
+  typecheck, test and the 23 browser tests passed.
 
 ## Open questions
 
