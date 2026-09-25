@@ -80,12 +80,46 @@ export interface PickupView {
   declaredCount: number | null;
   scannedCount: number;
   parcels: { code: string; status: string; expected: boolean; scanned: boolean }[];
-  aEmporter: unknown[];
+  aEmporter: AEmporter;
+}
+
+/** The bons he takes to one seller (Coursier 4.6, D-84). */
+export interface AEmporter {
+  bonsVersement: {
+    id: string;
+    number: string;
+    netMillimes: MoneyJson;
+    enMain: boolean;
+    remis: boolean;
+  }[];
+  bonsRetour: {
+    id: string;
+    number: string;
+    enMain: boolean;
+    remis: boolean;
+    lines: { code: string; itemType: 'COLIS' | 'ARTICLE_RECUPERE'; received: boolean }[];
+  }[];
+}
+
+/** A visit only to hand over bons (answer 4, D-84). */
+export interface BonVisit {
+  sellerId: string;
+  shopName: string;
+  contactName: string;
+  sellerPhone: string;
+  address: string | null;
+  landmark: string | null;
+  localiteNameFr: string | null;
+  localiteNameAr: string | null;
+  delegationNameFr: string | null;
+  delegationNameAr: string | null;
+  aEmporter: AEmporter;
 }
 
 export interface PickupDay {
   open: PickupView[];
   done: PickupView[];
+  visits: BonVisit[];
 }
 
 /** GET /coursier/caisse (Coursier 4.7). */
@@ -97,6 +131,43 @@ export interface Cash {
     deliveredAt: string | null;
   }[];
   totalMillimes: MoneyJson;
+  /** A ramasseur's bons still to hand to sellers (D-84). */
+  bons: { number: string; shopName: string; netMillimes: MoneyJson }[];
+  bonCashMillimes: MoneyJson;
+  aRemettreMillimes: MoneyJson;
+  /** The depot's count of his last days (Coursier 4.7). */
+  sessions: {
+    day: string;
+    status: 'COMPTEE' | 'CLOTUREE';
+    expectedMillimes: MoneyJson;
+    countedMillimes: MoneyJson | null;
+    ecartMillimes: MoneyJson | null;
+    conforme: boolean;
+    debtMillimes: MoneyJson | null;
+  }[];
+}
+
+/** GET /coursier/gains (Coursier 4.10, D-82). */
+export interface Gains {
+  payPlan: string;
+  pendingPayPlan: string | null;
+  pendingPayPlanFrom: string | null;
+  period: { start: string; end: string };
+  nextPaymentDate: string;
+  parcelCount: number;
+  grossMillimes: MoneyJson;
+  debtsMillimes: MoneyJson;
+  dueMillimes: MoneyJson;
+  carriedDebtMillimes: MoneyJson;
+  debtsOpenMillimes: MoneyJson;
+  fiches: {
+    id: string;
+    number: string;
+    period: { start: string; end: string };
+    parcelCount: number;
+    netMillimes: MoneyJson;
+    status: 'A_PAYER' | 'PAYEE';
+  }[];
 }
 
 /** GET /coursier/moi (Coursier 4.12). */

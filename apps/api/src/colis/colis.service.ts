@@ -248,7 +248,10 @@ export class ColisService {
         plannedLivreur: {
           select: { user: { select: { id: true, firstName: true, lastName: true } } },
         },
-        bonVersementLine: { select: { bonVersement: { select: { number: true } } } },
+        bonVersementLines: {
+          where: { releasedAt: null },
+          select: { bonVersement: { select: { number: true } } },
+        },
         charges: {
           orderBy: { createdAt: 'asc' },
           select: { type: true, amountMillimes: true, status: true },
@@ -383,7 +386,7 @@ export class ColisService {
         changeClientFeeMillimes: parcel.changeClientFeeMillimes,
         courierRateMillimes: parcel.courierRateMillimes,
         cashStatus: parcel.cashStatus,
-        bonNumber: parcel.bonVersementLine?.bonVersement.number ?? null,
+        bonNumber: parcel.bonVersementLines[0]?.bonVersement.number ?? null,
         charges: parcel.charges,
       },
       changeRequests: await this.changeRequests.forParcel(parcel.id),

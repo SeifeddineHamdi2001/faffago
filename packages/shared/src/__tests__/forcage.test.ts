@@ -11,6 +11,35 @@ import { ParcelLocation as L, ParcelStatus as S } from '../statuses.js';
 
 const LIVREUR = '3f1e4b6a-2c7d-4e8f-9a0b-1c2d3e4f5a6b';
 
+describe('Forcer un statut on a Livré (D-85)', () => {
+  const livre = (cashStatus: 'CHEZ_LE_COURSIER' | 'AU_DEPOT' | 'PAYE') => ({
+    status: S.LIVRE,
+    location: L.CHEZ_LE_CLIENT,
+    cashStatus,
+  });
+  const back = { status: S.EN_LIVRAISON, location: L.AVEC_LE_LIVREUR };
+
+  it('undoes a Livré whose cash is still with the courier, back out with him', () => {
+    expect(forcedStatusRefusal(livre('CHEZ_LE_COURSIER'), back)).toBeNull();
+    expect(forcedTargets(livre('CHEZ_LE_COURSIER'))).toEqual([back]);
+  });
+
+  it('refuses once the cash is counted or paid, and any other target', () => {
+    expect(forcedStatusRefusal(livre('AU_DEPOT'), back)).toBe(ForcageRefusal.FORCAGE_NON_AUTORISE);
+    expect(forcedStatusRefusal(livre('PAYE'), back)).toBe(ForcageRefusal.FORCAGE_NON_AUTORISE);
+    expect(forcedTargets(livre('AU_DEPOT'))).toEqual([]);
+    expect(
+      forcedStatusRefusal(livre('CHEZ_LE_COURSIER'), { status: S.AU_DEPOT, location: L.AU_DEPOT }),
+    ).toBe(ForcageRefusal.FORCAGE_NON_AUTORISE);
+  });
+
+  it('never forces a parcel into Livré', () => {
+    expect(forcedStatusRefusal(back, { status: S.LIVRE, location: L.CHEZ_LE_CLIENT })).toBe(
+      ForcageRefusal.FORCAGE_NON_AUTORISE,
+    );
+  });
+});
+
 describe('Forcer un statut in phase 5 (D-56)', () => {
   it('moves between Ramassé, Au dépôt and En livraison, each at its place', () => {
     const ramasse = { status: S.RAMASSE, location: L.AVEC_LE_RAMASSEUR };
@@ -126,7 +155,7 @@ describe('Forcer un statut in phase 5 (D-56)', () => {
 
   it('says why, in French', () => {
     expect(FORCAGE_MESSAGES_FR.FORCAGE_NON_AUTORISE).toBe(
-      'Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, ou le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, se corrigent.',
+      'Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, ou un Livré dont l’argent est encore chez le coursier, se corrigent.',
     );
     expect(FORCAGE_MESSAGES_FR.MEME_ETAT).toBe('Le colis est déjà dans cet état.');
     expect(FORCAGE_MESSAGES_FR.LIVREUR_INVALIDE).toBe('Choisissez le livreur qui a le colis.');

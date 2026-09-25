@@ -17,6 +17,7 @@ import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { attachWaitingBons } from '../money/bons-versement.service';
 import { ZoneCoverageService, dateColumnOf } from '../zones/zone-coverage.service';
 
 interface CourierRef {
@@ -221,6 +222,8 @@ export class RamassagesService {
           plannedAt: now,
         },
       });
+      // The seller's bons waiting for a visit travel with this one (D-80).
+      await attachWaitingBons(tx, pickup);
       return tx.pickup.findUniqueOrThrow({ where: { id }, include: INCLUDE });
     });
     return this.view(row, null);

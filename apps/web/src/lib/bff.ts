@@ -23,6 +23,14 @@ const PROXIED_ROOTS = new Set([
   'colis',
   'demandes-modification',
   'exceptions',
+  // Money (phase 8): the back office's, and the seller's own bons to print.
+  'caisse',
+  'paiements-vendeurs',
+  'bons-versement',
+  'bons-retour',
+  'paie',
+  'paiements',
+  'retours',
 ]);
 
 export function isProxiedPath(segments: string[]): boolean {

@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Parcel, ParcelEvent, Prisma, ScanSource, SellerCharge } from '@prisma/client';
 import {
+  applyCashTransition,
   applyParcelAction,
+  CashTransition,
+  ParcelCashStatus,
   businessDateOf,
   documentDateKey,
   ParcelEffect,
@@ -496,6 +499,142 @@ export class ParcelEventService {
         actorRole: input.actor.role,
         reasonText: input.reason,
         serverTime: this.clock.now(),
+      },
+    });
+    return updated;
+  }
+
+  /**
+   * The cash side of a delivered parcel moving (D-79, D-80): Au dépôt when
+   * its courier's caisse is closed, Payé when the seller signs the bon. The
+   * status and the place do not move; one event says what happened, and a
+   * paid parcel's life ends there (D-24). The caller holds the transaction.
+   */
+  async recordCashTransition(
+    tx: Prisma.TransactionClient,
+    input: {
+      parcelId: string;
+      actor: UserPrincipal;
+      transition: CashTransition;
+      scanId?: string | null;
+      deviceTime?: Date | null;
+      metadata?: Prisma.InputJsonObject;
+    },
+  ): Promise<Parcel> {
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const current = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    const cashStatus = applyCashTransition(snapshotOf(current), input.transition);
+    if (cashStatus === current.cashStatus) {
+      throw new Error(`Transition de caisse impossible : ${input.transition} sur ${current.code}`);
+    }
+    const now = this.clock.now();
+    const paid = cashStatus === ParcelCashStatus.PAYE;
+    const updated = await tx.parcel.update({
+      where: { id: current.id },
+      data: { cashStatus, ...(paid ? { closedAt: now } : {}) },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: current.id,
+        type:
+          input.transition === CashTransition.BON_REMIS
+            ? ParcelEventType.PAIEMENT_VENDEUR
+            : ParcelEventType.ENCAISSEMENT_DEPOT,
+        previousStatus: current.status,
+        newStatus: current.status,
+        previousLocation: current.location,
+        newLocation: current.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        scanId: input.scanId ?? null,
+        deviceTime: input.deviceTime ?? null,
+        serverTime: now,
+        metadata: input.metadata,
+      },
+    });
+    return updated;
+  }
+
+  /**
+   * The old item of an échange scanned into its seller's bon de retour
+   * (A-10, D-81): the delivered parcel does not move, the event says the
+   * item is at the depot. The caller has checked the item is waiting.
+   */
+  async recordExchangeItemPrepared(
+    tx: Prisma.TransactionClient,
+    input: { parcelId: string; actor: UserPrincipal; scanId: string; bonNumber: string },
+  ): Promise<ParcelEvent> {
+    const parcel = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    return tx.parcelEvent.create({
+      data: {
+        parcelId: parcel.id,
+        type: ParcelEventType.ARTICLE_ECHANGE_RECUPERE,
+        previousStatus: parcel.status,
+        newStatus: parcel.status,
+        previousLocation: parcel.location,
+        newLocation: parcel.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        scanId: input.scanId,
+        serverTime: this.clock.now(),
+        metadata: { bonRetour: input.bonNumber },
+      },
+    });
+  }
+
+  /**
+   * Forcer un statut on a Livré whose cash is still with the courier (D-85):
+   * back out with its livreur, the attempt it counted taken back, the
+   * delivery fee cancelled (A-1), the frozen rate removed (A-15), the cash
+   * and the échange item cleared, and the parcel out of any caisse count.
+   * The caller has checked the move and holds the parcel's lock.
+   */
+  async undoDelivery(
+    tx: Prisma.TransactionClient,
+    input: { parcelId: string; actor: UserPrincipal; reason: string },
+  ): Promise<Parcel> {
+    await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ${input.parcelId}::uuid FOR UPDATE`;
+    const current = await tx.parcel.findUniqueOrThrow({ where: { id: input.parcelId } });
+    if (
+      current.status !== ParcelStatus.LIVRE ||
+      current.cashStatus !== ParcelCashStatus.CHEZ_LE_COURSIER
+    ) {
+      throw new Error(`Livraison non annulable : ${current.code}`);
+    }
+    const updated = await tx.parcel.update({
+      where: { id: current.id },
+      data: {
+        status: ParcelStatus.EN_LIVRAISON,
+        location: ParcelLocation.AVEC_LE_LIVREUR,
+        cashStatus: null,
+        courierRateMillimes: null,
+        deliveredAt: null,
+        attemptCount: Math.max(0, current.attemptCount - 1),
+        exchangeItemCollected: false,
+        exchangeItemStatus: null,
+      },
+    });
+    await tx.sellerCharge.updateMany({
+      where: { parcelId: current.id, type: 'LIVRAISON', status: 'EN_ATTENTE' },
+      data: { status: 'ANNULEE' },
+    });
+    // Counted but not closed: the count no longer matches, the Caisse asks for a recount.
+    await tx.caisseSessionParcel.deleteMany({
+      where: { parcelId: current.id, caisseSession: { status: { not: 'CLOTUREE' } } },
+    });
+    await tx.parcelEvent.create({
+      data: {
+        parcelId: current.id,
+        type: ParcelEventType.FORCAGE_STATUT,
+        previousStatus: current.status,
+        newStatus: updated.status,
+        previousLocation: current.location,
+        newLocation: updated.location,
+        actorUserId: input.actor.userId,
+        actorRole: input.actor.role,
+        reasonText: input.reason,
+        serverTime: this.clock.now(),
+        metadata: { livraisonAnnulee: true },
       },
     });
     return updated;

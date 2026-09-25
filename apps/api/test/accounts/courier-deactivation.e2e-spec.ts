@@ -213,10 +213,49 @@ describe('with work still open', () => {
     expect((await deactivate(idle)).status).toBe(200);
   });
 
-  // Phase 8 adds these checks, with the Caisse and the pay.
-  it.todo('refuses while a caisse session of the courier is not CLOTUREE');
-  it.todo('refuses while a payslip of the livreur is A_PAYER');
-  it.todo('refuses while a debt of the livreur is EN_COURS');
+  // Phase 8: the Caisse and the pay.
+  it('refuses while a caisse session of the courier is not CLOTUREE', async () => {
+    const ramasseur = await createUser(t.prisma, { role: 'RAMASSEUR' });
+    await t.prisma.caisseSession.create({
+      data: { courierId: ramasseur.courierId!, businessDate: new Date('2026-09-25T00:00:00.000Z') },
+    });
+    const response = await deactivate(ramasseur);
+    expect(response.status).toBe(409);
+    expect(response.body.blockers.map((b: { type: string }) => b.type)).toEqual([
+      'CAISSE_NON_CLOTUREE',
+    ]);
+  });
+
+  it('refuses while a payslip of the livreur is A_PAYER', async () => {
+    const livreur = await createUser(t.prisma, { role: 'LIVREUR' });
+    await t.prisma.payslip.create({
+      data: {
+        number: `FP-TEST-${livreur.id.slice(0, 8)}`,
+        courierId: livreur.courierId!,
+        payPlan: 'HEBDOMADAIRE',
+        periodStart: new Date('2026-09-14T00:00:00.000Z'),
+        periodEnd: new Date('2026-09-20T00:00:00.000Z'),
+        parcelCount: 1,
+        ratePerParcelMillimes: 3500n,
+        grossMillimes: 3500n,
+        netMillimes: 3500n,
+        preparedByUserId: admin.id,
+      },
+    });
+    const response = await deactivate(livreur);
+    expect(response.body.blockers.map((b: { type: string }) => b.type)).toEqual([
+      'FICHE_DE_PAIE_A_PAYER',
+    ]);
+  });
+
+  it('refuses while a debt of the livreur is EN_COURS', async () => {
+    const livreur = await createUser(t.prisma, { role: 'LIVREUR' });
+    await t.prisma.courierDebt.create({
+      data: { courierId: livreur.courierId!, amountMillimes: 5000n, remainingMillimes: 5000n },
+    });
+    const response = await deactivate(livreur);
+    expect(response.body.blockers.map((b: { type: string }) => b.type)).toEqual(['DETTE_EN_COURS']);
+  });
 });
 
 describe('réactiver', () => {

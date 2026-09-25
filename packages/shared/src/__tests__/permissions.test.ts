@@ -87,6 +87,7 @@ describe('permission matrix — outside the Admin 2 table', () => {
     for (const permission of [
       Permission.BONS_VERSEMENT,
       Permission.PAIE_COURSIERS,
+      Permission.CAISSE_ECARTS,
       Permission.GERER_VENDEURS_COURSIERS,
       Permission.COMPTES_STAFF,
       Permission.REGENERER_MOT_DE_PASSE,
@@ -147,6 +148,7 @@ describe('permission matrix — deny by default', () => {
       Permission.REIMPRIMER_ETIQUETTE,
       Permission.VOIR_COMME_VENDEUR,
       Permission.REGENERER_MOT_DE_PASSE,
+      Permission.CAISSE_ECARTS,
       Permission.ESPACE_VENDEUR,
       Permission.APP_LIVREUR,
       Permission.APP_RAMASSEUR,

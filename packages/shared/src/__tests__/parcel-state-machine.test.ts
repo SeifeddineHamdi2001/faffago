@@ -57,6 +57,7 @@ function command(
     SCAN_PREPARATION_RETOURS: Role.DEPOT,
     SCAN_RETOUR_RECU: Role.RAMASSEUR,
     DEPART_RETOUR: Role.DEPOT,
+    RETOUR_NON_REMIS: Role.DEPOT,
     AUTO_RETOUR_48H: SYSTEM_ACTOR,
   };
   return {
@@ -612,6 +613,38 @@ describe('the return journey', () => {
     expect(received.next.status).toBe(ParcelStatus.RETOUR_RECU);
     expect(received.next.location).toBe(ParcelLocation.RENDU_AU_VENDEUR);
     expect(received.events[0]?.effects).toContain(ParcelEffect.CLOTURER_CHAT);
+  });
+
+  it('brings a return not handed over back to the depot, no fee (D-81, answer 6)', () => {
+    const current = parcel({
+      status: ParcelStatus.RETOUR_EN_ROUTE,
+      location: ParcelLocation.AVEC_LE_RAMASSEUR,
+    });
+    const back = expectOk(applyParcelAction(current, command(ParcelAction.RETOUR_NON_REMIS)));
+    expect(back.next).toMatchObject({
+      status: ParcelStatus.RETOUR_AU_DEPOT,
+      location: ParcelLocation.AU_DEPOT,
+    });
+    expect(back.events).toEqual([
+      expect.objectContaining({ type: ParcelEventType.RETOUR_NON_REMIS, effects: [] }),
+    ]);
+  });
+
+  it('brings back only a return that is en route, and only by the depot', () => {
+    const depot = parcel({
+      status: ParcelStatus.RETOUR_AU_DEPOT,
+      location: ParcelLocation.AU_DEPOT,
+    });
+    expect(applyParcelAction(depot, command(ParcelAction.RETOUR_NON_REMIS)).ok).toBe(false);
+    const enRoute = parcel({
+      status: ParcelStatus.RETOUR_EN_ROUTE,
+      location: ParcelLocation.AVEC_LE_RAMASSEUR,
+    });
+    const byRamasseur = applyParcelAction(
+      enRoute,
+      command(ParcelAction.RETOUR_NON_REMIS, { actor: Role.RAMASSEUR }),
+    );
+    expect(byRamasseur.ok).toBe(false);
   });
 
   it('refuses to group a return that is still with the courier', () => {

@@ -33,6 +33,8 @@ export const Permission = {
   BONS_RETOUR: 'BONS_RETOUR',
   /** Courier pay, cancel a courier debt. */
   PAIE_COURSIERS: 'PAIE_COURSIERS',
+  /** Mark a positive caisse écart as checked, with a note: the admin (D-79, answer 3). */
+  CAISSE_ECARTS: 'CAISSE_ECARTS',
   /** Create / suspend sellers and couriers. */
   GERER_VENDEURS_COURSIERS: 'GERER_VENDEURS_COURSIERS',
   /** Override a parcel status. */
@@ -94,6 +96,7 @@ export const ROLES_BY_PERMISSION: Readonly<Record<Permission, readonly Role[]>> 
   BONS_VERSEMENT: frozen([ADMIN]),
   BONS_RETOUR: frozen([ADMIN, DEPOT]),
   PAIE_COURSIERS: frozen([ADMIN]),
+  CAISSE_ECARTS: frozen([ADMIN]),
   GERER_VENDEURS_COURSIERS: frozen([ADMIN]),
   FORCER_STATUT: frozen([ADMIN]),
   PARAMETRES: frozen([ADMIN]),

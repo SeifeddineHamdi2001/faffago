@@ -425,7 +425,17 @@ describe('parcels', () => {
         `insert into bon_versement_parcels ("bonVersementId","parcelId","codMillimes") values ($1,$2,85000)`,
         [other.rows[0]!.id, PARCEL_ID],
       ),
-    ).rejects.toThrow(/parcelId/);
+    ).rejects.toThrow(/bon_versement_parcels_active_parcel_key/);
+
+    // A cancelled bon releases its line: the parcel may go on a new bon (D-80).
+    await db.query(
+      `update bon_versement_parcels set "releasedAt" = now() where "bonVersementId" = $1`,
+      [bon.rows[0]!.id],
+    );
+    await db.query(
+      `insert into bon_versement_parcels ("bonVersementId","parcelId","codMillimes") values ($1,$2,85000)`,
+      [other.rows[0]!.id, PARCEL_ID],
+    );
   });
 });
 

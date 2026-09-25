@@ -7,9 +7,11 @@ import {
   DashboardPeriod,
   dashboardQuerySchema,
   dashboardTitle,
+  formatDeliveryRate,
   periodRange,
   type DayRange,
 } from '@faffago/shared';
+import { day, dt } from '@/lib/money';
 import type { SellerDashboard } from '@/lib/types';
 
 const PRESETS = DASHBOARD_PERIODS.filter((period) => period !== DashboardPeriod.PERSONNALISE);
@@ -53,9 +55,9 @@ function presetHref(period: DashboardPeriod): string {
 }
 
 /**
- * Tableau de bord (Vendeur 4.1, D-39, D-48): what happened to the seller's
- * parcels over the period chosen, and the quick actions. À recevoir and
- * Taux de livraison join it in phase 8, À traiter with phases 7 and 8.
+ * Tableau de bord (Vendeur 4.1, D-39, D-48, D-83): how much he is owed (À
+ * recevoir), what needs his attention (À traiter), what happened to his
+ * parcels over the period chosen, and his delivery rate over the same period.
  */
 export function SellerDashboardScreen({
   dashboard,
@@ -92,6 +94,9 @@ export function SellerDashboardScreen({
           Votre compte est suspendu : vous ne pouvez pas créer de colis ni demander de ramassage.
         </p>
       )}
+
+      <ARecevoir money={dashboard.aRecevoir} />
+      <ATraiter todo={dashboard.aTraiter} />
 
       <nav aria-label="Période" className="mb-3 flex flex-wrap gap-2">
         {PRESETS.map((preset) => (
@@ -166,6 +171,116 @@ export function SellerDashboardScreen({
           ))}
         </dl>
       </section>
+      <DeliveryRate rate={dashboard.deliveryRate} />
+    </section>
+  );
+}
+
+/** À recevoir (Vendeur 4.1, D-83): the hero number, split by where the cash is. */
+function ARecevoir({ money }: { money: SellerDashboard['aRecevoir'] }) {
+  return (
+    <section aria-labelledby="a-recevoir" className="card mb-4 border-2 border-orange">
+      <h2 id="a-recevoir" className="text-sm font-semibold text-navy/70">
+        À recevoir
+      </h2>
+      <p className="font-display text-4xl font-bold text-navy">{dt(money.totalMillimes)}</p>
+      <p className="mt-1 text-sm">
+        Chez les coursiers : {dt(money.chezLesCoursiersMillimes)} · Au dépôt, prêt à payer :{' '}
+        {dt(money.auDepotMillimes)}
+      </p>
+      {money.fraisADeduireMillimes !== '0' && (
+        <p className="text-sm">Frais à déduire : {dt(money.fraisADeduireMillimes)}</p>
+      )}
+      <p className="mt-1 text-xs text-navy/70">
+        Montant des colis livrés moins les frais de livraison, avant retenue à la source.{' '}
+        <Link href="/vendeur/paiements" className="text-orange-dark underline">
+          Voir les paiements
+        </Link>
+      </p>
+    </section>
+  );
+}
+
+/** À traiter (Vendeur 4.1): bons on their way, returns at the depot; À vérifier has its banner. */
+function ATraiter({ todo }: { todo: SellerDashboard['aTraiter'] }) {
+  const items = [
+    {
+      count: todo.bonsVersementEnRoute,
+      label: 'bon(s) de versement en route',
+      href: '/vendeur/paiements',
+    },
+    { count: todo.bonsRetourEnRoute, label: 'bon(s) de retour en route', href: '/vendeur/retours' },
+    { count: todo.retoursAuDepot, label: 'retour(s) au dépôt', href: '/vendeur/retours' },
+  ].filter((item) => item.count > 0);
+  if (items.length === 0) return null;
+  return (
+    <section aria-label="À traiter" className="card mb-4">
+      <h2 className="mb-1 font-display text-lg font-bold text-navy">À traiter</h2>
+      <ul className="text-sm">
+        {items.map((item) => (
+          <li key={item.label}>
+            <Link href={item.href} className="text-orange-dark underline">
+              {item.count} {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Taux de livraison (Vendeur 4.1, D-83): livrés ÷ (livrés + retournés) over
+ * the period, and a bar per day on a 0–100 % scale when the period is short.
+ */
+function DeliveryRate({ rate }: { rate: SellerDashboard['deliveryRate'] }) {
+  const showDays = rate.days.length > 1 && rate.days.length <= 31;
+  return (
+    <section aria-labelledby="taux" className="card mt-4">
+      <h2 id="taux" className="font-display text-lg font-bold text-navy">
+        Taux de livraison
+      </h2>
+      <p className="font-display text-3xl font-bold text-navy">
+        {formatDeliveryRate(rate.rateBps)}
+      </p>
+      <p className="text-sm text-navy/70">
+        {rate.delivered} livré(s) · {rate.returned} retourné(s)
+      </p>
+      {showDays && (
+        <div className="mt-3 flex gap-2">
+          <div
+            className="flex h-32 flex-col justify-between text-right text-xs text-navy/70"
+            aria-hidden="true"
+          >
+            <span>100 %</span>
+            <span>50 %</span>
+            <span>0 %</span>
+          </div>
+          <ul
+            className="flex h-32 flex-1 items-end gap-1 border-b border-l border-navy/20"
+            aria-label="Par jour"
+          >
+            {rate.days.map((d) => {
+              const total = d.delivered + d.returned;
+              const percent = total === 0 ? 0 : Math.round((d.delivered * 100) / total);
+              return (
+                <li
+                  key={d.day}
+                  className="flex h-full flex-1 flex-col justify-end"
+                  title={`${day(d.day)} : ${total === 0 ? '—' : `${percent} %`} (${d.delivered} livré(s), ${d.returned} retourné(s))`}
+                >
+                  <span className="sr-only">
+                    {day(d.day)} : {total === 0 ? 'aucun' : `${percent} %`}
+                  </span>
+                  {total > 0 && (
+                    <span className="block rounded-t bg-orange" style={{ height: `${percent}%` }} />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

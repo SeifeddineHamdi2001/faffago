@@ -4,16 +4,18 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
+  BonKind,
   ScanAction,
   isRepeatRead,
   isWithinCancelWindow,
   parcelCodeFromScan,
+  parseBonScan,
 } from '@faffago/shared';
 import type { PickupDay, Tour } from '../api/types';
 import { BigButton, Card, Field, Screen, T } from '../components/ui';
 import { useI18n } from '../i18n';
-import type { RootStackParams } from '../navigation/types';
-import { findPreviousScan, lastScan, type QueueRow } from '../queue/queue';
+import type { RootStackParams, ScanStep } from '../navigation/types';
+import { QueueStatus, findPreviousScan, lastScan, type QueueRow } from '../queue/queue';
 import { useApp } from '../state/app';
 import { useData } from '../state/useData';
 import { colors } from '../theme';
@@ -29,10 +31,17 @@ interface Feedback {
  * The Scanner (Coursier 3, 4.4, 4.6): the camera reads the label's Code128 or
  * its QR (D-36); a damaged label is typed, allowed but flagged (Coursier
  * rule 1). What the scan does depends on the courier: the livreur opens
- * Livré / Échec for a parcel of his tour, the ramasseur records a pickup scan
- * and keeps scanning.
+ * Livré / Échec for a parcel of his tour, the ramasseur records the step of
+ * his visit — a pickup scan, a bon de versement's QR, a return — and keeps
+ * scanning (D-84).
  */
-export function ScannerScreen({ pickupId }: { pickupId?: string }) {
+export function ScannerScreen({
+  pickupId,
+  step = 'COLIS',
+}: {
+  pickupId?: string;
+  step?: ScanStep;
+}) {
   const navigation = useNavigation<Nav>();
   const { session, recent, recordScan, cancelLastScan, cancelWindowSeconds } = useApp();
   const i18n = useI18n();
@@ -46,7 +55,7 @@ export function ScannerScreen({ pickupId }: { pickupId?: string }) {
   const tour = useData<Tour>('/coursier/tournee');
   const pickups = useData<PickupDay>('/coursier/ramassages');
 
-  if (isRamasseur && !pickupId) {
+  if (isRamasseur && step === 'COLIS' && !pickupId) {
     const open = isRamasseur ? (pickups.data?.open ?? []) : [];
     return (
       <Screen title={t('scanTitle')}>
@@ -74,9 +83,40 @@ export function ScannerScreen({ pickupId }: { pickupId?: string }) {
   }
 
   async function handle(raw: string, manual: boolean) {
+    if (isRamasseur && step === 'BON') {
+      const bon = parseBonScan(raw);
+      if (!bon || bon.kind !== BonKind.BON_VERSEMENT) {
+        setFeedback({ ok: false, text: t('unreadableBon') });
+        return;
+      }
+      const already = recent.some(
+        (r) =>
+          r.action === ScanAction.BON_VERSEMENT_REMIS &&
+          r.operation.kind === 'SCAN' &&
+          r.operation.rawCode.trim().toUpperCase() === raw.trim().toUpperCase() &&
+          (r.status === QueueStatus.EN_ATTENTE || r.status === QueueStatus.ACCEPTE),
+      );
+      if (already) {
+        setFeedback({ ok: false, text: t('bonAlreadyScanned') });
+        return;
+      }
+      await recordScan({ action: ScanAction.BON_VERSEMENT_REMIS, rawCode: raw, manual });
+      setFeedback({ ok: true, text: t('bonScanned') });
+      return;
+    }
     const code = parcelCodeFromScan(raw);
     if (!code) {
       setFeedback({ ok: false, text: t('unreadableCode') });
+      return;
+    }
+    if (isRamasseur && step === 'RETOURS') {
+      const previous = findPreviousScan(recent, code, ScanAction.RETOUR_RECU);
+      if (previous) {
+        setFeedback(alreadyScanned(previous));
+        return;
+      }
+      await recordScan({ action: ScanAction.RETOUR_RECU, rawCode: raw, manual });
+      setFeedback({ ok: true, text: t('retourSaved', { code }) });
       return;
     }
     if (isRamasseur) {
@@ -118,15 +158,21 @@ export function ScannerScreen({ pickupId }: { pickupId?: string }) {
   }
 
   const standing = lastScan(recent);
+  // A bon's steps are corrected by the admin, never undone from the phone (D-84).
   const canCancel =
     isRamasseur &&
+    step === 'COLIS' &&
     lastRow !== null &&
     standing?.id === lastRow.id &&
     isWithinCancelWindow(new Date(lastRow.deviceTime), new Date(), cancelWindowSeconds);
 
   return (
     <Screen
-      title={t('scanTitle')}
+      title={
+        isRamasseur
+          ? `${t('scanTitle')} · ${t(step === 'BON' ? 'stepBon' : step === 'RETOURS' ? 'stepRetours' : 'stepColis')}`
+          : t('scanTitle')
+      }
       footer={
         canCancel ? (
           <BigButton
@@ -173,10 +219,13 @@ export function ScannerScreen({ pickupId }: { pickupId?: string }) {
           </T>
         </Card>
       ) : null}
+      {isRamasseur && step !== 'COLIS' ? (
+        <T muted>{t(step === 'BON' ? 'scanBonHint' : 'scanRetoursHint')}</T>
+      ) : null}
       <Card>
         <T muted>{t('typeCodeHint')}</T>
         <Field
-          label={t('parcelCode')}
+          label={step === 'BON' ? t('bonNumber') : t('parcelCode')}
           value={typed}
           onChangeText={setTyped}
           autoCapitalize="characters"

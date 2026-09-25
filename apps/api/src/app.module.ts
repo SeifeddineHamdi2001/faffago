@@ -13,6 +13,7 @@ import { DemandesModule } from './demandes/demandes.module';
 import { ExceptionsModule } from './exceptions/exceptions.module';
 import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
+import { MoneyModule } from './money/money.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { PickupsModule } from './pickups/pickups.module';
@@ -60,6 +61,7 @@ import { ZonesModule } from './zones/zones.module';
     DashboardModule,
     CourierModule,
     AVerifierModule,
+    MoneyModule,
   ],
 })
 export class AppModule {}

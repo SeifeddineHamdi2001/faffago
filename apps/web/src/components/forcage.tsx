@@ -8,6 +8,7 @@ import {
   Permission,
   forcedTargets,
   targetNeedsLivreur,
+  type ParcelCashStatus,
   type ParcelLocation,
   type ParcelState,
   type ParcelStatus,
@@ -42,7 +43,7 @@ export function ForcerStatut({
   permissions,
 }: {
   code: string;
-  current: { status: string; location: string };
+  current: { status: string; location: string; cashStatus?: string | null };
   livreurs: Livreur[];
   permissions: Permission[];
 }) {
@@ -59,6 +60,7 @@ export function ForcerStatut({
   const targets = forcedTargets({
     status: current.status as ParcelStatus,
     location: current.location as ParcelLocation,
+    cashStatus: (current.cashStatus ?? null) as ParcelCashStatus | null,
   });
   if (targets.length === 0) {
     return (

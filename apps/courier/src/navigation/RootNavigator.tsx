@@ -16,8 +16,10 @@ import { DeliverScreen } from '../screens/livreur/DeliverScreen';
 import { RetourDepotScreen } from '../screens/livreur/RetourDepotScreen';
 import { StopScreen } from '../screens/livreur/StopScreen';
 import { TourneeScreen } from '../screens/livreur/TourneeScreen';
+import { GainsScreen } from '../screens/livreur/GainsScreen';
 import { PickupScreen } from '../screens/ramasseur/PickupScreen';
 import { RamassagesScreen } from '../screens/ramasseur/RamassagesScreen';
+import { VisitScreen } from '../screens/ramasseur/VisitScreen';
 import { useApp } from '../state/app';
 import { TOUCH_MIN, colors, font } from '../theme';
 import type { RootScreenProps, RootStackParams, TabParams } from './types';
@@ -30,7 +32,7 @@ function ScanTab() {
 }
 
 function ScannerRoute({ route }: RootScreenProps<'Scanner'>) {
-  return <ScannerScreen pickupId={route.params.pickupId} />;
+  return <ScannerScreen pickupId={route.params.pickupId} step={route.params.step} />;
 }
 
 function ChangePinRoute({ navigation }: RootScreenProps<'ChangePin'>) {
@@ -129,6 +131,8 @@ export function RootNavigator() {
           options={{ title: t('tabScanner') }}
         />
         <Stack.Screen name="Pickup" component={PickupScreen} options={{ title: t('ramassages') }} />
+        <Stack.Screen name="Visit" component={VisitScreen} options={{ title: t('ramassages') }} />
+        <Stack.Screen name="Gains" component={GainsScreen} options={{ title: t('mesGains') }} />
         <Stack.Screen
           name="RetourDepot"
           component={RetourDepotScreen}

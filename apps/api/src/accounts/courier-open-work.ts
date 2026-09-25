@@ -3,19 +3,15 @@ import { CourierBlockerType, courierBlocker, type CourierBlocker } from '@faffag
 
 /**
  * What still ties a courier to the operation (D-12). The deactivation is
- * refused while this list is not empty, and the admin sees it whole.
- *
- * Phase 8 adds, with the Caisse and the pay — see the it.todo tests in
- * test/accounts/courier-deactivation.e2e-spec.ts:
- *   CAISSE_NON_CLOTUREE    a caisse session of his that is not CLOTUREE
- *   FICHE_DE_PAIE_A_PAYER  a payslip of his that is A_PAYER
- *   DETTE_EN_COURS         a debt of his that is EN_COURS
+ * refused while this list is not empty, and the admin sees it whole: his
+ * work, his cash, and from phase 8 a caisse session not closed, a fiche de
+ * paie not paid, a debt en cours.
  */
 export async function courierOpenWork(
   tx: Prisma.TransactionClient,
   courierId: string,
 ): Promise<CourierBlocker[]> {
-  const [inHands, cash, bonsVersement, bonsRetour] = await Promise.all([
+  const [inHands, cash, bonsVersement, bonsRetour, caisse, fiches, dettes] = await Promise.all([
     tx.parcel.count({
       where: {
         OR: [
@@ -40,6 +36,9 @@ export async function courierOpenWork(
     tx.parcel.count({ where: { currentLivreurId: courierId, cashStatus: 'CHEZ_LE_COURSIER' } }),
     tx.bonVersement.count({ where: { ramasseurId: courierId, status: 'EN_ROUTE' } }),
     tx.bonRetour.count({ where: { ramasseurId: courierId, status: 'EN_ROUTE' } }),
+    tx.caisseSession.count({ where: { courierId, status: { not: 'CLOTUREE' } } }),
+    tx.payslip.count({ where: { courierId, status: 'A_PAYER' } }),
+    tx.courierDebt.count({ where: { courierId, status: 'EN_COURS' } }),
   ]);
 
   const counts: [CourierBlockerType, number][] = [
@@ -47,6 +46,9 @@ export async function courierOpenWork(
     [CourierBlockerType.ARGENT_CHEZ_LE_COURSIER, cash],
     [CourierBlockerType.BON_VERSEMENT_EN_ROUTE, bonsVersement],
     [CourierBlockerType.BON_RETOUR_EN_ROUTE, bonsRetour],
+    [CourierBlockerType.CAISSE_NON_CLOTUREE, caisse],
+    [CourierBlockerType.FICHE_DE_PAIE_A_PAYER, fiches],
+    [CourierBlockerType.DETTE_EN_COURS, dettes],
   ];
   return counts
     .filter(([, count]) => count > 0)

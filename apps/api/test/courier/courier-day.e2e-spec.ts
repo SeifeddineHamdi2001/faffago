@@ -308,7 +308,7 @@ describe('the ramasseur’s day (Coursier 4.6)', () => {
       delegationNameFr: 'Le Bardo',
       scannedCount: 0,
       parcels: [{ code: listed.code, expected: true, scanned: false, status: 'CREE' }],
-      aEmporter: [],
+      aEmporter: { bonsVersement: [], bonsRetour: [] },
     });
     expect(response.body.done.length).toBeGreaterThan(0);
     expect((await get('/coursier/ramassages', aliToken)).status).toBe(403);
@@ -397,10 +397,14 @@ describe('Ma caisse (Coursier 4.7)', () => {
     const after = (await get('/coursier/caisse', aliToken)).body;
     expect(BigInt(after.totalMillimes) - BigInt(before.totalMillimes)).toBe(85000n);
     expect(after.parcels.map((p: { code: string }) => p.code)).toContain(delivered.code);
-    // The ramasseur's bon cash comes with the bons (D-61).
+    // A ramasseur carries no delivery cash; his bon cash is tested with the bons (D-84).
     expect((await get('/coursier/caisse', hediToken)).body).toEqual({
       parcels: [],
       totalMillimes: '0',
+      bons: [],
+      bonCashMillimes: '0',
+      aRemettreMillimes: '0',
+      sessions: [],
     });
   });
 });

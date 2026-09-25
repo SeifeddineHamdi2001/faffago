@@ -75,7 +75,7 @@ async function typeCode(code: string) {
 }
 
 describe('ScanStation (Admin 4.2, D-50)', () => {
-  it('shows the three modes with their shortcut, Entrée dépôt first', () => {
+  it('shows the five modes with their shortcut, Entrée dépôt first (D-50)', () => {
     render(<ScanStation couriers={couriers} now={clockOf(5)} />);
     const modes = screen
       .getAllByRole('button', { pressed: undefined })
@@ -84,6 +84,8 @@ describe('ScanStation (Admin 4.2, D-50)', () => {
       'Entrée dépôtF1',
       'Sortie coursierF2',
       'Retour de tournéeF3',
+      'Préparation retoursF4',
+      'Archivage bonsF5',
     ]);
     expect(screen.getByRole('button', { name: /Entrée dépôt/ })).toHaveAttribute(
       'aria-pressed',

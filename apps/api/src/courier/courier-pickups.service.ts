@@ -17,6 +17,7 @@ import {
 import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { BonHandoverService, type SellerAEmporter } from '../money/bon-handover.service';
 import { SettingsService } from '../settings/settings.service';
 import { dateColumnOf } from '../zones/zone-coverage.service';
 import { applyOnce, type OperationAnswer } from './courier-operations';
@@ -48,9 +49,26 @@ export interface CourierPickupView {
   scannedCount: number;
   /** Expected (announced by the seller) and scanned; missing ones stay listed. */
   parcels: { code: string; status: string; expected: boolean; scanned: boolean }[];
-  /** Bons to hand over: they come with the bons in phase 8 (D-61). */
-  aEmporter: never[];
+  /** The bons he takes to this seller (D-84). */
+  aEmporter: SellerAEmporter;
 }
+
+/** A visit with nothing to pick up: only bons to hand over (answer 4, D-84). */
+export interface CourierBonVisitView {
+  sellerId: string;
+  shopName: string;
+  contactName: string;
+  sellerPhone: string;
+  address: string | null;
+  landmark: string | null;
+  localiteNameFr: string | null;
+  localiteNameAr: string | null;
+  delegationNameFr: string | null;
+  delegationNameAr: string | null;
+  aEmporter: SellerAEmporter;
+}
+
+const NOTHING: SellerAEmporter = { bonsVersement: [], bonsRetour: [] };
 
 /**
  * The ramasseur's pickups (Coursier 4.6): his day, and Terminer le ramassage,
@@ -63,13 +81,19 @@ export class CourierPickupsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly handover: BonHandoverService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  /** Planned for him today or earlier and still open, then those he closed today. */
-  async day(
-    actor: UserPrincipal,
-  ): Promise<{ open: CourierPickupView[]; done: CourierPickupView[] }> {
+  /**
+   * Planned for him today or earlier and still open, then those he closed
+   * today; and the sellers he visits only to hand over bons (D-84).
+   */
+  async day(actor: UserPrincipal): Promise<{
+    open: CourierPickupView[];
+    done: CourierPickupView[];
+    visits: CourierBonVisitView[];
+  }> {
     const now = this.clock.now();
     const todayKey = tunisDayKey(now);
     const include = {
@@ -105,6 +129,7 @@ export class CourierPickupsService {
         include,
       }),
     ]);
+    const bons = await this.handover.aEmporter(actor.courierId ?? '', todayKey);
     type Row = (typeof open)[number];
     const view = (p: Row): CourierPickupView => ({
       id: p.id,
@@ -134,9 +159,47 @@ export class CourierPickupsService {
         .sort((a, b) =>
           a.scanned === b.scanned ? a.code.localeCompare(b.code) : a.scanned ? 1 : -1,
         ),
-      aEmporter: [],
+      aEmporter: bons.get(p.sellerId) ?? NOTHING,
     });
-    return { open: open.map(view), done: done.map(view) };
+
+    const visited = new Set([...open, ...done].map((p) => p.sellerId));
+    const others = [...bons.keys()].filter((sellerId) => !visited.has(sellerId));
+    const sellers = await this.prisma.seller.findMany({
+      where: { id: { in: others } },
+      orderBy: { shopName: 'asc' },
+      select: {
+        id: true,
+        shopName: true,
+        contactFullName: true,
+        contactPhone: true,
+        pickupAddresses: {
+          where: { isActive: true },
+          orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+          take: 1,
+          include: {
+            localite: { select: { nameFr: true, nameAr: true } },
+            delegation: { select: { nameFr: true, nameAr: true } },
+          },
+        },
+      },
+    });
+    const visits = sellers.map((seller): CourierBonVisitView => {
+      const address = seller.pickupAddresses[0];
+      return {
+        sellerId: seller.id,
+        shopName: seller.shopName,
+        contactName: seller.contactFullName,
+        sellerPhone: seller.contactPhone,
+        address: address?.address ?? null,
+        landmark: address?.landmark ?? null,
+        localiteNameFr: address?.localite.nameFr ?? null,
+        localiteNameAr: address?.localite.nameAr ?? null,
+        delegationNameFr: address?.delegation.nameFr ?? null,
+        delegationNameAr: address?.delegation.nameAr ?? null,
+        aEmporter: bons.get(seller.id)!,
+      };
+    });
+    return { open: open.map(view), done: done.map(view), visits };
   }
 
   /** Terminer le ramassage, applied once per id the phone drew. */

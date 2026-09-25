@@ -15,11 +15,22 @@ import {
 import { sellerIdOf, type Principal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { SellerMoneyService, type DeliveryRate } from '../money/seller-money.service';
 
 export interface SellerDashboard {
   from: string;
   to: string;
   counts: Record<DashboardTile, number>;
+  /** The money part (D-39, D-83): À recevoir, À traiter, and the rate over the same period. */
+  aRecevoir: {
+    parcelCount: number;
+    chezLesCoursiersMillimes: bigint;
+    auDepotMillimes: bigint;
+    totalMillimes: bigint;
+    fraisADeduireMillimes: bigint;
+  };
+  aTraiter: { bonsVersementEnRoute: number; bonsRetourEnRoute: number; retoursAuDepot: number };
+  deliveryRate: DeliveryRate;
 }
 
 /**
@@ -31,6 +42,7 @@ export interface SellerDashboard {
 export class DashboardService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly money: SellerMoneyService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -76,6 +88,11 @@ export class DashboardService {
       });
       if (tile) counts[tile] += row.parcels;
     }
-    return { from, to, counts };
+    const [{ parcels: _parcels, ...aRecevoir }, aTraiter, deliveryRate] = await Promise.all([
+      this.money.aRecevoir(sellerId),
+      this.money.aTraiter(sellerId),
+      this.money.deliveryRate(sellerId, from, to),
+    ]);
+    return { from, to, counts, aRecevoir, aTraiter, deliveryRate };
   }
 }

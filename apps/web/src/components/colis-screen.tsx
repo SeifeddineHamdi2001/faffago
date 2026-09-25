@@ -397,7 +397,11 @@ export function ColisDetailScreen({
         <div className="mb-4">
           <ForcerStatut
             code={parcel.code}
-            current={{ status: parcel.status, location: parcel.location }}
+            current={{
+              status: parcel.status,
+              location: parcel.location,
+              cashStatus: parcel.money.cashStatus,
+            }}
             livreurs={livreurs}
             permissions={permissions}
           />

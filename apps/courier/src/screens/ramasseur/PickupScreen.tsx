@@ -9,6 +9,7 @@ import { QueueStatus } from '../../queue/queue';
 import { useApp } from '../../state/app';
 import { useData } from '../../state/useData';
 import { colors } from '../../theme';
+import { AEmporterCard } from './AEmporterCard';
 
 /** Free from this many parcels (Vendeur rule 11, A-13); the API decides the fee. */
 const FREE_THRESHOLD = 5;
@@ -17,8 +18,8 @@ const FREE_THRESHOLD = 5;
  * One pickup (Coursier 4.6): who to hand cash to, the parcels expected and
  * scanned — missing ones stay listed, extra ones of the same seller are
  * welcome (D-47) — then Terminer le ramassage, which closes the visit and
- * charges the pickup fee below 5 parcels, none at 0 (A-13). The bon de
- * versement and Retours steps come with the bons (D-61).
+ * charges the pickup fee below 5 parcels, none at 0 (A-13). Between the two,
+ * À emporter and its steps Bon de versement and Retours (D-84).
  */
 export function PickupScreen({ route, navigation }: RootScreenProps<'Pickup'>) {
   const { recent, recordOperation } = useApp();
@@ -146,8 +147,14 @@ export function PickupScreen({ route, navigation }: RootScreenProps<'Pickup'>) {
         ) : null}
         {pickup.plannedSlot ? <T muted>{i18n.slot(pickup.plannedSlot)}</T> : null}
         {pickup.note ? <T muted>{pickup.note}</T> : null}
-        <T muted>{t('aEmporterNone')}</T>
       </Card>
+      <AEmporterCard
+        aEmporter={pickup.aEmporter}
+        onScanBon={() => navigation.navigate('Scanner', { pickupId: pickup.id, step: 'BON' })}
+        onScanRetours={() =>
+          navigation.navigate('Scanner', { pickupId: pickup.id, step: 'RETOURS' })
+        }
+      />
       <Card>
         <T bold size="large" testID="pickup-counts">
           {`${t('scanned')} ${scannedCount} · ${t('expected')} ${

@@ -40,6 +40,19 @@ export const AuditAction = {
   /** Every upload and every view of a CIN or patente (D-32). */
   AJOUT_DOCUMENT_VENDEUR: 'AJOUT_DOCUMENT_VENDEUR',
   CONSULTATION_DOCUMENT_VENDEUR: 'CONSULTATION_DOCUMENT_VENDEUR',
+  // ── Money (phase 8) ──
+  /** A courier's caisse closed: attendu, compté, écart (D-79). */
+  CLOTURE_CAISSE: 'CLOTURE_CAISSE',
+  /** A positive écart checked by the admin, with a note (D-79). */
+  VERIFICATION_ECART: 'VERIFICATION_ECART',
+  /** A courier debt cancelled by the admin, with a note (Admin rule 5). */
+  ANNULATION_DETTE: 'ANNULATION_DETTE',
+  /** Annuler le bon (A-5). */
+  ANNULATION_BON_VERSEMENT: 'ANNULATION_BON_VERSEMENT',
+  /** A livreur's pay plan, applying from the next period (A-16). */
+  CHANGEMENT_PLAN_PAIE: 'CHANGEMENT_PLAN_PAIE',
+  /** A fiche de paie marked Payée (Admin 4.12). */
+  PAIEMENT_FICHE: 'PAIEMENT_FICHE',
 } as const;
 export type AuditAction = (typeof AuditAction)[keyof typeof AuditAction];
 

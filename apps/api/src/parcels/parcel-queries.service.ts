@@ -237,7 +237,10 @@ export class ParcelQueriesService {
             orderBy: { calledAt: 'desc' },
             select: { calledAt: true, answered: true, note: true },
           },
-          bonVersementLine: { select: { bonVersement: { select: { number: true } } } },
+          bonVersementLines: {
+            where: { releasedAt: null },
+            select: { bonVersement: { select: { number: true } } },
+          },
         },
       }),
       this.prisma.parcelEvent.findMany({
@@ -318,7 +321,7 @@ export class ParcelQueriesService {
       ),
       calls: parcel.calls,
       now: this.clock.now(),
-      bonNumber: parcel.bonVersementLine?.bonVersement.number ?? null,
+      bonNumber: parcel.bonVersementLines[0]?.bonVersement.number ?? null,
       timeline: events.map((event) => ({
         type: event.type,
         at: sellerTimelineTime({

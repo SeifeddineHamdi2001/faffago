@@ -28,6 +28,8 @@ import {
 import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { BonHandoverService } from '../money/bon-handover.service';
+import { BonsRetourService } from '../money/bons-retour.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { SettingsService } from '../settings/settings.service';
 
@@ -111,6 +113,8 @@ export class CourierScansService {
     private readonly prisma: PrismaService,
     private readonly events: ParcelEventService,
     private readonly settings: SettingsService,
+    private readonly handover: BonHandoverService,
+    private readonly bonsRetour: BonsRetourService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -211,6 +215,29 @@ export class CourierScansService {
       return refuse(ScanRefusal.ROLE_NON_AUTORISE);
     }
 
+    // The bon de versement's QR names a bon, not a parcel (Coursier 4.6, D-84).
+    if (op.action === ScanAction.BON_VERSEMENT_REMIS) {
+      await tx.scan.create({ data: { ...base, parcelId: null, accepted: true } });
+      const step = await this.handover.remisFromScan(tx, actor, {
+        id: scanId,
+        rawCode: op.rawCode,
+        deviceTime,
+      });
+      await tx.scan.update({
+        where: { id: scanId },
+        data: {
+          bonVersementId: step.bonVersementId ?? null,
+          ...(step.ok ? {} : { accepted: false, refusalReason: step.refusal }),
+        },
+      });
+      return scanResult(op.clientScanId, {
+        ok: step.ok,
+        code: step.ok ? null : step.refusal,
+        message: step.ok ? step.message : SCAN_REFUSAL_MESSAGES_FR[step.refusal],
+        parcel: null,
+      });
+    }
+
     if (op.action === ScanAction.RAMASSAGE) {
       if (!pickupIsHis || pickup.status === 'DEMANDE') {
         return refuse(ScanRefusal.RAMASSAGE_INTROUVABLE);
@@ -222,6 +249,35 @@ export class CourierScansService {
     if (op.action === ScanAction.RAMASSAGE && parcel.sellerId !== pickup!.sellerId) {
       // Extra parcels are welcome, but only the seller's own (D-47).
       return refuse(ScanRefusal.COLIS_AUTRE_VENDEUR);
+    }
+
+    // Retour reçu: a return, or an échange's old item, on a bon de retour he carries (D-81).
+    if (op.action === ScanAction.RETOUR_RECU) {
+      await tx.scan.create({ data: { ...base, accepted: true } });
+      const step = await this.bonsRetour.receiveFromScan(tx, actor, parcel, {
+        id: scanId,
+        deviceTime,
+        source: op.source,
+      });
+      if (!step.ok) {
+        await tx.scan.update({
+          where: { id: scanId },
+          data: { accepted: false, refusalReason: step.refusal },
+        });
+        return scanResult(op.clientScanId, {
+          ok: false,
+          code: step.refusal,
+          message: SCAN_REFUSAL_MESSAGES_FR[step.refusal],
+          parcel: { code: parcel.code, status: parcel.status },
+        });
+      }
+      const after = await tx.parcel.findUniqueOrThrow({ where: { id: parcel.id } });
+      return scanResult(op.clientScanId, {
+        ok: true,
+        code: null,
+        message: step.message,
+        parcel: { code: after.code, status: after.status },
+      });
     }
 
     const deliverable =
@@ -241,7 +297,7 @@ export class CourierScansService {
       parcelId: parcel.id,
       actor,
       request: {
-        action: PARCEL_ACTION_BY_COURIER_SCAN[op.action],
+        action: PARCEL_ACTION_BY_COURIER_SCAN[op.action]!,
         failureReason: op.action === ScanAction.ECHEC ? (op.failureReason ?? undefined) : undefined,
         postponedTo: op.postponedTo ? new Date(`${op.postponedTo}T00:00:00.000Z`) : null,
         relaunchSlot: op.relaunchSlot ?? null,
@@ -325,11 +381,19 @@ export class CourierScansService {
       : null;
     // The parcel as the scan left it, not as it is now.
     const status = event?.newStatus ?? parcel?.status ?? null;
+    const bon = row.bonVersementId
+      ? await this.prisma.bonVersement.findUnique({
+          where: { id: row.bonVersementId },
+          select: { number: true },
+        })
+      : null;
     return scanResult(op.clientScanId, {
       ok: row.accepted,
       code: row.accepted ? null : row.refusalReason,
       message: row.accepted
-        ? PARCEL_STATUS_LABELS_FR[status!]
+        ? status
+          ? PARCEL_STATUS_LABELS_FR[status]
+          : `Bon ${bon?.number ?? ''} remis`
         : SCAN_REFUSAL_MESSAGES_FR[row.refusalReason as ScanRefusal],
       parcel: parcel && status ? { code: parcel.code, status } : null,
       replayed: true,
@@ -381,6 +445,14 @@ export class CourierScansService {
         });
       }
 
+      // A bon's steps are corrected by the admin, never undone from the phone (D-84).
+      if (
+        scan.action === ScanAction.BON_VERSEMENT_REMIS ||
+        scan.action === ScanAction.RETOUR_RECU
+      ) {
+        return refused(ScanCancelRefusal.ANNULATION_BON, parcelView);
+      }
+
       const { settings } = await this.settings.current(tx);
       let isLatestOfActor = false;
       let parcelUnchangedSince = false;
@@ -430,6 +502,15 @@ export class CourierScansService {
         parcelUnchangedSince,
         chargesStillWaiting,
         pickupFinished,
+        // Once his caisse of that day is closed, only the admin corrects (A-11, D-79).
+        caisseClosed:
+          (await tx.caisseSession.count({
+            where: {
+              courier: { userId: scan.actorUserId },
+              businessDate: scan.businessDate,
+              status: 'CLOTUREE',
+            },
+          })) > 0,
       });
       if (refusal) return refused(refusal, parcelView);
 
@@ -445,6 +526,12 @@ export class CourierScansService {
         where: { id: scan.id },
         data: { cancelledAt: this.clock.now(), cancelledByUserId: actor.userId },
       });
+      // A counted Livré that did not happen: the count must be redone (D-79).
+      if (scan.action === ScanAction.LIVRE) {
+        await tx.caisseSessionParcel.deleteMany({
+          where: { parcelId: scan.parcelId!, caisseSession: { status: { not: 'CLOTUREE' } } },
+        });
+      }
 
       if (scan.action === ScanAction.RAMASSAGE && scan.pickupId) {
         const link = await tx.pickupParcel.findUnique({

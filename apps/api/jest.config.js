@@ -17,4 +17,7 @@ module.exports = {
   // when turbo ran the web and shared tests beside them: PGlite then aborts
   // with "RuntimeError: unreachable" in whichever file is unlucky.
   maxWorkers: '50%',
+  // Each file leaves its PGlite's WebAssembly memory behind in the worker;
+  // past this a worker is replaced before its next file (phase 8, more files).
+  workerIdleMemoryLimit: '1024MB',
 };

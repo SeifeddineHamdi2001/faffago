@@ -481,9 +481,10 @@ Steps, all done:
 
 ## Phase 8 — Money
 
-Branch `phase-8` (2026-09-25). Step 0 done; the money questions decisions.md
-does not answer were sent in one message, and the steps below that depend on
-them wait for the answers.
+Branch `phase-8` (2026-09-25). The eleven money questions were answered the
+same day and recorded as D-79 to D-85 (Caisse per courier with a daily
+summary, bons de versement and de retour, livreur pay, what the seller sees,
+the ramasseur's visit, Forcer un statut on a Livré).
 
 0. [x] Real PostgreSQL: two Livré scans at once, the D-21 COMMIT error through
        the production Prisma setup, `faffago_app` with its password — 7 tests
@@ -581,6 +582,10 @@ deployment — phases 6, 7, 8, 9 (trimmed) and 11 above.
       retenue amount itself is computed and stored on every bon at launch,
       per CLAUDE.md, Money; only the certificate document and the monthly
       report are deferred)
+      **Deadline**: they must be built **before the first tax declaration
+      deadline for the retenue** (decided 2026-09-25). The date comes from
+      the accountant; until it is known, treat this as the first post-launch
+      item.
 
 ### The full Exceptions queue
 

@@ -3,7 +3,7 @@ import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { LogoutButton } from '@/components/logout-button';
 import { SellerNav } from '@/components/seller-nav';
 import { requireMe, serverGetOrNull } from '@/lib/server/session';
-import type { SellerVerifySummary } from '@/lib/types';
+import type { SellerMoneyBadges, SellerVerifySummary } from '@/lib/types';
 
 /**
  * The seller space (Vendeur 3). The shop name is always visible. While an
@@ -14,6 +14,7 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
   const me = await requireMe('vendeur');
   // The À vérifier badge (Vendeur 3). A failed count never blocks the page.
   const summary = await serverGetOrNull<SellerVerifySummary>('vendeur', '/a-verifier/resume');
+  const money = await serverGetOrNull<SellerMoneyBadges>('vendeur', '/paiements/resume');
 
   return (
     <div className="min-h-screen">
@@ -24,7 +25,11 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
         </p>
         <p className="font-semibold">{me.seller?.shopName}</p>
       </header>
-      <SellerNav aVerifierCount={summary?.count ?? 0} />
+      <SellerNav
+        aVerifierCount={summary?.count ?? 0}
+        paiementsCount={money?.bonsVersementEnRoute ?? 0}
+        retoursCount={money?.bonsRetourEnRoute ?? 0}
+      />
       <main className="mx-auto max-w-4xl p-4">
         {children}
         {!me.impersonation && (

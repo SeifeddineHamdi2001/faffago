@@ -62,6 +62,28 @@ const dashboard: SellerDashboard = {
   from: '2026-09-19',
   to: TODAY,
   counts: { CREES: 12, RAMASSES: 10, EN_LIVRAISON: 9, LIVRES: 7, ECHECS: 2, REPORTES: 1 },
+  aRecevoir: {
+    parcelCount: 3,
+    chezLesCoursiersMillimes: '78000',
+    auDepotMillimes: '156000',
+    totalMillimes: '234000',
+    fraisADeduireMillimes: '2000',
+  },
+  aTraiter: { bonsVersementEnRoute: 1, bonsRetourEnRoute: 0, retoursAuDepot: 2 },
+  deliveryRate: {
+    delivered: 7,
+    returned: 1,
+    rateBps: 8750,
+    days: [
+      { day: '2026-09-19', delivered: 0, returned: 0 },
+      { day: '2026-09-20', delivered: 1, returned: 0 },
+      { day: '2026-09-21', delivered: 2, returned: 1 },
+      { day: '2026-09-22', delivered: 1, returned: 0 },
+      { day: '2026-09-23', delivered: 1, returned: 0 },
+      { day: '2026-09-24', delivered: 1, returned: 0 },
+      { day: TODAY, delivered: 1, returned: 0 },
+    ],
+  },
 };
 
 function renderScreen(overrides: Partial<Parameters<typeof SellerDashboardScreen>[0]> = {}) {
@@ -150,5 +172,25 @@ describe('Tableau de bord (Vendeur 4.1, D-48)', () => {
     expect(screen.queryByRole('link', { name: 'Créer un colis' })).toBeNull();
     expect(screen.queryByText(/suspendu/)).toBeNull();
     expect(screen.getAllByRole('definition')).toHaveLength(6);
+  });
+});
+
+describe('the money part (Vendeur 4.1, D-83)', () => {
+  it('shows À recevoir split by where the cash is, what to deal with, and the delivery rate', () => {
+    renderScreen();
+    const hero = screen.getByRole('region', { name: 'À recevoir' });
+    expect(within(hero).getByText('234,000 DT')).toBeInTheDocument();
+    expect(hero).toHaveTextContent(
+      'Chez les coursiers : 78,000 DT · Au dépôt, prêt à payer : 156,000 DT',
+    );
+    expect(hero).toHaveTextContent('Frais à déduire : 2,000 DT');
+    const todo = screen.getByRole('region', { name: 'À traiter' });
+    expect(
+      within(todo).getByRole('link', { name: '1 bon(s) de versement en route' }),
+    ).toHaveAttribute('href', '/vendeur/paiements');
+    expect(within(todo).getByRole('link', { name: '2 retour(s) au dépôt' })).toBeInTheDocument();
+    const rate = screen.getByRole('region', { name: 'Taux de livraison' });
+    expect(within(rate).getByText('87,5 %')).toBeInTheDocument();
+    expect(within(rate).getAllByRole('listitem')).toHaveLength(7);
   });
 });

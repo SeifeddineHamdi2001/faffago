@@ -10,6 +10,7 @@ import {
 import { AllowOutdatedCourierApp, CurrentPrincipal, RequirePermission } from '../auth/decorators';
 import type { Principal, UserPrincipal } from '../auth/principal';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { PayrollService } from '../money/payroll.service';
 import { CourierDayService } from './courier-day.service';
 import { CourierPickupsService } from './courier-pickups.service';
 import { CourierSyncService } from './courier-sync.service';
@@ -48,6 +49,7 @@ export class CourierController {
   constructor(
     private readonly day: CourierDayService,
     private readonly pickups: CourierPickupsService,
+    private readonly payroll: PayrollService,
   ) {}
 
   /** Ma tournée and Retour au dépôt (Coursier 4.2, 4.5). */
@@ -69,6 +71,13 @@ export class CourierController {
   @RequirePermission(Permission.APP_COURSIER)
   cash(@CurrentPrincipal() principal: Principal) {
     return this.day.cash(principal as UserPrincipal);
+  }
+
+  /** Mes gains (Coursier 4.10, D-82): livreurs only; ramasseurs are paid by HR. */
+  @Get('gains')
+  @RequirePermission(Permission.APP_LIVREUR)
+  earnings(@CurrentPrincipal() principal: Principal) {
+    return this.payroll.earnings(principal as UserPrincipal);
   }
 
   /** Profil (Coursier 4.12). */

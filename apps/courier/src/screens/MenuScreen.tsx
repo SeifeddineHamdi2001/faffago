@@ -14,8 +14,8 @@ type Nav = NativeStackNavigationProp<RootStackParams>;
 /**
  * Menu and Profil (Coursier 3, 4.12): role, zones and pay plan read-only, set
  * by the admin; language and PIN set on the phone; no password change (Q7).
- * Chat, Notifications and Mes gains come after launch or with phase 8
- * (CLAUDE.md, D-62).
+ * Mes gains for a livreur (D-82); Chat and Notifications come after launch
+ * (CLAUDE.md).
  */
 export function MenuScreen() {
   const navigation = useNavigation<Nav>();
@@ -85,6 +85,13 @@ export function MenuScreen() {
           />
         </View>
       </Card>
+      {data?.role === 'LIVREUR' ? (
+        <BigButton
+          testID="open-gains"
+          label={t('mesGains')}
+          onPress={() => navigation.navigate('Gains')}
+        />
+      ) : null}
       <BigButton
         variant="secondary"
         label={t('changePin')}

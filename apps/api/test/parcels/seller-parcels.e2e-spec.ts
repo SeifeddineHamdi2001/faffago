@@ -101,7 +101,7 @@ async function parcelIn(status: string, location: string, owner = seller): Promi
 }
 
 function events(parcelId: string) {
-  return t.prisma.parcelEvent.findMany({ where: { parcelId }, orderBy: { serverTime: 'asc' } });
+  return t.prisma.parcelEvent.findMany({ where: { parcelId }, orderBy: { sequence: 'asc' } });
 }
 
 describe('Créer un colis (Vendeur 4.2)', () => {

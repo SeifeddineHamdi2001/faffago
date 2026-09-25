@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
-import type { Cash, PickupDay, PickupView, Profile } from '../src/api/types';
+import type { Cash, Gains, PickupDay, PickupView, Profile } from '../src/api/types';
 import { CaisseScreen } from '../src/screens/CaisseScreen';
 import { UpdateScreen } from '../src/screens/GateScreens';
 import { JourneeScreen } from '../src/screens/JourneeScreen';
@@ -11,7 +11,9 @@ import { DeliverScreen } from '../src/screens/livreur/DeliverScreen';
 import { RetourDepotScreen } from '../src/screens/livreur/RetourDepotScreen';
 import { StopScreen } from '../src/screens/livreur/StopScreen';
 import { TourneeScreen } from '../src/screens/livreur/TourneeScreen';
+import { GainsScreen } from '../src/screens/livreur/GainsScreen';
 import { PickupScreen } from '../src/screens/ramasseur/PickupScreen';
+import { VisitScreen } from '../src/screens/ramasseur/VisitScreen';
 import type { RootScreenProps, RootStackParams } from '../src/navigation/types';
 import { QueueStatus, type QueueRow } from '../src/queue/queue';
 import { appValue, goBack, navigate, renderScreen, stop, tour } from './harness';
@@ -55,7 +57,7 @@ const pickup = (overrides: Partial<PickupView> = {}): PickupView => ({
     { code: 'FG-AAAAAAAA', status: 'RAMASSE', expected: true, scanned: true },
     { code: 'FG-BBBBBBBB', status: 'CREE', expected: true, scanned: false },
   ],
-  aEmporter: [],
+  aEmporter: { bonsVersement: [], bonsRetour: [] },
   ...overrides,
 });
 
@@ -293,7 +295,7 @@ describe('ScannerScreen (Coursier 4.4, 4.6, 4.9)', () => {
 describe('PickupScreen (Coursier 4.6, A-13)', () => {
   it('shows the contact, the missing parcels, and closes the pickup', async () => {
     const value = appValue({
-      '/coursier/ramassages': { open: [pickup()], done: [] } satisfies PickupDay,
+      '/coursier/ramassages': { open: [pickup()], done: [], visits: [] } satisfies PickupDay,
     });
     value.session!.user.role = 'RAMASSEUR';
     await renderScreen(<PickupScreen {...routeProps<'Pickup'>({ id: 'p1' })} />, value);
@@ -324,6 +326,10 @@ describe('CaisseScreen (Coursier 4.7, 4.9)', () => {
         },
       ],
       totalMillimes: '85000',
+      bons: [],
+      bonCashMillimes: '0',
+      aRemettreMillimes: '85000',
+      sessions: [],
     };
     const value = appValue(
       { '/coursier/caisse': cash },
@@ -355,7 +361,14 @@ describe('JourneeScreen (Coursier 4.1)', () => {
   it('gives today in numbers and what is still open before going home', async () => {
     const value = appValue({
       '/coursier/tournee': tour({ toBringBack: [stop({ code: 'FG-FAIL0000' })], doneToday: 3 }),
-      '/coursier/caisse': { parcels: [], totalMillimes: '0' } satisfies Cash,
+      '/coursier/caisse': {
+        parcels: [],
+        totalMillimes: '0',
+        bons: [],
+        bonCashMillimes: '0',
+        aRemettreMillimes: '0',
+        sessions: [],
+      } satisfies Cash,
     });
     await renderScreen(<JourneeScreen />, value);
     expect(await screen.findByText('3 faits sur 4')).toBeTruthy();
@@ -412,5 +425,169 @@ describe('UpdateScreen (tech-stack 5)', () => {
     expect(screen.getByTestId('update-message')).toHaveTextContent(
       'Envoi des scans en attente avant la mise à jour : 3 restant(s).',
     );
+  });
+});
+
+describe('the ramasseur’s bons (Coursier 4.6, D-84)', () => {
+  const aEmporter = {
+    bonsVersement: [
+      { id: 'bv1', number: 'BV-2026-0925-01', netMillimes: '78000', enMain: true, remis: false },
+    ],
+    bonsRetour: [
+      {
+        id: 'br1',
+        number: 'BR-2026-0925-01',
+        enMain: true,
+        remis: false,
+        lines: [
+          { code: 'FG-RRRRRRRR', itemType: 'COLIS' as const, received: false },
+          { code: 'FG-EEEEEEEE', itemType: 'ARTICLE_RECUPERE' as const, received: true },
+        ],
+      },
+    ],
+  };
+
+  it('shows À emporter on the pickup, and opens the Bon de versement step', async () => {
+    const value = appValue({
+      '/coursier/ramassages': {
+        open: [pickup({ aEmporter })],
+        done: [],
+        visits: [],
+      } satisfies PickupDay,
+    });
+    value.session!.user.role = 'RAMASSEUR';
+    await renderScreen(<PickupScreen {...routeProps<'Pickup'>({ id: 'p1' })} />, value);
+    expect(await screen.findByTestId('bon-BV-2026-0925-01')).toHaveTextContent(
+      'Bon de versement BV-2026-0925-01 · 78,000 DT · En main',
+    );
+    expect(screen.getByText('FG-EEEEEEEE · ancien article · Reçu')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('scan-bon'));
+    expect(navigate).toHaveBeenCalledWith('Scanner', { pickupId: 'p1', step: 'BON' });
+    await fireEvent.press(screen.getByTestId('scan-retours'));
+    expect(navigate).toHaveBeenCalledWith('Scanner', { pickupId: 'p1', step: 'RETOURS' });
+  });
+
+  it('records the bon’s QR as Remis, and a return as Retour reçu', async () => {
+    const value = appValue({ '/coursier/ramassages': { open: [], done: [], visits: [] } });
+    value.session!.user.role = 'RAMASSEUR';
+    await renderScreen(<ScannerScreen step="BON" />, value);
+    await fireEvent.changeText(screen.getByLabelText('Numéro du bon'), 'FG-AAAAAAAA');
+    await fireEvent.press(screen.getByTestId('validate-code'));
+    expect(await screen.findByTestId('scan-feedback')).toHaveTextContent('QR du bon illisible');
+    await fireEvent.changeText(screen.getByLabelText('Numéro du bon'), 'BV-2026-0925-01');
+    await fireEvent.press(screen.getByTestId('validate-code'));
+    await waitFor(() =>
+      expect(value.recordScan).toHaveBeenCalledWith({
+        action: 'BON_VERSEMENT_REMIS',
+        rawCode: 'BV-2026-0925-01',
+        manual: true,
+      }),
+    );
+    expect(await screen.findByTestId('scan-feedback')).toHaveTextContent(
+      'Bon de versement enregistré',
+    );
+
+    await renderScreen(<ScannerScreen step="RETOURS" />, value);
+    await fireEvent.changeText(screen.getByLabelText('Code du colis'), 'FG-RRRRRRRR');
+    await fireEvent.press(screen.getByTestId('validate-code'));
+    await waitFor(() =>
+      expect(value.recordScan).toHaveBeenCalledWith({
+        action: 'RETOUR_RECU',
+        rawCode: 'FG-RRRRRRRR',
+        manual: true,
+      }),
+    );
+  });
+
+  it('shows a visit with only bons to hand over', async () => {
+    const value = appValue({
+      '/coursier/ramassages': {
+        open: [],
+        done: [],
+        visits: [
+          {
+            sellerId: 's1',
+            shopName: 'Chic Tunis',
+            contactName: 'Amel',
+            sellerPhone: '22000000',
+            address: 'Boutique, rue 3',
+            landmark: null,
+            localiteNameFr: 'Khaznadar',
+            localiteNameAr: null,
+            delegationNameFr: 'Le Bardo',
+            delegationNameAr: 'باردو',
+            aEmporter,
+          },
+        ],
+      } satisfies PickupDay,
+    });
+    value.session!.user.role = 'RAMASSEUR';
+    await renderScreen(<VisitScreen {...routeProps<'Visit'>({ sellerId: 's1' })} />, value);
+    expect(await screen.findByText('Contact : Amel')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('scan-bon'));
+    expect(navigate).toHaveBeenCalledWith('Scanner', { step: 'BON' });
+  });
+});
+
+describe('Ma caisse, the depot’s count (Coursier 4.7, D-84)', () => {
+  it('adds the bon cash, and shows conforme or the écart with its debt', async () => {
+    const cash: Cash = {
+      parcels: [],
+      totalMillimes: '0',
+      bons: [{ number: 'BV-2026-0925-01', shopName: 'Chic', netMillimes: '78000' }],
+      bonCashMillimes: '78000',
+      aRemettreMillimes: '78000',
+      sessions: [
+        {
+          day: '2026-09-24',
+          status: 'CLOTUREE',
+          expectedMillimes: '170000',
+          countedMillimes: '165000',
+          ecartMillimes: '-5000',
+          conforme: false,
+          debtMillimes: '5000',
+        },
+        {
+          day: '2026-09-23',
+          status: 'CLOTUREE',
+          expectedMillimes: '85000',
+          countedMillimes: '85000',
+          ecartMillimes: '0',
+          conforme: true,
+          debtMillimes: null,
+        },
+      ],
+    };
+    const value = appValue({ '/coursier/caisse': cash });
+    await renderScreen(<CaisseScreen />, value);
+    await waitFor(() => expect(screen.getByTestId('cash-total')).toHaveTextContent('78,000 DT'));
+    expect(screen.getByTestId('caisse-2026-09-24')).toHaveTextContent(
+      '24/09 · écart -5,000 DT · Dette de 5,000 DT, déduite de votre paie',
+    );
+    expect(screen.getByTestId('caisse-2026-09-23')).toHaveTextContent('23/09 · conforme');
+  });
+});
+
+describe('Mes gains (Coursier 4.10, D-82)', () => {
+  it('shows the amount due, the period and the next payment', async () => {
+    const gains: Gains = {
+      payPlan: 'HEBDOMADAIRE',
+      pendingPayPlan: null,
+      pendingPayPlanFrom: null,
+      period: { start: '2026-09-21', end: '2026-09-27' },
+      nextPaymentDate: '2026-09-28',
+      parcelCount: 2,
+      grossMillimes: '7000',
+      debtsMillimes: '2000',
+      dueMillimes: '5000',
+      carriedDebtMillimes: '0',
+      debtsOpenMillimes: '2000',
+      fiches: [],
+    };
+    const value = appValue({ '/coursier/gains': gains });
+    await renderScreen(<GainsScreen />, value);
+    await waitFor(() => expect(screen.getByTestId('gains-due')).toHaveTextContent('5,000 DT'));
+    expect(screen.getByText('2 colis livrés · 7,000 DT')).toBeTruthy();
+    expect(screen.getByText('Prochain paiement le 28/09')).toBeTruthy();
   });
 });

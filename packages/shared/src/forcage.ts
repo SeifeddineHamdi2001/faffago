@@ -1,17 +1,35 @@
 import { z } from 'zod';
-import { ParcelLocation, ParcelStatus } from './statuses.js';
+import { ParcelCashStatus, ParcelLocation, ParcelStatus } from './statuses.js';
 
 /**
  * Forcer un statut in phase 5 (Admin 4.3, 4.17, D-56): the admin corrects a
  * scanning mistake, with a reason, audited. No effect runs — no charge, no
  * 48-hour clock, the attempt count unchanged — so only the moves that never
- * involve money or a seller's decision are allowed until phase 8 defines how
- * money is reversed.
+ * involve money or a seller's decision are allowed. Phase 8 adds one money
+ * move with its own reversal: undoing a Livré whose cash is still with the
+ * courier (D-85).
  */
 
 export interface ParcelState {
   status: ParcelStatus;
   location: ParcelLocation;
+  /** Read for a Livré only: the undo of D-85 needs the cash still with the courier. */
+  cashStatus?: ParcelCashStatus | null;
+}
+
+/** Where an undone Livré goes: back out with its livreur (D-85). */
+export const UNDO_DELIVERY_TARGET: ParcelState = {
+  status: ParcelStatus.EN_LIVRAISON,
+  location: ParcelLocation.AVEC_LE_LIVREUR,
+};
+
+/** D-85: a Livré whose cash is still Chez le coursier can be undone, nothing else of money. */
+export function isDeliveryUndo(current: ParcelState, target: ParcelState): boolean {
+  return (
+    current.status === ParcelStatus.LIVRE &&
+    current.cashStatus === ParcelCashStatus.CHEZ_LE_COURSIER &&
+    same(target, UNDO_DELIVERY_TARGET)
+  );
 }
 
 /** The three states a parcel moves between freely, each at its own place. */
@@ -41,7 +59,7 @@ export type ForcageRefusal = (typeof ForcageRefusal)[keyof typeof ForcageRefusal
 
 export const FORCAGE_MESSAGES_FR: Record<ForcageRefusal, string> = {
   FORCAGE_NON_AUTORISE:
-    'Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, ou le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, se corrigent.',
+    'Cette correction n’est pas possible ici : seuls Ramassé, Au dépôt et En livraison, le lieu d’un colis À vérifier, Relancé ou Retour au dépôt, ou un Livré dont l’argent est encore chez le coursier, se corrigent.',
   MEME_ETAT: 'Le colis est déjà dans cet état.',
   LIVREUR_INVALIDE: 'Choisissez le livreur qui a le colis.',
 };
@@ -60,6 +78,9 @@ export function forcedStatusRefusal(
   target: ParcelState,
 ): ForcageRefusal | null {
   if (same(current, target)) return ForcageRefusal.MEME_ETAT;
+  if (current.status === ParcelStatus.LIVRE) {
+    return isDeliveryUndo(current, target) ? null : ForcageRefusal.FORCAGE_NON_AUTORISE;
+  }
   if (LOCATION_FIX_STATUSES.includes(current.status)) {
     const placeOnly =
       target.status === current.status &&
@@ -72,9 +93,12 @@ export function forcedStatusRefusal(
 
 /** The targets the screen offers for a parcel as it is. */
 export function forcedTargets(current: ParcelState): ParcelState[] {
-  const candidates: ParcelState[] = LOCATION_FIX_STATUSES.includes(current.status)
-    ? LOCATION_FIX_PLACES.map((location) => ({ status: current.status, location }))
-    : [...FORCEABLE_STATES];
+  const candidates: ParcelState[] =
+    current.status === ParcelStatus.LIVRE
+      ? [UNDO_DELIVERY_TARGET]
+      : LOCATION_FIX_STATUSES.includes(current.status)
+        ? LOCATION_FIX_PLACES.map((location) => ({ status: current.status, location }))
+        : [...FORCEABLE_STATES];
   return candidates.filter((target) => forcedStatusRefusal(current, target) === null);
 }
 

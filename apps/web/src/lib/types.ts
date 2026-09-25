@@ -377,6 +377,312 @@ export interface SellerDashboard {
   from: string;
   to: string;
   counts: Record<DashboardTile, number>;
+  /** The money part (D-39, D-83). */
+  aRecevoir: ARecevoirTotals;
+  aTraiter: { bonsVersementEnRoute: number; bonsRetourEnRoute: number; retoursAuDepot: number };
+  deliveryRate: {
+    delivered: number;
+    returned: number;
+    rateBps: number | null;
+    days: { day: string; delivered: number; returned: number }[];
+  };
+}
+
+// ── Money (phase 8, D-79 to D-85). Amounts are millimes as digits. ──
+
+export interface ARecevoirTotals {
+  parcelCount: number;
+  chezLesCoursiersMillimes: string;
+  auDepotMillimes: string;
+  totalMillimes: string;
+  fraisADeduireMillimes: string;
+}
+
+export interface PersonRef {
+  userId: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface BonVisit {
+  ramasseur: PersonRef | null;
+  plannedDate: string | null;
+  viaPickup: boolean;
+}
+
+export interface BonVersementRow {
+  id: string;
+  number: string;
+  status: string;
+  seller: { id: string; shopName: string; contactFullName: string; contactPhone: string };
+  preparedAt: string;
+  parcelCount: number;
+  totalCodMillimes: string;
+  totalFeesMillimes: string;
+  baseAfterFeesMillimes: string;
+  sellerStatutSnapshot: string;
+  retenueRateBps: number;
+  retenueMillimes: string;
+  netMillimes: string;
+  visit: BonVisit | null;
+  enRouteAt: string | null;
+  remisAt: string | null;
+  archivedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+}
+
+export interface BonVersementDetail extends BonVersementRow {
+  qr: string;
+  parcels: {
+    code: string;
+    recipientName: string;
+    deliveredAt: string | null;
+    codMillimes: string;
+  }[];
+  charges: { type: string; label: string; parcelCode: string | null; amountMillimes: string }[];
+}
+
+/** GET /paiements-vendeurs (Admin 4.10). */
+export interface SellerPayoutSummary {
+  seller: { id: string; shopName: string; statut: string };
+  payableMillimes: string;
+  payableCount: number;
+  withCouriersMillimes: string;
+  pendingChargesMillimes: string;
+  bonsEnCours: number;
+}
+
+/** GET /paiements-vendeurs/:sellerId. */
+export interface SellerPayoutDetail {
+  seller: {
+    id: string;
+    shopName: string;
+    statut: string;
+    contactFullName: string;
+    contactPhone: string;
+  };
+  retenueRateBps: number;
+  parcels: {
+    id: string;
+    code: string;
+    recipientName: string;
+    deliveredAt: string | null;
+    codMillimes: string;
+  }[];
+  charges: {
+    id: string;
+    type: string;
+    label: string;
+    amountMillimes: string;
+    createdAt: string;
+    parcelCode: string | null;
+  }[];
+  soldeDebiteurMillimes: string;
+  bons: BonVersementRow[];
+}
+
+export interface BonRetourRow {
+  id: string;
+  number: string;
+  status: string;
+  seller: { id: string; shopName: string; contactFullName: string; contactPhone: string };
+  preparedAt: string;
+  enRouteAt: string | null;
+  remisAt: string | null;
+  archivedAt: string | null;
+  visit: BonVisit | null;
+  lines: {
+    code: string;
+    recipientName: string;
+    productDescription: string;
+    itemType: 'COLIS' | 'ARTICLE_RECUPERE';
+    received: boolean;
+    receivedAt: string | null;
+  }[];
+  pendingCount: number;
+}
+
+export interface ReturnLine {
+  code: string;
+  recipientName: string;
+  itemType: 'COLIS' | 'ARTICLE_RECUPERE';
+  status: string;
+  atDepot: boolean;
+  bonNumber: string | null;
+}
+
+/** GET /bons-retour (Admin 4.11). */
+export interface ReturnsBySeller {
+  seller: { id: string; shopName: string };
+  returns: ReturnLine[];
+  bons: BonRetourRow[];
+}
+
+export type CaisseStatus = 'OUVERTE' | 'COMPTEE' | 'CLOTUREE';
+
+export interface CaisseSummaryRow {
+  courier: PersonRef & { role: 'LIVREUR' | 'RAMASSEUR' };
+  sessionId: string | null;
+  status: CaisseStatus;
+  expectedMillimes: string;
+  countedMillimes: string | null;
+  ecartMillimes: string | null;
+  parcelCount: number;
+  lateCount: number;
+  bonCount: number;
+  ecartFlagged: boolean;
+  ecartChecked: boolean;
+}
+
+/** GET /caisse?date= (D-79, answer 1). */
+export interface CaisseSummary {
+  day: string;
+  rows: CaisseSummaryRow[];
+  totals: {
+    expectedMillimes: string;
+    countedMillimes: string;
+    ecartMillimes: string;
+    byStatus: Record<CaisseStatus, number>;
+  };
+}
+
+/** GET /caisse/:userId/:date. */
+export interface CaisseSession {
+  sessionId: string | null;
+  day: string;
+  courier: PersonRef & { role: 'LIVREUR' | 'RAMASSEUR' };
+  status: CaisseStatus;
+  expected: { deliveryMillimes: string; bonCashMillimes: string; totalMillimes: string };
+  countedMillimes: string | null;
+  ecartMillimes: string | null;
+  ecartFlagged: boolean;
+  ecartCheckedAt: string | null;
+  ecartNote: string | null;
+  countedAt: string | null;
+  closedAt: string | null;
+  lines: {
+    parcelId: string;
+    code: string;
+    shopName: string;
+    codMillimes: string;
+    origin: 'JOUR' | 'TARDIF';
+    scanDay: string;
+  }[];
+  bons: {
+    bonVersementId: string;
+    number: string;
+    shopName: string;
+    status: string;
+    takenOutMillimes: string;
+    remisMillimes: string;
+  }[];
+  bonsRetourEnRoute: { number: string; shopName: string; pendingLines: number }[];
+  debt: { id: string; amountMillimes: string; status: string } | null;
+}
+
+export interface CaisseEcartRow {
+  sessionId: string;
+  day: string;
+  courier: PersonRef & { role: string };
+  expectedMillimes: string;
+  countedMillimes: string | null;
+  ecartMillimes: string | null;
+}
+
+/** GET /caisse/depart (answer 5). */
+export interface DepartRamasseur extends PersonRef {
+  bonsPrevus: number;
+}
+
+export interface DepartBon {
+  id: string;
+  kind: 'BON_VERSEMENT' | 'BON_RETOUR';
+  number: string;
+  shopName: string;
+  netMillimes: string | null;
+  lineCount: number;
+  plannedDate: string | null;
+}
+
+/** GET /caisse/depart/:userId. */
+export interface Departure {
+  ramasseur: PersonRef;
+  prevus: DepartBon[];
+  autres: DepartBon[];
+}
+
+/** GET /paie (Admin 4.12, D-82). */
+export interface PayrollRow {
+  livreur: PersonRef & { isActive: boolean };
+  payPlan: string;
+  pendingPayPlan: string | null;
+  pendingPayPlanFrom: string | null;
+  currentPeriod: { start: string; end: string };
+  duePeriod: { start: string; end: string };
+  due: boolean;
+  parcelCount: number;
+  cashWithCourierCount: number;
+  grossMillimes: string;
+  deductionsMillimes: string;
+  netMillimes: string;
+  debtsMillimes: string;
+  payslipsAPayer: number;
+}
+
+export interface PayslipRow {
+  id: string;
+  number: string;
+  livreur: PersonRef;
+  payPlan: string;
+  period: { start: string; end: string };
+  parcelCount: number;
+  grossMillimes: string;
+  deductionsMillimes: string;
+  netMillimes: string;
+  status: 'A_PAYER' | 'PAYEE';
+  preparedAt: string;
+  paidAt: string | null;
+}
+
+export interface CourierDebtRow {
+  id: string;
+  status: 'EN_COURS' | 'DEDUITE' | 'ANNULEE';
+  amountMillimes: string;
+  remainingMillimes: string;
+  caisseDay: string | null;
+  createdAt: string;
+  cancelReason: string | null;
+}
+
+export interface ARecevoirParcel {
+  code: string;
+  recipientName: string;
+  deliveredAt: string | null;
+  cashStatus: 'CHEZ_LE_COURSIER' | 'AU_DEPOT';
+  codMillimes: string;
+  deliveryFeeMillimes: string;
+  netMillimes: string;
+  bon: { number: string; status: string } | null;
+}
+
+/** GET /paiements (Vendeur 4.11, D-83). */
+export interface SellerPaiements {
+  aRecevoir: ARecevoirTotals & { parcels: ARecevoirParcel[] };
+  bons: BonVersementRow[];
+}
+
+/** GET /retours (Vendeur 4.12). */
+export interface SellerRetours {
+  returns: ReturnLine[];
+  bons: BonRetourRow[];
+  receivedCount: number;
+}
+
+/** GET /paiements/resume: the menu badges (D-83). */
+export interface SellerMoneyBadges {
+  bonsVersementEnRoute: number;
+  bonsRetourEnRoute: number;
 }
 
 /** GET /zones (Paramètres › Zones, D-51). Couriers are named by their account id. */

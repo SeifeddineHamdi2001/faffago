@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import type { ParcelLocation, ParcelStatus, Prisma } from '@prisma/client';
 import { seed } from '../../prisma/seed';
-import { createTestApp, createUser, login, type Fixture, type TestApp } from '../support/test-app';
+import {
+  COURIER_APP_HEADERS,
+  createTestApp,
+  createUser,
+  login,
+  type Fixture,
+  type TestApp,
+} from '../support/test-app';
 import { createParcel } from '../support/work-fixtures';
 
 /**
@@ -154,7 +161,8 @@ describe('POST /colis/:code/forcer-statut (D-56)', () => {
   });
 
   it('refuses what phase 5 does not correct, with its reason', async () => {
-    const delivered = await parcel('LIVRE', 'CHEZ_LE_CLIENT', { cashStatus: 'CHEZ_LE_COURSIER' });
+    // Counted at the depot: the undo of D-85 is over.
+    const delivered = await parcel('LIVRE', 'CHEZ_LE_CLIENT', { cashStatus: 'AU_DEPOT' });
     const back = await force(delivered.code, {
       status: 'EN_LIVRAISON',
       location: 'AVEC_LE_LIVREUR',
@@ -175,6 +183,61 @@ describe('POST /colis/:code/forcer-statut (D-56)', () => {
       const response = await force(atDepot.code, { ...target, reason: 'Correction de test' });
       expect(response.status).toBe(409);
     }
+  });
+
+  it('undoes a Livré whose cash is still with the courier, with its money reversed (D-85)', async () => {
+    const aliToken = (await login(t, ali)).accessToken;
+    const p = await parcel('EN_LIVRAISON', 'AVEC_LE_LIVREUR', { currentLivreurId: ali.courierId! });
+    const scan = await t.request('POST', '/scans/courier', {
+      token: aliToken,
+      headers: COURIER_APP_HEADERS,
+      body: {
+        operations: [
+          {
+            kind: 'SCAN',
+            clientScanId: randomUUID(),
+            action: 'LIVRE',
+            rawCode: p.code,
+            source: 'APP_COURSIER',
+            collectedMillimes: '85000',
+            deviceTime: '2026-09-25T08:00:00.000Z',
+          },
+        ],
+      },
+    });
+    expect(scan.body.results[0].ok).toBe(true);
+
+    const other = await createUser(t.prisma, { role: 'LIVREUR' });
+    const wrong = await force(p.code, {
+      status: 'EN_LIVRAISON',
+      location: 'AVEC_LE_LIVREUR',
+      livreurId: other.id,
+      reason: 'Livré scanné par erreur',
+    });
+    expect(wrong.body.code).toBe('LIVREUR_INVALIDE');
+
+    const undone = await force(p.code, {
+      status: 'EN_LIVRAISON',
+      location: 'AVEC_LE_LIVREUR',
+      livreurId: ali.id,
+      reason: 'Livré scanné par erreur',
+    });
+    expect(undone.status).toBe(200);
+    expect(await reload(p.id)).toMatchObject({
+      status: 'EN_LIVRAISON',
+      location: 'AVEC_LE_LIVREUR',
+      currentLivreurId: ali.courierId,
+      cashStatus: null,
+      courierRateMillimes: null,
+      deliveredAt: null,
+      attemptCount: 0,
+    });
+    const charges = await t.prisma.sellerCharge.findMany({ where: { parcelId: p.id } });
+    expect(charges).toEqual([expect.objectContaining({ type: 'LIVRAISON', status: 'ANNULEE' })]);
+    const [entry] = await t.prisma.auditLog.findMany({
+      where: { entityId: p.id, action: 'FORCAGE_STATUT' },
+    });
+    expect(entry!.before).toMatchObject({ status: 'LIVRE', cashStatus: 'CHEZ_LE_COURSIER' });
   });
 
   it('refuses a livreur who is not one', async () => {

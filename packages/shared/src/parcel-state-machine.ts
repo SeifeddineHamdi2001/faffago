@@ -52,6 +52,8 @@ export const ParcelEventType = {
   ANNULATION_SCAN: 'ANNULATION_SCAN',
   /** A seller's change request applied by Faffa Go (D-57). */
   MODIFICATION_APPLIQUEE: 'MODIFICATION_APPLIQUEE',
+  /** A return taken out and not handed over, back at the depot (D-81, answer 6). */
+  RETOUR_NON_REMIS: 'RETOUR_NON_REMIS',
 } as const;
 export type ParcelEventType = (typeof ParcelEventType)[keyof typeof ParcelEventType];
 
@@ -73,6 +75,8 @@ export const ParcelAction = {
   /** The seller moves the date of an already planned relance (D-9). */
   DECISION_CHANGER_DATE: 'DECISION_CHANGER_DATE',
   DEPART_RETOUR: 'DEPART_RETOUR',
+  /** At the ramasseur's Clôturer: a return he brought back (D-81). */
+  RETOUR_NON_REMIS: 'RETOUR_NON_REMIS',
   AUTO_RETOUR_48H: 'AUTO_RETOUR_48H',
 } as const;
 export type ParcelAction = (typeof ParcelAction)[keyof typeof ParcelAction];
@@ -150,6 +154,20 @@ export const ScanRefusal = {
   MONTANT_DIFFERENT: 'MONTANT_DIFFERENT',
   /** Livré on an échange confirms the old item was collected (Coursier 4.4, A-10). */
   ECHANGE_NON_CONFIRME: 'ECHANGE_NON_CONFIRME',
+  // ── Bons (phase 8, D-80, D-81) ──
+  BON_INCONNU: 'BON_INCONNU',
+  /** Remis: only a bon he carries, En route. */
+  BON_PAS_EN_ROUTE: 'BON_PAS_EN_ROUTE',
+  BON_AUTRE_RAMASSEUR: 'BON_AUTRE_RAMASSEUR',
+  /** Archivage: the signed copy comes back after Remis. */
+  BON_PAS_REMIS: 'BON_PAS_REMIS',
+  BON_DEJA_ARCHIVE: 'BON_DEJA_ARCHIVE',
+  /** Retour reçu: the parcel is not on a bon de retour he carries. */
+  RETOUR_HORS_BON: 'RETOUR_HORS_BON',
+  /** Préparation retours: already on an open bon de retour. */
+  DEJA_SUR_BON_RETOUR: 'DEJA_SUR_BON_RETOUR',
+  /** Préparation retours of a delivered échange: no old item to bring back. */
+  ARTICLE_NON_RECUPERE: 'ARTICLE_NON_RECUPERE',
 } as const;
 export type ScanRefusal = (typeof ScanRefusal)[keyof typeof ScanRefusal];
 
@@ -177,6 +195,14 @@ export const SCAN_REFUSAL_MESSAGES_FR: Record<ScanRefusal, string> = {
   COLIS_AUTRE_VENDEUR: 'Ce colis appartient à un autre vendeur',
   MONTANT_DIFFERENT: 'Le montant encaissé doit être exactement le COD du colis',
   ECHANGE_NON_CONFIRME: 'Confirmez que l’ancien article a été récupéré',
+  BON_INCONNU: 'Bon inconnu',
+  BON_PAS_EN_ROUTE: 'Ce bon n’est pas en route',
+  BON_AUTRE_RAMASSEUR: 'Ce bon est confié à un autre ramasseur',
+  BON_PAS_REMIS: 'Ce bon n’a pas encore été remis au vendeur',
+  BON_DEJA_ARCHIVE: 'Bon déjà archivé',
+  RETOUR_HORS_BON: 'Ce colis n’est pas sur un bon de retour que vous portez',
+  DEJA_SUR_BON_RETOUR: 'Colis déjà sur un bon de retour',
+  ARTICLE_NON_RECUPERE: 'Aucun ancien article à rendre pour ce colis',
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -268,6 +294,7 @@ const ALLOWED_ACTORS: Record<ParcelAction, readonly Actor[]> = {
   DECISION_CHANGER_CLIENT: [Role.VENDEUR],
   DECISION_CHANGER_DATE: [Role.VENDEUR],
   DEPART_RETOUR: [Role.ADMIN, Role.DEPOT],
+  RETOUR_NON_REMIS: [Role.ADMIN, Role.DEPOT],
   AUTO_RETOUR_48H: [SYSTEM_ACTOR],
 };
 
@@ -838,6 +865,27 @@ export function applyParcelAction(
             ParcelStatus.RETOUR_RECU,
             ParcelLocation.RENDU_AU_VENDEUR,
             [ParcelEffect.CLOTURER_CHAT],
+          ),
+        ],
+      };
+    }
+
+    case ParcelAction.RETOUR_NON_REMIS: {
+      if (parcel.status !== ParcelStatus.RETOUR_EN_ROUTE) return refuseByStatus(parcel);
+      // Brought back by the ramasseur: waiting for the next visit, no fee (D-81).
+      return {
+        ok: true,
+        next: {
+          ...parcel,
+          status: ParcelStatus.RETOUR_AU_DEPOT,
+          location: ParcelLocation.AU_DEPOT,
+        },
+        events: [
+          event(
+            ParcelEventType.RETOUR_NON_REMIS,
+            parcel,
+            ParcelStatus.RETOUR_AU_DEPOT,
+            ParcelLocation.AU_DEPOT,
           ),
         ],
       };

@@ -31,6 +31,8 @@ import type { RequestMeta } from '../auth/sessions.service';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { BonHandoverService } from '../money/bon-handover.service';
+import { BonsRetourService } from '../money/bons-retour.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { SettingsService } from '../settings/settings.service';
 import { ZoneCoverageService, dateColumnOf } from '../zones/zone-coverage.service';
@@ -148,6 +150,8 @@ export class DepotScansService {
     private readonly settings: SettingsService,
     private readonly coverage: ZoneCoverageService,
     private readonly audit: AuditService,
+    private readonly handover: BonHandoverService,
+    private readonly bonsRetour: BonsRetourService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -254,7 +258,63 @@ export class DepotScansService {
         return refuse(ScanRefusal.COURSIER_NON_PRECISE);
       }
     }
+    // Archivage bons: the signed copy's QR names a bon, not a parcel (D-80, D-81).
+    if (input.mode === ScanAction.ARCHIVAGE_BON) {
+      await tx.scan.create({ data: { ...base, accepted: true } });
+      const step = await this.handover.archiveFromScan(tx, actor, input.rawCode);
+      await tx.scan.update({
+        where: { id: scanId },
+        data: {
+          bonVersementId: step.bonVersementId ?? null,
+          bonRetourId: step.bonRetourId ?? null,
+          ...(step.ok ? {} : { accepted: false, refusalReason: step.refusal }),
+        },
+      });
+      return this.resultOf(tx, input, {
+        scanId,
+        refusal: step.ok ? null : step.refusal,
+        parcel: null,
+        before: null,
+        courier: null,
+        message: step.ok ? step.message : undefined,
+      });
+    }
+
     if (!parcel) return refuse(ScanRefusal.CODE_INCONNU);
+
+    // Préparation retours: into the seller's bon de retour (D-81).
+    if (input.mode === ScanAction.PREPARATION_RETOURS) {
+      await tx.scan.create({
+        data: {
+          ...base,
+          parcelId: parcel.id,
+          accepted: true,
+          parcelBefore: before as unknown as Prisma.InputJsonObject,
+        },
+      });
+      const step = await this.bonsRetour.prepareFromScan(tx, actor, parcel, scanId);
+      if (!step.ok) {
+        await tx.scan.update({
+          where: { id: scanId },
+          data: { accepted: false, refusalReason: step.refusal },
+        });
+        return this.resultOf(tx, input, {
+          scanId,
+          refusal: step.refusal,
+          parcel,
+          before,
+          courier: null,
+        });
+      }
+      return this.resultOf(tx, input, {
+        scanId,
+        refusal: null,
+        parcel: await tx.parcel.findUniqueOrThrow({ where: { id: parcel.id } }),
+        before,
+        courier: null,
+        message: step.message,
+      });
+    }
 
     const courierId = courier?.courier?.id ?? null;
     if (
@@ -294,7 +354,7 @@ export class DepotScansService {
       parcelId: parcel.id,
       actor,
       request: {
-        action: PARCEL_ACTION_BY_DEPOT_MODE[input.mode],
+        action: PARCEL_ACTION_BY_DEPOT_MODE[input.mode]!,
         assignToCourierId: input.mode === ScanAction.SORTIE_COURSIER ? courierId : null,
       },
       context: {
@@ -355,6 +415,10 @@ export class DepotScansService {
       if (scan.cancelledAt && scan.cancelledByUserId === actor.userId) {
         return this.cancelResultOf(tx, scan.id);
       }
+      // An archived bon is corrected by the admin, not undone (D-84).
+      if (scan.action === ScanAction.ARCHIVAGE_BON && scan.accepted) {
+        throw cancelRefused(ScanCancelRefusal.ANNULATION_BON);
+      }
 
       const { settings } = await this.settings.current(tx);
       const now = this.clock.now();
@@ -403,6 +467,9 @@ export class DepotScansService {
         scanAction: scan.action,
         before: scan.parcelBefore as unknown as ParcelBefore,
       });
+      if (scan.action === ScanAction.PREPARATION_RETOURS) {
+        await this.bonsRetour.unprepare(tx, scan.parcelId!);
+      }
       await tx.scan.update({
         where: { id: scan.id },
         data: { cancelledAt: now, cancelledByUserId: actor.userId },
@@ -432,6 +499,9 @@ export class DepotScansService {
       }
       const scan = await tx.scan.findUniqueOrThrow({ where: { id: scanId } });
       if (scan.cancelledAt) return this.cancelResultOf(tx, scan.id);
+      if (scan.action === ScanAction.ARCHIVAGE_BON && scan.accepted) {
+        throw cancelRefused(ScanCancelRefusal.ANNULATION_BON);
+      }
       if (!scan.accepted || !scan.parcelId) {
         throw cancelRefused(ScanCancelRefusal.ANNULATION_SCAN_REFUSE);
       }
@@ -450,6 +520,9 @@ export class DepotScansService {
         before: scan.parcelBefore as unknown as ParcelBefore,
         reason,
       });
+      if (scan.action === ScanAction.PREPARATION_RETOURS) {
+        await this.bonsRetour.unprepare(tx, scan.parcelId);
+      }
       await tx.scan.update({
         where: { id: scan.id },
         data: {
@@ -571,6 +644,8 @@ export class DepotScansService {
       before: ParcelBefore | null;
       courier: CourierRef | null;
       plannedForCourierId?: string | null;
+      /** A step's own wording: the bon a parcel joined, the bon archived. */
+      message?: string;
     },
   ): Promise<DepotScanResult> {
     const row = await db.scan.findUniqueOrThrow({ where: { id: facts.scanId } });
@@ -615,16 +690,19 @@ export class DepotScansService {
       replayed: false,
       refusal: facts.refusal,
       message:
-        accepted && parcelView
-          ? successMessage(parcelView.status, parcelView.location)
-          : SCAN_REFUSAL_MESSAGES_FR[facts.refusal ?? ScanRefusal.CODE_INCONNU],
+        accepted && facts.message
+          ? facts.message
+          : accepted && parcelView
+            ? successMessage(parcelView.status, parcelView.location)
+            : SCAN_REFUSAL_MESSAGES_FR[facts.refusal ?? ScanRefusal.CODE_INCONNU],
       manualEntry: row.manualEntry,
       clockSkewFlagged: row.clockSkewFlagged,
       parcel: parcelView,
       courier: facts.courier,
       plannedFor,
+      // An archived bon is the admin's to correct: no Annuler offered (D-84).
       cancellableUntil:
-        accepted && !row.cancelledAt
+        accepted && !row.cancelledAt && row.action !== ScanAction.ARCHIVAGE_BON
           ? new Date(
               row.receivedAt.getTime() + settings.scanCancelWindowSeconds * 1000,
             ).toISOString()

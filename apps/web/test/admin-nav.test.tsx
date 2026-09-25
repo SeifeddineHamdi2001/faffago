@@ -21,13 +21,17 @@ describe('AdminNav', () => {
       'Tournées',
       'À vérifier',
       'Exceptions',
+      'Caisse',
+      'Paiements vendeurs',
+      'Retours',
+      'Paie coursiers',
       'Vendeurs',
       'Coursiers',
       'Paramètres',
     ]);
   });
 
-  it('gives Dépôt the operations screens, Vendeurs and Coursiers, never Paramètres', () => {
+  it('gives Dépôt the operations screens, the Caisse and Retours, never payments, pay or Paramètres', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.DEPOT]} />);
     expect(links()).toEqual([
       'Scan',
@@ -35,14 +39,23 @@ describe('AdminNav', () => {
       'Ramassages',
       'Tournées',
       'Exceptions',
+      'Caisse',
+      'Retours',
       'Vendeurs',
       'Coursiers',
     ]);
   });
 
-  it('gives Service client Colis, À vérifier, Exceptions, Vendeurs and Coursiers, no Scan nor planning (D-11)', () => {
+  it('gives Service client Colis, À vérifier, Exceptions, Retours, Vendeurs and Coursiers, no Scan nor money (D-11)', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
-    expect(links()).toEqual(['Colis', 'À vérifier', 'Exceptions', 'Vendeurs', 'Coursiers']);
+    expect(links()).toEqual([
+      'Colis',
+      'À vérifier',
+      'Exceptions',
+      'Retours',
+      'Vendeurs',
+      'Coursiers',
+    ]);
   });
 
   it('marks the current screen', () => {

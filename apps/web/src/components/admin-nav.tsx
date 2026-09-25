@@ -23,6 +23,11 @@ const ITEMS: { href: string; label: string; permission: Permission }[] = [
   },
   { href: '/admin/a-verifier', label: 'À vérifier', permission: Permission.SUIVI_A_VERIFIER },
   { href: '/admin/exceptions', label: 'Exceptions', permission: Permission.EXCEPTIONS_LECTURE },
+  // Argent (Admin 3).
+  { href: '/admin/caisse', label: 'Caisse', permission: Permission.CAISSE },
+  { href: '/admin/paiements', label: 'Paiements vendeurs', permission: Permission.BONS_VERSEMENT },
+  { href: '/admin/retours', label: 'Retours', permission: Permission.RETOURS_LECTURE },
+  { href: '/admin/paie', label: 'Paie coursiers', permission: Permission.PAIE_COURSIERS },
   { href: '/admin/vendeurs', label: 'Vendeurs', permission: Permission.VENDEURS_LECTURE },
   { href: '/admin/coursiers', label: 'Coursiers', permission: Permission.COURSIERS_LECTURE },
   { href: '/admin/parametres', label: 'Paramètres', permission: Permission.PARAMETRES },

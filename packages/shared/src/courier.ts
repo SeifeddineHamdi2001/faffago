@@ -30,20 +30,25 @@ import {
 // ── Scans ───────────────────────────────────────────────────
 
 /**
- * The scans of phase 6. Retour reçu and the bon de versement come with the
- * bons in phase 8 (D-61).
+ * The scans of phase 6, and the ramasseur's two bon steps of phase 8 (D-61,
+ * D-84): the bon de versement's QR (Remis), each returned parcel (Retour reçu).
  */
 export const COURIER_SCAN_ACTIONS = [
   ScanAction.RAMASSAGE,
   ScanAction.LIVRE,
   ScanAction.ECHEC,
+  ScanAction.BON_VERSEMENT_REMIS,
+  ScanAction.RETOUR_RECU,
 ] as const;
 export type CourierScanAction = (typeof COURIER_SCAN_ACTIONS)[number];
 
-export const PARCEL_ACTION_BY_COURIER_SCAN: Record<CourierScanAction, ParcelAction> = {
+/** Null for the bon de versement: its QR names a bon, not a parcel. */
+export const PARCEL_ACTION_BY_COURIER_SCAN: Record<CourierScanAction, ParcelAction | null> = {
   RAMASSAGE: ParcelAction.SCAN_RAMASSAGE,
   LIVRE: ParcelAction.SCAN_LIVRE,
   ECHEC: ParcelAction.SCAN_ECHEC,
+  BON_VERSEMENT_REMIS: null,
+  RETOUR_RECU: ParcelAction.SCAN_RETOUR_RECU,
 };
 
 /** Which scans each courier makes (Coursier 5). */
@@ -52,7 +57,7 @@ export const COURIER_SCAN_ACTIONS_BY_ROLE: Record<
   readonly CourierScanAction[]
 > = {
   LIVREUR: [ScanAction.LIVRE, ScanAction.ECHEC],
-  RAMASSEUR: [ScanAction.RAMASSAGE],
+  RAMASSEUR: [ScanAction.RAMASSAGE, ScanAction.BON_VERSEMENT_REMIS, ScanAction.RETOUR_RECU],
 };
 
 /** The camera, or a code typed from a damaged label (Coursier rule 1, A-22). */
@@ -259,6 +264,8 @@ export interface CourierScanCancelFacts {
   chargesStillWaiting: boolean;
   /** A pickup scan whose pickup Terminer has already counted (A-13). */
   pickupFinished: boolean;
+  /** His caisse session of the scan's business day is Clôturée (A-11, D-79). */
+  caisseClosed: boolean;
 }
 
 /**
@@ -275,6 +282,7 @@ export function courierScanCancelRefusal(facts: CourierScanCancelFacts): ScanCan
   if (elapsed < 0 || elapsed > facts.windowSeconds * 1000) {
     return ScanCancelRefusal.ANNULATION_HORS_DELAI;
   }
+  if (facts.caisseClosed) return ScanCancelRefusal.ANNULATION_CAISSE_CLOTUREE;
   if (facts.pickupFinished) return ScanCancelRefusal.ANNULATION_RAMASSAGE_TERMINE;
   if (!facts.parcelUnchangedSince || !facts.chargesStillWaiting) {
     return ScanCancelRefusal.ANNULATION_COLIS_MODIFIE;

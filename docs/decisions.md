@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-78** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-78 are rules |
+| **D-1 … D-85** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-85 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -30,7 +30,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-2 · `SellerCharge` is the single deduction table](#d-2--sellercharge-is-the-single-deduction-table)
 - [D-3 · Actor columns carry no Prisma relation](#d-3--actor-columns-carry-no-prisma-relation)
 
-**Rules decided during the build — D-4 to D-78**
+**Rules decided during the build — D-4 to D-85**
 
 - [D-4 · Relancer, Retourner and Changer de client are the seller's alone](#d-4--relancer-retourner-and-changer-de-client-are-the-sellers-alone)
 - [D-5 · "Voir comme le vendeur" is read-only impersonation](#d-5--voir-comme-le-vendeur-is-read-only-impersonation)
@@ -107,6 +107,13 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-76 · The in-app alert, the lists and the wording](#d-76--the-in-app-alert-the-lists-and-the-wording)
 - [D-77 · Demo parcels waiting on the seller](#d-77--demo-parcels-waiting-on-the-seller)
 - [D-78 · Real PostgreSQL in the tests, without Docker](#d-78--real-postgresql-in-the-tests-without-docker)
+- [D-79 · The Caisse](#d-79--the-caisse)
+- [D-80 · Bons de versement](#d-80--bons-de-versement)
+- [D-81 · Bons de retour](#d-81--bons-de-retour)
+- [D-82 · Livreur pay](#d-82--livreur-pay)
+- [D-83 · What the seller sees of the money](#d-83--what-the-seller-sees-of-the-money)
+- [D-84 · The ramasseur's visit](#d-84--the-ramasseurs-visit)
+- [D-85 · Forcer un statut on money](#d-85--forcer-un-statut-on-money)
 
 **Money — A-1 to A-5**
 
@@ -1553,6 +1560,157 @@ money"). The development machine has no Docker, so Testcontainers is out.
 
 **Where.** `apps/api/test/real-postgres/`, `test/support/real-postgres.ts`,
 `test/support/real-postgres-server.mjs`; `createTestApp(…, { databaseUrl })`.
+
+### D-79 · The Caisse
+
+Decided 2026-09-25, answering the phase 8 questions 1 to 3 (Admin 4.9, A-11,
+A-12). **Changes Admin 4.9**: its "the day cannot be closed while a courier …
+has not been counted" becomes the daily summary below.
+
+- **One session per courier and business day**, counted and closed **on its
+  own**, by Admin or Dépôt (`CAISSE`). **Compter** writes the amount handed
+  over (Comptée); a recount replaces it until **Clôturer** (Clôturée). There is
+  no "close the day" that waits for everyone.
+- **Daily summary**: for a business day, every courier who delivered or took
+  bons that day, with attendu, compté, écart and **Ouverte / Comptée /
+  Clôturée**, and the totals.
+- **Attendu, livreur**: the COD of every parcel his accepted, not cancelled
+  Livré scan delivered **on that business day** (the phone's day, A-12) whose
+  cash is still Chez le coursier, **plus the "scan tardif"**: a Livré of an
+  earlier day whose own session was already Clôturée when it arrived (answer
+  2). A day never counted keeps its parcels: it shows as Ouverte in its own
+  summary. Worked out when read, and **written into the session's lines at
+  Compter**.
+- **Attendu, ramasseur**: the net of the bons de versement handed to him that
+  day and not remis.
+- **Clôturer is refused if the attendu changed since Compter** (a scan synced
+  in between): "Le montant attendu a changé : recomptez".
+- **At Clôturer**, in one transaction: each parcel's cash goes Au dépôt with an
+  `ENCAISSEMENT_DEPOT` event; a **negative écart of a livreur** becomes a
+  `CourierDebt` (En cours); a **negative écart of a ramasseur** is recorded on
+  the session only and listed for HR (his pay is outside the app); a
+  **positive écart** is flagged (answer 3).
+- **Positive écart**: no credit to the courier. It stays flagged until the
+  **admin** marks it **Vérifié** with a note (`CAISSE_ECARTS`, admin only, new
+  permission; `ecartCheckedAt`, `ecartCheckedByUserId`).
+- **Once Clôturée, no scan of that courier's day can be cancelled** (A-11):
+  `ANNULATION_CAISSE_CLOTUREE`. Only the admin's Forcer un statut remains (D-85).
+- **Debts**: the admin cancels a debt with a note (`PAIE_COURSIERS`). Only what
+  is left is cancelled; what a fiche already deducted stays deducted.
+
+### D-80 · Bons de versement
+
+Decided 2026-09-25 (Vendeur 4.11, Admin 4.10, A-2, A-3, A-5, D-34; answers 4
+and 5).
+
+- **Préparer le bon**: admin only. The seller's parcels Livré, cash Au dépôt,
+  in no active bon, all ticked; what he unticks waits. The server re-reads and
+  locks everything, then runs `buildBonVersement`: charges oldest first, never
+  negative (A-2), the retenue on the base after every fee, half-up (A-3), the
+  **statut and the rate frozen on the bon** (D-34). Included charges become
+  Déduite. One bon per parcel (A-5a).
+- **Number** `BV-2026-0925-01`, per Tunis day, from `document_counters`.
+  **QR**: `BV:` + a random token. A typed bon number is accepted and flagged,
+  like a typed parcel code.
+- **Attached to the seller's next Planifié pickup** (its ramasseur and day).
+  None: the bon waits unattached; Admin or Dépôt (`PLANIFIER_RAMASSAGES_TOURNEES`)
+  **assigns a ramasseur and a day**, and it shows in his app as a visit with
+  nothing to pick up, no pickup fee (answer 4). A bon whose pickup is cancelled
+  is unattached again. Planning a pickup attaches the seller's unattached bons.
+- **En route**: Admin or Dépôt hands the bon and its cash to the ramasseur at
+  the Caisse (answer 5): the net joins his session's attendu
+  (`caisse_session_bons.takenOutMillimes`).
+- **Remis**: the ramasseur scans the bon's QR (`BON_VERSEMENT_REMIS`): bon
+  Remis, every parcel's cash **Payé** with a `PAIEMENT_VENDEUR` event, the
+  parcel closed (D-24).
+- **Not remis** by the evening: at his Clôturer the cash counts as brought
+  back, the bon returns to Préparé, unattached (A-5b).
+- **Archivé**: the signed copy scanned at the depot, station mode **Archivage
+  bons** (D-50).
+- **Annuler le bon** (A-5): admin, **Préparé only** (a bon brought back is
+  Préparé again), a reason, audited. Its parcels are free again
+  (`bon_versement_parcels.releasedAt`: one unreleased line per parcel), its
+  charges back to En attente, the number never reused.
+- **PDF**: two copies on one A4, each with the QR, the parcels, the fee lines,
+  the retenue on its own line and the net. Built on request, never stored.
+
+### D-81 · Bons de retour
+
+Decided 2026-09-25 (Vendeur 4.12, Admin 4.11, A-7, A-10, D-11; answer 6).
+
+- **Préparation retours** (station, Admin and Dépôt): a parcel Retour au dépôt
+  and at the depot joins its seller's open Préparé bon de retour, created with
+  its number (`BR-…`) when there is none. Also the **old item of an échange**:
+  the delivered parcel's code, item collected and not yet in a bon, becomes an
+  `ARTICLE_RECUPERE` line with an `ARTICLE_ECHANGE_RECUPERE` event, **no fee**
+  (A-10).
+- **Attached and handed out like a bon de versement** (D-80): `DEPART_RETOUR`
+  moves each parcel to Retour en route with the ramasseur.
+- **Retour reçu**: the ramasseur scans each parcel (the échange parcel's code
+  for its item). The bon is **Remis** once every line is received.
+- **Not handed over** (answer 6): at his Clôturer, each line not received goes
+  back — parcel **Retour au dépôt, at the depot**, a new transition and event
+  `RETOUR_NON_REMIS`, no fee — and the bon returns to Préparé, unattached; its
+  received lines stay received. The ramasseur's session exists as soon as he
+  takes a bon de retour, even with no cash.
+- **Archivé** through Archivage bons, like a bon de versement.
+
+### D-82 · Livreur pay
+
+Decided 2026-09-25 (Admin 4.12, Coursier 4.10, A-15, A-16; answers 7, 8).
+
+- **A fiche is due** once its period has ended **and** no parcel of his
+  delivered on or before its end still has its cash Chez le coursier (every
+  session closed). It pays **every delivered parcel not yet on a fiche** up to
+  the period's end, at the **rate frozen at delivery** (A-15): late parcels
+  catch up. Nothing delivered, no fiche.
+- **Debts** En cours are deducted **when the fiche is prepared**, oldest
+  first; what does not fit stays (Admin 4.12). Number `FP-2026-0925-01`.
+  **Payée**: admin. Preparing and paying: `PAIE_COURSIERS`.
+- **Plan change** (A-16): takes effect **the day after the current period
+  ends**; the first period of the new plan runs from that day to its calendar
+  end (a first short week, answer 8). Stored as a pending plan and its date.
+- **Mes gains** (app): the current period's parcels × their rates − debts en
+  cours = amount due, the next payment date (the day after the period), and
+  the fiches.
+
+### D-83 · What the seller sees of the money
+
+Decided 2026-09-25 (Vendeur 4.1, 4.11, 4.12, D-40, D-48; answer 10).
+
+- **À recevoir**: COD − the delivery fee frozen on the parcel, for every
+  delivered parcel not yet paid, split **chez les coursiers** / **au dépôt**
+  (a parcel in a bon Préparé or En route counts au dépôt). The other fees
+  waiting — return, change-client, pickup — show on their own line, **Frais à
+  déduire**. The retenue is not estimated.
+- **Taux de livraison**: livrés ÷ (livrés + retournés) over the Tableau de
+  bord's period (D-48): a parcel counts on its `LIVRAISON` or `RETOUR_RECU`
+  event (D-24), a cancelled scan taken back. "—" with nothing to count.
+- **Menu badges**: Paiements counts the bons de versement **En route**,
+  Retours the bons de retour En route.
+- The seller prints his own bons; another seller's does not exist (D-26).
+
+### D-84 · The ramasseur's visit
+
+Decided 2026-09-25 (Coursier 4.6, 4.7; D-61).
+
+- His day lists his pickups and his **bon-only visits**, each seller with
+  **À emporter**: the bons de versement (number, net) and de retour (number,
+  lines) he carries.
+- The steps **Bon de versement** and **Retours** use the same queue
+  (`POST /scans/courier`): `BON_VERSEMENT_REMIS` with the QR, `RETOUR_RECU`
+  with the parcel's label.
+- **Ma caisse**: a livreur's cash, a ramasseur's bon cash still to hand out,
+  and the result of each closed session: **Conforme**, or the écart.
+
+### D-85 · Forcer un statut on money
+
+Decided 2026-09-25 (D-56, A-11; answer 9). One more move, admin only, with a
+reason: **undo a Livré whose cash is still Chez le coursier**. The parcel goes
+back to En livraison with its livreur, the attempt it counted taken back; the
+delivery fee becomes Annulée, the frozen courier rate is removed, the cash
+status and the échange item cleared. Everything else touching Livré, a return,
+Annulé or a charge stays refused.
 
 ---
 

@@ -20,12 +20,20 @@ const SCAN_ID = '3f1e4b6a-2c7d-4e8f-9a0b-1c2d3e4f5a6b';
 const COURIER_ID = '5d0c2a8e-1f3b-4c6d-9e7f-0a1b2c3d4e5f';
 
 describe('the depot scan modes (Admin 4.2, D-50)', () => {
-  it('ships three modes, in the order of the spec', () => {
-    expect(DEPOT_SCAN_MODES).toEqual(['ENTREE_DEPOT', 'SORTIE_COURSIER', 'RETOUR_DE_TOURNEE']);
+  it('ships the five modes of the spec, in its order (D-50, phase 8)', () => {
+    expect(DEPOT_SCAN_MODES).toEqual([
+      'ENTREE_DEPOT',
+      'SORTIE_COURSIER',
+      'RETOUR_DE_TOURNEE',
+      'PREPARATION_RETOURS',
+      'ARCHIVAGE_BON',
+    ]);
     expect(DEPOT_SCAN_MODES.map((mode) => DEPOT_SCAN_MODE_LABELS_FR[mode])).toEqual([
       'Entrée dépôt',
       'Sortie coursier',
       'Retour de tournée',
+      'Préparation retours',
+      'Archivage bons',
     ]);
   });
 
@@ -34,6 +42,8 @@ describe('the depot scan modes (Admin 4.2, D-50)', () => {
       'F1',
       'F2',
       'F3',
+      'F4',
+      'F5',
     ]);
   });
 
@@ -42,6 +52,9 @@ describe('the depot scan modes (Admin 4.2, D-50)', () => {
       ENTREE_DEPOT: ParcelAction.SCAN_ENTREE_DEPOT,
       SORTIE_COURSIER: ParcelAction.SCAN_SORTIE_COURSIER,
       RETOUR_DE_TOURNEE: ParcelAction.SCAN_RETOUR_DE_TOURNEE,
+      PREPARATION_RETOURS: ParcelAction.SCAN_PREPARATION_RETOURS,
+      // Archivage scans a bon's QR, not a parcel.
+      ARCHIVAGE_BON: null,
     });
   });
 
@@ -49,6 +62,8 @@ describe('the depot scan modes (Admin 4.2, D-50)', () => {
     expect(depotModeNeedsCourier('ENTREE_DEPOT')).toBe(false);
     expect(depotModeNeedsCourier('SORTIE_COURSIER')).toBe(true);
     expect(depotModeNeedsCourier('RETOUR_DE_TOURNEE')).toBe(true);
+    expect(depotModeNeedsCourier('PREPARATION_RETOURS')).toBe(false);
+    expect(depotModeNeedsCourier('ARCHIVAGE_BON')).toBe(false);
   });
 });
 
@@ -71,9 +86,10 @@ describe('the scan the station sends (D-53)', () => {
     expect(depotScanSchema.safeParse({ ...entree, mode: 'ENTREE_DEPOT' }).success).toBe(true);
   });
 
-  it('refuses a scan without its UUID, a mode of phase 8, or the courier app as source', () => {
+  it('refuses a scan without its UUID, a courier’s action, or the courier app as source', () => {
     expect(depotScanSchema.safeParse({ ...scan, clientScanId: 'abc' }).success).toBe(false);
-    expect(depotScanSchema.safeParse({ ...scan, mode: 'ARCHIVAGE_BON' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, mode: 'LIVRE' }).success).toBe(false);
+    expect(depotScanSchema.safeParse({ ...scan, mode: 'ARCHIVAGE_BON' }).success).toBe(true);
     expect(depotScanSchema.safeParse({ ...scan, source: 'APP_COURSIER' }).success).toBe(false);
     expect(depotScanSchema.safeParse({ ...scan, deviceTime: 'hier' }).success).toBe(false);
     expect(depotScanSchema.safeParse({ ...scan, rawCode: '  ' }).success).toBe(false);
@@ -171,6 +187,8 @@ describe('Annuler le dernier scan (A-11, D-54)', () => {
       ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
       ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
       ANNULATION_RAMASSAGE_TERMINE: 'Ramassage terminé : ce scan ne peut plus être annulé',
+      ANNULATION_CAISSE_CLOTUREE: 'Caisse clôturée : seul l’admin peut corriger',
+      ANNULATION_BON: 'Un scan de bon ne s’annule pas : l’admin corrige',
     });
   });
 });

@@ -231,6 +231,7 @@ export const PARCEL_EVENT_LABELS_FR: Record<ParcelEventType, string> = {
   FORCAGE_STATUT: 'Statut corrigé par Faffa Go',
   ANNULATION_SCAN: 'Scan annulé',
   MODIFICATION_APPLIQUEE: 'Modification appliquée',
+  RETOUR_NON_REMIS: 'Retour ramené au dépôt',
 };
 
 /**

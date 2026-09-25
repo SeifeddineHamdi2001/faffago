@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma, type User } from '@prisma/client';
 import {
+  businessDateOf,
   AUTH_MESSAGES,
   AuthErrorCode,
   COURIER_DEACTIVATION_REFUSED,
@@ -217,6 +218,8 @@ export class AccountsService {
                 cin: input.cin,
                 vehicle: input.vehicle ?? null,
                 payPlan: input.role === Role.LIVREUR ? input.payPlan : null,
+                // His plan runs from his first day (A-16, D-82).
+                payPlanSince: businessDateOf(this.clock.now()),
               },
             },
           },

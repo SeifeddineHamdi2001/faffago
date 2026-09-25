@@ -165,6 +165,8 @@ enum ParcelEventType {
   FORCAGE_STATUT
   ANNULATION_SCAN
   MODIFICATION_APPLIQUEE
+  /// A return taken out and not handed over, back at the depot (D-81).
+  RETOUR_NON_REMIS
 }
 
 enum ScanAction {
@@ -228,6 +230,13 @@ enum CaisseSessionStatus {
   OUVERTE
   COMPTEE
   CLOTUREE
+}
+
+/// A delivery of the session's day, or one synced after its own day was
+/// closed (D-79).
+enum CaisseLineOrigin {
+  JOUR
+  TARDIF
 }
 
 enum DebtStatus {
@@ -506,15 +515,20 @@ model PickupAddress {
 // ─────────────────────────────────────────────────────────────
 
 model Courier {
-  id           String              @id @default(uuid()) @db.Uuid
-  userId       String              @unique @db.Uuid
-  cin          String
-  vehicle      String?
+  id                 String              @id @default(uuid()) @db.Uuid
+  userId             String              @unique @db.Uuid
+  cin                String
+  vehicle            String?
   /// Livreurs only. Ramasseurs are employees paid by HR outside the app.
-  payPlan      PayPlan?
-  accountState CourierAccountState @default(ACTIF)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  payPlan            PayPlan?
+  /// The day the plan in force took effect; a change waits for the next
+  /// period (A-16, D-82). CHECK couriers_pending_plan_complete.
+  payPlanSince       DateTime            @default(now()) @db.Date
+  pendingPayPlan     PayPlan?
+  pendingPayPlanFrom DateTime?           @db.Date
+  accountState       CourierAccountState @default(ACTIF)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   user            User             @relation(fields: [userId], references: [id])
   zoneAssignments ZoneAssignment[]
@@ -757,24 +771,24 @@ model Parcel {
   closedAt        DateTime?
   updatedAt       DateTime  @updatedAt
 
-  seller           Seller                @relation(fields: [sellerId], references: [id])
-  import           ParcelImport?         @relation(fields: [importId], references: [id])
-  delegation       Delegation            @relation(fields: [delegationId], references: [id])
-  localite         Localite              @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
-  plannedLivreur   Courier?              @relation("ParcelPlannedLivreur", fields: [plannedLivreurId], references: [id])
-  currentLivreur   Courier?              @relation("ParcelLivreur", fields: [currentLivreurId], references: [id])
-  events           ParcelEvent[]
-  scans            Scan[]
-  charges          SellerCharge[]
-  pickupLinks      PickupParcel[]
-  bonVersementLine BonVersementParcel?
-  bonRetourLines   BonRetourParcel[]
-  caisseLine       CaisseSessionParcel?
-  payslipLine      PayslipParcel[]
-  chatThread       ChatThread?
-  calls            FaffaGoCall[]
-  changeRequests   SellerChangeRequest[]
-  clientChanges    ParcelClientChange[]
+  seller            Seller                @relation(fields: [sellerId], references: [id])
+  import            ParcelImport?         @relation(fields: [importId], references: [id])
+  delegation        Delegation            @relation(fields: [delegationId], references: [id])
+  localite          Localite              @relation(fields: [localiteId, delegationId], references: [id, delegationId], onDelete: Restrict, onUpdate: Restrict)
+  plannedLivreur    Courier?              @relation("ParcelPlannedLivreur", fields: [plannedLivreurId], references: [id])
+  currentLivreur    Courier?              @relation("ParcelLivreur", fields: [currentLivreurId], references: [id])
+  events            ParcelEvent[]
+  scans             Scan[]
+  charges           SellerCharge[]
+  pickupLinks       PickupParcel[]
+  bonVersementLines BonVersementParcel[]
+  bonRetourLines    BonRetourParcel[]
+  caisseLine        CaisseSessionParcel?
+  payslipLine       PayslipParcel[]
+  chatThread        ChatThread?
+  calls             FaffaGoCall[]
+  changeRequests    SellerChangeRequest[]
+  clientChanges     ParcelClientChange[]
 
   @@unique([importId, importLine])
   @@index([sellerId, status])
@@ -1064,7 +1078,10 @@ model BonVersement {
   qrToken           String    @unique
   preparedByUserId  String    @db.Uuid
   preparedAt        DateTime  @default(now())
+  /// With no planned pickup, the ramasseur and the day the team assigned
+  /// (D-80); while En route, the ramasseur carrying it.
   ramasseurId       String?   @db.Uuid
+  plannedDate       DateTime? @db.Date
   pickupId          String?   @db.Uuid
   enRouteAt         DateTime?
   remisAt           DateTime?
@@ -1091,15 +1108,19 @@ model BonVersement {
 }
 
 model BonVersementParcel {
-  bonVersementId String @db.Uuid
-  /// A parcel belongs to one bon only (A-5a, Vendeur rule 05).
-  parcelId       String @unique @db.Uuid
+  bonVersementId String    @db.Uuid
+  /// A parcel is on one active bon only (A-5a, Vendeur rule 05): the partial
+  /// unique index bon_versement_parcels_active_parcel_key, in the migration,
+  /// counts only lines not released by a cancelled bon (D-80).
+  parcelId       String    @db.Uuid
   codMillimes    BigInt
+  releasedAt     DateTime?
 
   bonVersement BonVersement @relation(fields: [bonVersementId], references: [id])
   parcel       Parcel       @relation(fields: [parcelId], references: [id])
 
   @@id([bonVersementId, parcelId])
+  @@index([parcelId])
   @@map("bon_versement_parcels")
 }
 
@@ -1138,6 +1159,7 @@ model BonRetour {
   preparedByUserId  String    @db.Uuid
   preparedAt        DateTime  @default(now())
   ramasseurId       String?   @db.Uuid
+  plannedDate       DateTime? @db.Date
   pickupId          String?   @db.Uuid
   enRouteAt         DateTime?
   remisAt           DateTime?
@@ -1184,14 +1206,18 @@ model CaisseSession {
   businessDate DateTime            @db.Date
   status       CaisseSessionStatus @default(OUVERTE)
 
-  expectedDeliveryMillimes BigInt  @default(0)
-  expectedBonCashMillimes  BigInt  @default(0)
-  expectedTotalMillimes    BigInt  @default(0)
+  expectedDeliveryMillimes BigInt    @default(0)
+  expectedBonCashMillimes  BigInt    @default(0)
+  expectedTotalMillimes    BigInt    @default(0)
   countedMillimes          BigInt?
   /// compté − attendu. Negative becomes a courier debt, positive is flagged.
   ecartMillimes            BigInt?
-  ecartFlagged             Boolean @default(false)
+  ecartFlagged             Boolean   @default(false)
   ecartNote                String?
+  /// A positive écart checked by the admin, with the note (D-79, answer 3).
+  ecartCheckedAt           DateTime?
+  ecartCheckedByUserId     String?   @db.Uuid
+  countedByUserId          String?   @db.Uuid
 
   openedAt       DateTime  @default(now())
   countedAt      DateTime?
@@ -1209,9 +1235,10 @@ model CaisseSession {
 }
 
 model CaisseSessionParcel {
-  caisseSessionId String @db.Uuid
-  parcelId        String @unique @db.Uuid
+  caisseSessionId String           @db.Uuid
+  parcelId        String           @unique @db.Uuid
   codMillimes     BigInt
+  origin          CaisseLineOrigin @default(JOUR)
 
   caisseSession CaisseSession @relation(fields: [caisseSessionId], references: [id])
   parcel        Parcel        @relation(fields: [parcelId], references: [id])

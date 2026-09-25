@@ -52,11 +52,11 @@ describe('the operations the app queues', () => {
     expect(parsed.success && parsed.data.kind === 'SCAN' && parsed.data.note).toBeNull();
   });
 
-  it('refuses a scan action the app does not make in phase 6 (D-61)', () => {
+  it('refuses a scan action the app never makes', () => {
     const parsed = courierOperationSchema.safeParse({
       kind: 'SCAN',
       clientScanId: uuid,
-      action: 'RETOUR_RECU',
+      action: 'ENTREE_DEPOT',
       rawCode: 'FG-AB12CD34',
       source: 'APP_COURSIER',
       deviceTime: '2026-09-25T10:00:00.000Z',
@@ -123,10 +123,17 @@ describe('the operations the app queues', () => {
 });
 
 describe('who scans what (Coursier 5)', () => {
-  it('gives the livreur Livré and Échec, the ramasseur the pickup', () => {
+  it('gives the livreur Livré and Échec, the ramasseur the pickup, the bon and the returns', () => {
     expect(COURIER_SCAN_ACTIONS_BY_ROLE.LIVREUR).toEqual(['LIVRE', 'ECHEC']);
-    expect(COURIER_SCAN_ACTIONS_BY_ROLE.RAMASSEUR).toEqual(['RAMASSAGE']);
+    expect(COURIER_SCAN_ACTIONS_BY_ROLE.RAMASSEUR).toEqual([
+      'RAMASSAGE',
+      'BON_VERSEMENT_REMIS',
+      'RETOUR_RECU',
+    ]);
     expect(PARCEL_ACTION_BY_COURIER_SCAN.LIVRE).toBe('SCAN_LIVRE');
+    expect(PARCEL_ACTION_BY_COURIER_SCAN.RETOUR_RECU).toBe('SCAN_RETOUR_RECU');
+    // The bon's QR names a bon, not a parcel (D-84).
+    expect(PARCEL_ACTION_BY_COURIER_SCAN.BON_VERSEMENT_REMIS).toBeNull();
   });
 
   it('lists the five failure reasons in the order of Coursier 4.4', () => {
@@ -153,6 +160,7 @@ describe('Annuler le dernier scan on the phone’s clock (A-11)', () => {
     parcelUnchangedSince: true,
     chargesStillWaiting: true,
     pickupFinished: false,
+    caisseClosed: false,
     ...over,
   });
 
@@ -189,6 +197,12 @@ describe('Annuler le dernier scan on the phone’s clock (A-11)', () => {
     );
     expect(courierScanCancelRefusal(facts({ pickupFinished: true }))).toBe(
       'ANNULATION_RAMASSAGE_TERMINE',
+    );
+  });
+
+  it('refuses once his caisse of that day is Clôturée, even within the minute (A-11, D-79)', () => {
+    expect(courierScanCancelRefusal(facts({ caisseClosed: true }))).toBe(
+      'ANNULATION_CAISSE_CLOTUREE',
     );
   });
 

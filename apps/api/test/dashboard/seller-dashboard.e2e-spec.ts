@@ -125,7 +125,7 @@ describe('the counts (Vendeur 4.1, D-48)', () => {
 
     const response = await dashboard(token);
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({
+    expect(response.body).toMatchObject({
       from: '2026-09-25',
       to: '2026-09-25',
       counts: { CREES: 1, RAMASSES: 1, EN_LIVRAISON: 1, LIVRES: 1, ECHECS: 1, REPORTES: 1 },
@@ -238,6 +238,57 @@ describe('the counts (Vendeur 4.1, D-48)', () => {
     const { token: otherToken } = await newSeller();
     await happened(await parcelOf(seller), 'CREATION', '2026-09-25T07:00:00.000Z');
     expect((await dashboard(otherToken)).body.counts).toEqual(ZERO);
+  });
+});
+
+describe('the money part (Vendeur 4.1, D-39, D-83)', () => {
+  it('gives À recevoir, À traiter and the delivery rate over the same period', async () => {
+    const { seller, token } = await newSeller();
+    const base = { sellerId: seller.sellerId!, createdByUserId: seller.id };
+    await createParcel(t.prisma, {
+      ...base,
+      status: 'LIVRE',
+      location: 'CHEZ_LE_CLIENT',
+      cashStatus: 'CHEZ_LE_COURSIER',
+    });
+    await createParcel(t.prisma, {
+      ...base,
+      status: 'LIVRE',
+      location: 'CHEZ_LE_CLIENT',
+      cashStatus: 'AU_DEPOT',
+    });
+    await createParcel(t.prisma, { ...base, status: 'RETOUR_AU_DEPOT', location: 'AU_DEPOT' });
+    await t.prisma.sellerCharge.create({
+      data: { sellerId: seller.sellerId!, type: 'RETOUR', amountMillimes: 5000n },
+    });
+    // Three delivered and one received back today, one delivered yesterday.
+    for (let i = 0; i < 3; i++)
+      await happened(await parcelOf(seller), 'LIVRAISON', '2026-09-25T07:00:00.000Z');
+    await happened(await parcelOf(seller), 'RETOUR_RECU', '2026-09-25T07:30:00.000Z');
+    await happened(await parcelOf(seller), 'LIVRAISON', '2026-09-24T10:00:00.000Z');
+
+    const today = await dashboard(token);
+    expect(today.body).toMatchObject({
+      aRecevoir: {
+        parcelCount: 2,
+        chezLesCoursiersMillimes: '78000',
+        auDepotMillimes: '78000',
+        totalMillimes: '156000',
+        fraisADeduireMillimes: '5000',
+      },
+      aTraiter: { bonsVersementEnRoute: 0, bonsRetourEnRoute: 0, retoursAuDepot: 1 },
+      deliveryRate: { delivered: 3, returned: 1, rateBps: 7500 },
+    });
+    const week = await dashboard(token, '?from=2026-09-19&to=2026-09-25');
+    expect(week.body.deliveryRate).toMatchObject({ delivered: 4, returned: 1, rateBps: 8000 });
+    expect(week.body.deliveryRate.days).toHaveLength(7);
+    expect(week.body.deliveryRate.days[5]).toEqual({
+      day: '2026-09-24',
+      delivered: 1,
+      returned: 0,
+    });
+    const empty = await dashboard(token, '?from=2026-08-01&to=2026-08-01');
+    expect(empty.body.deliveryRate).toMatchObject({ delivered: 0, returned: 0, rateBps: null });
   });
 });
 

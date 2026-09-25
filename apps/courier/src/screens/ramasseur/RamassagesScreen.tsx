@@ -10,7 +10,8 @@ type Nav = NativeStackNavigationProp<RootStackParams>;
 
 /**
  * Ramassages (Coursier 4.6): the sellers he picks up from today — shop,
- * address, time slot, seller's phone — then those he closed today.
+ * address, time slot, seller's phone — the sellers he only brings bons to
+ * (D-84), then those he closed today.
  */
 export function RamassagesScreen() {
   const navigation = useNavigation<Nav>();
@@ -27,6 +28,32 @@ export function RamassagesScreen() {
           onPress={() => navigation.navigate('Pickup', { id: p.id })}
         />
       ))}
+      {(data?.visits.length ?? 0) > 0 ? (
+        <>
+          <T bold muted>
+            {t('visitesBons')}
+          </T>
+          {data!.visits.map((v) => (
+            <Card key={v.sellerId}>
+              <T
+                bold
+                size="large"
+                testID={`visit-${v.sellerId}`}
+                onPress={() => navigation.navigate('Visit', { sellerId: v.sellerId })}
+              >
+                {v.shopName}
+              </T>
+              {v.address ? <T>{v.address}</T> : null}
+              <T muted>
+                {[
+                  ...v.aEmporter.bonsVersement.map((b) => b.number),
+                  ...v.aEmporter.bonsRetour.map((b) => b.number),
+                ].join(' · ')}
+              </T>
+            </Card>
+          ))}
+        </>
+      ) : null}
       {(data?.done.length ?? 0) > 0 ? (
         <>
           <T bold muted>

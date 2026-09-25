@@ -56,13 +56,15 @@ export const SCAN_SOURCE_LABELS_FR: Record<ScanSource, string> = {
 // ── The depot's station ─────────────────────────────────────
 
 /**
- * The three modes of phase 5 (D-50). Préparation retours and Archivage bons
- * need the bons and come with phase 8.
+ * The five modes of Admin 4.2: the three of phase 5, and Préparation retours
+ * and Archivage bons, which came with the bons in phase 8 (D-50, D-80, D-81).
  */
 export const DEPOT_SCAN_MODES = [
   ScanAction.ENTREE_DEPOT,
   ScanAction.SORTIE_COURSIER,
   ScanAction.RETOUR_DE_TOURNEE,
+  ScanAction.PREPARATION_RETOURS,
+  ScanAction.ARCHIVAGE_BON,
 ] as const;
 export type DepotScanMode = (typeof DEPOT_SCAN_MODES)[number];
 
@@ -70,27 +72,34 @@ export const DEPOT_SCAN_MODE_LABELS_FR: Record<DepotScanMode, string> = {
   ENTREE_DEPOT: 'Entrée dépôt',
   SORTIE_COURSIER: 'Sortie coursier',
   RETOUR_DE_TOURNEE: 'Retour de tournée',
+  PREPARATION_RETOURS: 'Préparation retours',
+  ARCHIVAGE_BON: 'Archivage bons',
 };
 
 /**
  * Keyboard shortcuts for the modes (Admin 4.2). Function keys, because a
  * barcode gun types letters, digits and Enter into the same page.
  */
-export const DEPOT_SCAN_MODE_SHORTCUTS: Record<DepotScanMode, 'F1' | 'F2' | 'F3'> = {
+export const DEPOT_SCAN_MODE_SHORTCUTS: Record<DepotScanMode, 'F1' | 'F2' | 'F3' | 'F4' | 'F5'> = {
   ENTREE_DEPOT: 'F1',
   SORTIE_COURSIER: 'F2',
   RETOUR_DE_TOURNEE: 'F3',
+  PREPARATION_RETOURS: 'F4',
+  ARCHIVAGE_BON: 'F5',
 };
 
-export const PARCEL_ACTION_BY_DEPOT_MODE: Record<DepotScanMode, ParcelAction> = {
+/** Null for Archivage bons: it scans a bon's QR, not a parcel. */
+export const PARCEL_ACTION_BY_DEPOT_MODE: Record<DepotScanMode, ParcelAction | null> = {
   ENTREE_DEPOT: ParcelAction.SCAN_ENTREE_DEPOT,
   SORTIE_COURSIER: ParcelAction.SCAN_SORTIE_COURSIER,
   RETOUR_DE_TOURNEE: ParcelAction.SCAN_RETOUR_DE_TOURNEE,
+  PREPARATION_RETOURS: ParcelAction.SCAN_PREPARATION_RETOURS,
+  ARCHIVAGE_BON: null,
 };
 
 /** Sortie coursier and Retour de tournée: the courier is chosen first (Admin 4.2, D-53). */
 export function depotModeNeedsCourier(mode: DepotScanMode): boolean {
-  return mode !== ScanAction.ENTREE_DEPOT;
+  return mode === ScanAction.SORTIE_COURSIER || mode === ScanAction.RETOUR_DE_TOURNEE;
 }
 
 /**
@@ -173,6 +182,10 @@ export const ScanCancelRefusal = {
   ANNULATION_COLIS_MODIFIE: 'ANNULATION_COLIS_MODIFIE',
   /** A pickup scan once Terminer le ramassage has counted it (A-13, D-61). */
   ANNULATION_RAMASSAGE_TERMINE: 'ANNULATION_RAMASSAGE_TERMINE',
+  /** The courier's caisse session of that day is Clôturée (A-11, D-79). */
+  ANNULATION_CAISSE_CLOTUREE: 'ANNULATION_CAISSE_CLOTUREE',
+  /** A bon scan (Remis, Archivage) is corrected by the admin, not undone (D-84). */
+  ANNULATION_BON: 'ANNULATION_BON',
 } as const;
 export type ScanCancelRefusal = (typeof ScanCancelRefusal)[keyof typeof ScanCancelRefusal];
 
@@ -184,6 +197,8 @@ export const SCAN_CANCEL_REFUSAL_MESSAGES_FR: Record<ScanCancelRefusal, string> 
   ANNULATION_HORS_DELAI: 'Délai d’annulation dépassé : seul l’admin peut corriger',
   ANNULATION_COLIS_MODIFIE: 'Le colis a changé depuis ce scan : il ne peut plus être annulé',
   ANNULATION_RAMASSAGE_TERMINE: 'Ramassage terminé : ce scan ne peut plus être annulé',
+  ANNULATION_CAISSE_CLOTUREE: 'Caisse clôturée : seul l’admin peut corriger',
+  ANNULATION_BON: 'Un scan de bon ne s’annule pas : l’admin corrige',
 };
 
 export interface DepotScanCancelFacts {

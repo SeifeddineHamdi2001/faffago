@@ -5,6 +5,7 @@ import {
   PARCEL_MESSAGES,
   ParcelErrorCode,
   forcedStatusRefusal,
+  isDeliveryUndo,
   isValidParcelCode,
   normalizeParcelCode,
   targetNeedsLivreur,
@@ -25,7 +26,8 @@ const refused = (refusal: ForcageRefusal) => apiError(409, refusal, FORCAGE_MESS
  * Forcer un statut (Admin 4.3, 4.17, D-56): the admin alone, a reason
  * required, one FORCAGE_STATUT event and an audit entry before and after.
  * Phase 5 allows only the moves that involve no money and no seller
- * decision, and runs no effect.
+ * decision, and runs no effect; phase 8 adds undoing a Livré whose cash is
+ * still with the courier, with its reversal (D-85).
  */
 @Injectable()
 export class ForcageService {
@@ -45,11 +47,14 @@ export class ForcageService {
       if (!parcel) throw colisIntrouvable();
 
       const target = { status: input.status, location: input.location };
-      const refusal = forcedStatusRefusal(
-        { status: parcel.status, location: parcel.location },
-        target,
-      );
+      const current = {
+        status: parcel.status,
+        location: parcel.location,
+        cashStatus: parcel.cashStatus,
+      };
+      const refusal = forcedStatusRefusal(current, target);
       if (refusal) throw refused(refusal);
+      const undo = isDeliveryUndo(current, target);
 
       let livreurCourierId: string | null = null;
       if (targetNeedsLivreur(target)) {
@@ -58,16 +63,22 @@ export class ForcageService {
           select: { id: true },
         });
         if (!livreur) throw refused(ForcageRefusal.LIVREUR_INVALIDE);
+        // An undone Livré goes back to the livreur who delivered it (D-85).
+        if (undo && livreur.id !== parcel.currentLivreurId) {
+          throw refused(ForcageRefusal.LIVREUR_INVALIDE);
+        }
         livreurCourierId = livreur.id;
       }
 
-      const updated = await this.events.forceStatus(tx, {
-        parcelId: parcel.id,
-        actor,
-        target,
-        livreurCourierId,
-        reason: input.reason,
-      });
+      const updated = undo
+        ? await this.events.undoDelivery(tx, { parcelId: parcel.id, actor, reason: input.reason })
+        : await this.events.forceStatus(tx, {
+            parcelId: parcel.id,
+            actor,
+            target,
+            livreurCourierId,
+            reason: input.reason,
+          });
       await this.audit.record(tx, {
         actor: { userId: actor.userId, role: actor.role },
         action: AuditAction.FORCAGE_STATUT,
@@ -77,6 +88,7 @@ export class ForcageService {
           status: parcel.status,
           location: parcel.location,
           currentLivreurId: parcel.currentLivreurId,
+          ...(undo ? { cashStatus: parcel.cashStatus } : {}),
         },
         after: {
           status: updated.status,

@@ -136,11 +136,13 @@ export class CourierDayService {
   }
 
   /**
-   * Ma caisse (Coursier 4.7): the cash of his deliveries not yet handed to the
-   * depot, parcel by parcel. The ramasseur's bon cash comes with the bons in
-   * phase 8 (D-61); the depot's count and the écart with the Caisse (phase 8).
+   * Ma caisse (Coursier 4.7, D-84): the cash of his deliveries not yet handed
+   * to the depot, parcel by parcel; a ramasseur's bon cash still to hand out;
+   * what to hand in tonight; and the depot's count of his last days, conforme
+   * or the écart.
    */
   async cash(actor: UserPrincipal) {
+    const courierId = actor.courierId ?? '';
     const parcels =
       actor.role === Role.LIVREUR
         ? await this.prisma.parcel.findMany({
@@ -158,9 +160,43 @@ export class CourierDayService {
             },
           })
         : [];
+    const bons =
+      actor.role === Role.RAMASSEUR
+        ? await this.prisma.bonVersement.findMany({
+            where: { ramasseurId: courierId, status: 'EN_ROUTE' },
+            orderBy: { enRouteAt: 'asc' },
+            select: { number: true, netMillimes: true, seller: { select: { shopName: true } } },
+          })
+        : [];
+    const sessions = await this.prisma.caisseSession.findMany({
+      where: { courierId, status: { in: ['COMPTEE', 'CLOTUREE'] } },
+      orderBy: { businessDate: 'desc' },
+      take: 7,
+      include: { debts: { select: { amountMillimes: true, status: true } } },
+    });
+    const totalMillimes = sumMillimes(parcels.map((p) => p.codAmountMillimes));
+    const bonCashMillimes = sumMillimes(bons.map((b) => b.netMillimes));
     return {
       parcels,
-      totalMillimes: sumMillimes(parcels.map((p) => p.codAmountMillimes)),
+      totalMillimes,
+      bons: bons.map((b) => ({
+        number: b.number,
+        shopName: b.seller.shopName,
+        netMillimes: b.netMillimes,
+      })),
+      bonCashMillimes,
+      // Cash is handed over every day, whatever the pay plan (Coursier 4.7).
+      aRemettreMillimes: totalMillimes + bonCashMillimes,
+      sessions: sessions.map((s) => ({
+        day: documentDateKey(s.businessDate),
+        status: s.status,
+        expectedMillimes: s.expectedTotalMillimes,
+        countedMillimes: s.countedMillimes,
+        ecartMillimes: s.ecartMillimes,
+        conforme: s.ecartMillimes === 0n,
+        // A livreur's shortfall is his debt; a ramasseur's goes to HR (Coursier rule 9).
+        debtMillimes: s.debts[0]?.amountMillimes ?? null,
+      })),
     };
   }
 

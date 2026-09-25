@@ -36,3 +36,7 @@ export * from './forcage.js';
 export * from './exceptions.js';
 export * from './courier.js';
 export * from './a-verifier.js';
+export * from './caisse.js';
+export * from './bons.js';
+export * from './payroll.js';
+export * from './seller-money.js';
