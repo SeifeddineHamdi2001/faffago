@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { ParcelEventType } from '../parcel-state-machine.js';
-import { PUBLIC_TIMELINE_EVENT_TYPES, PublicStatus, publicStatusFor } from '../public-tracking.js';
+import {
+  PUBLIC_TIMELINE_EVENT_TYPES,
+  PUBLIC_TRACKING_THROTTLE,
+  PublicStatus,
+  publicStatusFor,
+  trackingBackoffSeconds,
+} from '../public-tracking.js';
 import { ParcelStatus, RelaunchOrigin } from '../statuses.js';
 
 describe('a cancelled order on public tracking (D-28)', () => {
@@ -43,5 +49,21 @@ describe('a cancelled order on public tracking (D-28)', () => {
 
   it('keeps the cancellation in the public timeline', () => {
     expect(PUBLIC_TIMELINE_EVENT_TYPES).toContain(ParcelEventType.ANNULATION);
+  });
+});
+
+describe('trackingBackoffSeconds (Landing 4.4, repeated wrong codes)', () => {
+  it('lets the free failures through', () => {
+    for (let i = 0; i <= PUBLIC_TRACKING_THROTTLE.freeFailuresPerIp; i++) {
+      expect(trackingBackoffSeconds(i)).toBe(0);
+    }
+  });
+
+  it('doubles past the free failures, capped at the maximum delay', () => {
+    const free = PUBLIC_TRACKING_THROTTLE.freeFailuresPerIp;
+    expect(trackingBackoffSeconds(free + 1)).toBe(1);
+    expect(trackingBackoffSeconds(free + 2)).toBe(2);
+    expect(trackingBackoffSeconds(free + 3)).toBe(4);
+    expect(trackingBackoffSeconds(free + 20)).toBe(PUBLIC_TRACKING_THROTTLE.maxDelaySeconds);
   });
 });

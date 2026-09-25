@@ -16,7 +16,8 @@ import {
 import { bff } from '@/lib/client/call';
 import { Field } from './create-courier-form';
 
-type Kind = 'money' | 'integer' | 'percent' | 'text';
+/** `optional`: free text that may be left empty, e.g. the Meta Pixel id (empty = off). */
+type Kind = 'money' | 'integer' | 'percent' | 'text' | 'optional';
 
 interface FieldDef {
   key: SettingKey;
@@ -82,6 +83,10 @@ const RULES: FieldDef[] = [
   },
 ];
 
+const ADS: FieldDef[] = [
+  { key: SettingKey.META_PIXEL_ID, label: 'Identifiant Meta Pixel', kind: 'optional' },
+];
+
 const CONTACT_FIELDS: Array<{ key: keyof ContactLinks; label: string }> = [
   { key: 'phone', label: 'Téléphone' },
   { key: 'whatsapp', label: 'WhatsApp' },
@@ -95,6 +100,7 @@ const INVALID: Record<Kind, string> = {
   integer: 'Nombre entier attendu',
   percent: 'Pourcentage invalide. Format : 3 ou 2,5',
   text: 'Valeur obligatoire',
+  optional: 'Valeur invalide',
 };
 
 /** The stored value as the admin reads it: DT for money, percent for the retenue. */
@@ -113,6 +119,7 @@ function fromText(kind: Kind, text: string): SettingJsonValue | null {
   }
   if (kind === 'percent') return parseRatePercent(trimmed);
   if (kind === 'integer') return parseWholeNumber(trimmed);
+  if (kind === 'optional') return trimmed;
   return trimmed === '' ? null : trimmed;
 }
 
@@ -317,6 +324,12 @@ export function SettingsScreen({
       <SettingsSection title="Retenue à la source" fields={RETENUE} values={values} />
       <SettingsSection title="Règles" fields={RULES} values={values} />
       <ContactLinksSection links={values[SettingKey.CONTACT_LINKS] as ContactLinks} />
+      <SettingsSection
+        title="Suivi publicitaire"
+        note="Meta Pixel sur le site public, pour mesurer les campagnes Facebook et Instagram. Laissez vide pour le désactiver."
+        fields={ADS}
+        values={values}
+      />
       <Section title="Raisons d'échec" note="Liste fixe, choisie par le livreur. Non modifiable.">
         <ul className="list-disc pl-5 text-navy md:col-span-2">
           {failureReasons.map((reason) => (

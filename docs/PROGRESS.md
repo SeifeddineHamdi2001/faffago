@@ -527,7 +527,22 @@ real bons printed: see phase 11.
 ## Phase 9 — Public site
 
 The whole public site, before launch (scope change 2026-09-25, CLAUDE.md
-launch scope).
+launch scope). Branch `phase-9`, plan 2026-09-25:
+
+1. [x] Shared, tests first: Meta Pixel setting (empty = off, the default),
+       tracking backoff, `publicSiteInfoFrom`
+2. [x] API: `GET /public/tracking/:code` (public fields, D-9, D-31, D-54,
+       Q1–Q3, rate-limited per IP) and `GET /public/site-info` (fees, contact
+       links, zones, pixel id) — 15 API e2e tests
+3. [x] Web: Paramètres › Suivi publicitaire (Meta Pixel id)
+4. [ ] Web: `/suivi/FG-…` tracking page, French and Arabic
+5. [ ] Web: landing page `/fr` and `/ar`, sections of landing.md, Tarifs and
+       Zones couvertes from the API, contact links
+6. [ ] Web: SEO (titles, descriptions, Open Graph, hreflang, sitemap, robots),
+       browser language on first visit, choice remembered
+7. [ ] Web: Meta Pixel script and events on the Devenir partenaire links
+8. [ ] Next.js 16: evaluate, report
+9. [ ] Playwright `phase-9.spec.ts`, decisions, ui-texts, PROGRESS
 
 - [ ] Suivre mon colis: public endpoint (public fields only), rate limiting, /suivi/FG-XXXXXX links
 - [ ] A cancelled order's timeline ends at "Commande annulée": hide Départ

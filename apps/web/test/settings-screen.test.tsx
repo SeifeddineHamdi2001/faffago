@@ -112,6 +112,35 @@ describe('SettingsScreen', () => {
     });
   });
 
+  it('keeps Meta Pixel off by default, and lets the admin switch it on or off again', async () => {
+    const user = userEvent.setup();
+    bff.mockResolvedValue({ ok: true, data: { changed: true } });
+    const { rerender } = renderScreen();
+
+    const pixel = screen.getByLabelText('Identifiant Meta Pixel');
+    expect(pixel).toHaveValue('');
+    await user.type(pixel, '123456789012345');
+    const ads = section('Suivi publicitaire');
+    await user.click(within(ads).getByRole('button', { name: 'Enregistrer' }));
+    expect(bff).toHaveBeenCalledWith('PATCH', 'settings/meta_pixel_id', {
+      value: '123456789012345',
+    });
+
+    bff.mockClear();
+    rerender(
+      <SettingsScreen
+        key="on"
+        values={{ ...defaultSettingValues(), meta_pixel_id: '123456789012345' }}
+        failureReasons={FAILURE_REASONS}
+      />,
+    );
+    await user.clear(screen.getByLabelText('Identifiant Meta Pixel'));
+    await user.click(
+      within(section('Suivi publicitaire')).getByRole('button', { name: 'Enregistrer' }),
+    );
+    expect(bff).toHaveBeenCalledWith('PATCH', 'settings/meta_pixel_id', { value: '' });
+  });
+
   it('refuses an amount it cannot read, before calling the API', async () => {
     const user = userEvent.setup();
     renderScreen();

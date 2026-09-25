@@ -195,12 +195,14 @@ describe('the Paramètres (D-20)', () => {
   it('writes the starting values, money as digit strings', async () => {
     const rows = await prisma.setting.findMany();
     const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
-    expect(rows).toHaveLength(14);
+    expect(rows).toHaveLength(15);
     expect(values.delivery_fee_millimes).toBe('5500');
     expect(values.return_fee_millimes).toBe('2000');
     expect(values.courier_rate_per_parcel_millimes).toBe('3500');
     expect(values.change_client_fee_millimes).toBe('1000');
     expect(values.contact_links).toEqual(DEFAULT_CONTACT_LINKS);
+    // Meta Pixel is seeded off (Landing 6, TO CONFIRM).
+    expect(values.meta_pixel_id).toBe('');
   });
 });
 

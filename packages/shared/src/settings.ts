@@ -25,6 +25,8 @@ export const SettingKey = {
   CLOCK_SKEW_FLAG_MINUTES: 'clock_skew_flag_minutes',
   CONTACT_LINKS: 'contact_links',
   COURIER_MIN_APP_VERSION: 'courier_min_app_version',
+  /** Empty = off. Landing 6, "TO CONFIRM"; kept easy to switch off (D-20 style). */
+  META_PIXEL_ID: 'meta_pixel_id',
 } as const;
 export type SettingKey = (typeof SettingKey)[keyof typeof SettingKey];
 
@@ -53,6 +55,8 @@ export interface PlatformSettings {
   /** Flag a scan whose device clock is this far from the server clock (A-12). */
   clockSkewFlagMinutes: number;
   courierMinAppVersion: string;
+  /** The public site's Meta Pixel id, or "" when tracking is off (default). */
+  metaPixelId: string;
 }
 
 /**
@@ -77,6 +81,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   scanCancelWindowSeconds: 60,
   clockSkewFlagMinutes: 15,
   courierMinAppVersion: '1.0.0',
+  metaPixelId: '',
 };
 
 /** Contact links behind "Devenir partenaire". Landing 2.8, Admin 4.16. */
@@ -162,6 +167,11 @@ export const SETTING_VALUE_SCHEMAS: Record<SettingKey, z.ZodType<SettingJsonValu
     .string()
     .regex(/^\d{1,3}\.\d{1,3}\.\d{1,3}$/, 'Version au format 1.2.3'),
   [SettingKey.CONTACT_LINKS]: contactLinksSchema,
+  /** Empty switches it off; otherwise digits only, as Meta issues them. */
+  [SettingKey.META_PIXEL_ID]: z
+    .string()
+    .trim()
+    .regex(/^\d{0,20}$/, 'Identifiant Meta Pixel : chiffres uniquement, ou vide pour désactiver'),
 };
 
 export type SettingParseResult =
@@ -198,6 +208,7 @@ export function settingValuesOf(
     [SettingKey.CLOCK_SKEW_FLAG_MINUTES]: d.clockSkewFlagMinutes,
     [SettingKey.COURIER_MIN_APP_VERSION]: d.courierMinAppVersion,
     [SettingKey.CONTACT_LINKS]: { ...contactLinks },
+    [SettingKey.META_PIXEL_ID]: d.metaPixelId,
   };
 }
 
@@ -227,6 +238,7 @@ export function readPlatformSettings(stored: Readonly<Record<string, unknown>>):
   const d = DEFAULT_SETTINGS;
   const version = stored[SettingKey.COURIER_MIN_APP_VERSION];
   const links = stored[SettingKey.CONTACT_LINKS];
+  const pixelId = stored[SettingKey.META_PIXEL_ID];
 
   return {
     settings: {
@@ -255,6 +267,7 @@ export function readPlatformSettings(stored: Readonly<Record<string, unknown>>):
       ),
       clockSkewFlagMinutes: whole(SettingKey.CLOCK_SKEW_FLAG_MINUTES, d.clockSkewFlagMinutes),
       courierMinAppVersion: typeof version === 'string' ? version : d.courierMinAppVersion,
+      metaPixelId: typeof pixelId === 'string' ? pixelId : d.metaPixelId,
     },
     contactLinks: {
       ...DEFAULT_CONTACT_LINKS,

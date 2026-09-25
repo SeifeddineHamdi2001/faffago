@@ -122,6 +122,29 @@ export function publicStatusFor(parcel: {
  * shows the new delivery's amount and délégation, which say nothing about the
  * new customer (Q3).
  */
+/**
+ * Rate limiting on the public tracking endpoint (Landing 4.4): "repeated wrong
+ * codes are slowed down". Mirrors `LOGIN_THROTTLE` (D-6) — held in memory, no
+ * permanent lockout, one VPS — but keyed on the visitor's IP alone: a wrong
+ * code is not an account, so there is no separate per-identifier bucket.
+ */
+export const PUBLIC_TRACKING_THROTTLE = {
+  /** Wrong codes an IP may try before it is slowed down. */
+  freeFailuresPerIp: 10,
+  /** Never blocks longer than this. */
+  maxDelaySeconds: 60,
+  /** An IP with no wrong code for this long is forgotten. */
+  forgetAfterSeconds: 3600,
+} as const;
+
+/** Doubling backoff after the free failures, capped, like `loginBackoffSeconds`. */
+export function trackingBackoffSeconds(failures: number): number {
+  const over = failures - PUBLIC_TRACKING_THROTTLE.freeFailuresPerIp;
+  if (over <= 0) return 0;
+  if (over > 6) return PUBLIC_TRACKING_THROTTLE.maxDelaySeconds;
+  return Math.min(2 ** (over - 1), PUBLIC_TRACKING_THROTTLE.maxDelaySeconds);
+}
+
 export interface PublicTrackingView {
   code: string;
   status: PublicStatus;

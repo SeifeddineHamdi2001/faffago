@@ -17,6 +17,7 @@ import { MoneyModule } from './money/money.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { PickupsModule } from './pickups/pickups.module';
+import { PublicModule } from './public/public.module';
 import { ScansModule } from './scans/scans.module';
 import { SellersModule } from './sellers/sellers.module';
 import { SettingsModule } from './settings/settings.module';
@@ -62,6 +63,7 @@ import { ZonesModule } from './zones/zones.module';
     CourierModule,
     AVerifierModule,
     MoneyModule,
+    PublicModule,
   ],
 })
 export class AppModule {}

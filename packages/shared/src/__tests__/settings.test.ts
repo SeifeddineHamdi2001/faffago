@@ -94,6 +94,15 @@ describe('parseSettingValue', () => {
     expect(parseSettingValue(SettingKey.COURIER_MIN_APP_VERSION, '1.2').ok).toBe(false);
   });
 
+  it('lets the Meta Pixel id be empty (off by default) or a run of digits', () => {
+    expect(parseSettingValue(SettingKey.META_PIXEL_ID, '')).toEqual({ ok: true, value: '' });
+    expect(parseSettingValue(SettingKey.META_PIXEL_ID, '123456789012345')).toEqual({
+      ok: true,
+      value: '123456789012345',
+    });
+    expect(parseSettingValue(SettingKey.META_PIXEL_ID, 'abc123').ok).toBe(false);
+  });
+
   it('requires https links, or an empty field, in the contact links', () => {
     const ok = parseSettingValue(SettingKey.CONTACT_LINKS, {
       ...DEFAULT_CONTACT_LINKS,
