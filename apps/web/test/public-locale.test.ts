@@ -2,7 +2,7 @@
 import { NextRequest } from 'next/server';
 import { describe, expect, it } from 'vitest';
 import { formatDayKey, formatTunisDateTime, preferredLocale } from '@/lib/locale';
-import { middleware } from '@/middleware';
+import { proxy as middleware } from '@/proxy';
 
 /** The public site's languages (Landing 5). */
 describe('preferredLocale', () => {

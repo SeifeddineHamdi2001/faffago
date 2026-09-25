@@ -29,7 +29,7 @@ import {
  *
  * The API still checks the role on every call; this only routes.
  */
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const publicResponse = publicSite(request);
   if (publicResponse) return publicResponse;

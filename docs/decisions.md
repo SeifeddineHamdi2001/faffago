@@ -453,7 +453,7 @@ The web app (Next.js) is the only client of the API from the browser side:
 
 The API still checks the role on every call; the web app only routes.
 
-**Where.** `apps/web/src/middleware.ts`, `apps/web/src/app/api/`,
+**Where.** `apps/web/src/proxy.ts` (was `middleware.ts` before Next.js 16), `apps/web/src/app/api/`,
 `apps/web/src/lib/`.
 
 ### D-16 · Demo accounts for development only
@@ -1802,7 +1802,7 @@ a permission).
 **Where.** `apps/api/src/public`, `packages/shared/src/public-tracking.ts`,
 `packages/shared/src/public-site.ts`, `apps/web/src/app/(public)`,
 `apps/web/src/components/public`, `apps/web/src/lib/locale.ts`,
-`apps/web/src/lib/public-texts.ts`, `apps/web/src/middleware.ts`.
+`apps/web/src/lib/public-texts.ts`, `apps/web/src/proxy.ts` (was `middleware.ts` before Next.js 16).
 
 ### D-88 · Correcting a bon scanned by mistake
 

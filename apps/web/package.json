@@ -18,7 +18,7 @@
     "@faffago/shared": "workspace:*",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
-    "next": "^15.5.0",
+    "next": "^16.3.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "server-only": "^0.0.1",
@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@faffago/config": "workspace:*",
-    "@next/eslint-plugin-next": "^15.5.0",
+    "@next/eslint-plugin-next": "^16.3.6",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.0",
     "@testing-library/jest-dom": "^6.6.0",

@@ -552,7 +552,7 @@ None touched money, a status or a permission.
        tracking, QR address, unknown code, Meta Pixel on and off), decisions,
        ui-texts — 22 web tests
 
-**Next.js 16 (evaluated 2026-09-25, not upgraded).** 16.3.6 is current and
+**Next.js 16 (evaluated 2026-09-25; upgraded the same day, below).** 16.3.6 is current and
 accepts the pinned React 19.2.3 (D-69); Node 22+ and TypeScript 5.9 qualify.
 The code already meets its removals: every `params`, `searchParams`,
 `cookies()` and `headers()` is awaited, no edge runtime, no webpack config, no
@@ -1306,6 +1306,10 @@ tests. Migration `20261011000000_bon_corrections`.
   site-info endpoints, landing page in French and Arabic, SEO, Meta Pixel
   behind a setting (off), language detection and memory; Next.js 16 evaluated,
   not upgraded.
+- 2026-09-25 — **Next.js 16.3.6**, on branch `next-16`: `middleware.ts` renamed
+  `proxy.ts` (the function `proxy`, same matcher and behaviour), `next build`
+  on Turbopack, `@next/eslint-plugin-next` 16. No other code change; lint,
+  typecheck, test and the 42 browser tests passed, then merged into `main`.
 - 2026-09-25 — **Bon corrections (D-88)**, on `main`: Corriger on a bon de
   versement Remis (Paiements vendeurs) and on a received line of a bon de
   retour (Retours), admin only; the HR list of bons corrected after closing.
