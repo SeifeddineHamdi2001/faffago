@@ -124,6 +124,11 @@ describe('a bon de retour from the station to the seller (D-81)', () => {
     expect(out.body.bonsRetourEnRoute).toEqual([
       expect.objectContaining({ number: bon.number, pendingLines: 3 }),
     ]);
+    expect(
+      await t.prisma.notification.findFirst({
+        where: { type: 'BON_RETOUR_EN_ROUTE', params: { path: ['number'], equals: bon.number } },
+      }),
+    ).not.toBeNull();
     expect(await t.prisma.parcel.findUniqueOrThrow({ where: { id: p1.id } })).toMatchObject({
       status: 'RETOUR_EN_ROUTE',
       location: 'AVEC_LE_RAMASSEUR',
@@ -153,6 +158,14 @@ describe('a bon de retour from the station to the seller (D-81)', () => {
     // The evening: p2 was not handed over, it comes back to the depot (answer 6).
     await count(t, depotToken, ramasseur, '0');
     expect((await close(t, depotToken, ramasseur)).body.status).toBe('CLOTUREE');
+    // Admin and Dépôt, who prepare bons de retour, are told it was not handed over (D-11).
+    const notRemis = await t.prisma.notification.findMany({
+      where: { type: 'BON_NON_REMIS', params: { path: ['number'], equals: bon.number } },
+      include: { user: { select: { role: true } } },
+    });
+    const roles = notRemis.map((row) => row.user.role);
+    expect(roles).toContain('DEPOT');
+    expect(roles.every((role) => role === 'ADMIN' || role === 'DEPOT')).toBe(true);
     expect(await t.prisma.parcel.findUniqueOrThrow({ where: { id: p2.id } })).toMatchObject({
       status: 'RETOUR_AU_DEPOT',
       location: 'AU_DEPOT',

@@ -1438,11 +1438,15 @@ model ChatMessage {
   senderKind   ChatParticipantKind
   body         String
   createdAt    DateTime            @default(now())
+  /// The order messages were written in, exact even within one millisecond or
+  /// one upload of the courier's queue.
+  sequence     BigInt              @unique @default(autoincrement())
 
   thread ChatThread @relation(fields: [threadId], references: [id])
   sender User       @relation(fields: [senderUserId], references: [id])
 
   @@index([threadId, createdAt])
+  @@index([threadId, senderKind, createdAt])
   @@map("chat_messages")
 }
 

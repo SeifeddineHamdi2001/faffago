@@ -43,3 +43,4 @@ export * from './payroll.js';
 export * from './seller-money.js';
 export * from './retenue.js';
 export * from './reports.js';
+export * from './notifications.js';

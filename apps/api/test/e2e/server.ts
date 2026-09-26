@@ -8,6 +8,7 @@ import { PrismaClient } from '@prisma/client';
 import { seed } from '../../prisma/seed';
 import {
   seedDemo,
+  seedDemoChat,
   seedDemoDeliveries,
   seedDemoFailures,
   seedDemoOperations,
@@ -48,6 +49,8 @@ async function main(): Promise<void> {
   // Phase 7: two failed deliveries waiting on the demo seller.
   await seedDemoFailures(prisma, { nodeEnv: 'test' });
   await seedDemoDeliveries(prisma, { nodeEnv: 'test' });
+  // Phase 10A: a message from the demo livreur in each demo chat.
+  await seedDemoChat(prisma, { nodeEnv: 'test' });
 
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(PrismaService)

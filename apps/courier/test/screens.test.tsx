@@ -1,6 +1,17 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
-import type { Cash, Gains, PickupDay, PickupView, Profile } from '../src/api/types';
+import type {
+  Cash,
+  ChatList,
+  ChatThread,
+  Gains,
+  NotificationList,
+  PickupDay,
+  PickupView,
+  Profile,
+} from '../src/api/types';
 import { CaisseScreen } from '../src/screens/CaisseScreen';
+import { ChatListScreen, ChatScreen } from '../src/screens/ChatScreens';
+import { NotificationsScreen } from '../src/screens/NotificationsScreen';
 import { UpdateScreen } from '../src/screens/GateScreens';
 import { JourneeScreen } from '../src/screens/JourneeScreen';
 import { LoginScreen } from '../src/screens/LoginScreen';
@@ -589,5 +600,314 @@ describe('Mes gains (Coursier 4.10, D-82)', () => {
     await waitFor(() => expect(screen.getByTestId('gains-due')).toHaveTextContent('5,000 DT'));
     expect(screen.getByText('2 colis livrés · 7,000 DT')).toBeTruthy();
     expect(screen.getByText('Prochain paiement le 28/09')).toBeTruthy();
+  });
+});
+
+describe('NotificationsScreen (Coursier 4.11, A-24)', () => {
+  const list: NotificationList = {
+    unreadCount: 2,
+    next: null,
+    items: [
+      {
+        id: 'n1',
+        type: 'NOUVEAUX_COLIS_ASSIGNES',
+        params: { count: 3 },
+        readAt: null,
+        createdAt: '2026-09-26T07:00:00.000Z',
+      },
+      {
+        id: 'n2',
+        type: 'NOUVEAU_MESSAGE',
+        params: { code: 'FG-AB12CD34', from: 'Boutique Yasmine' },
+        readAt: null,
+        createdAt: '2026-09-26T08:00:00.000Z',
+      },
+      {
+        id: 'n3',
+        type: 'RAPPEL_FIN_DE_JOURNEE',
+        params: { parcels: 1, bons: 0, cash: true, day: '2026-09-25' },
+        readAt: '2026-09-25T17:00:00.000Z',
+        createdAt: '2026-09-25T17:00:00.000Z',
+      },
+    ],
+  };
+
+  it('words each notification from its parameters, in French', async () => {
+    await renderScreen(<NotificationsScreen />, appValue({ '/notifications': list }));
+
+    expect(await screen.findByText('3 nouveaux colis assignés')).toBeTruthy();
+    expect(screen.getByText('Nouveau message de Boutique Yasmine sur FG-AB12CD34')).toBeTruthy();
+    expect(
+      screen.getByText('Avant de rentrer : 1 colis à rendre au dépôt, argent à remettre'),
+    ).toBeTruthy();
+  });
+
+  it('words them in Arabic when the courier reads Arabic', async () => {
+    await renderScreen(<NotificationsScreen />, appValue({ '/notifications': list }), 'AR');
+
+    expect(await screen.findByText('طرود جديدة: 3')).toBeTruthy();
+    expect(screen.getByText('رسالة جديدة من Boutique Yasmine بخصوص FG-AB12CD34')).toBeTruthy();
+  });
+
+  it('marks one read and opens the chat it is about', async () => {
+    const request = jest.fn(async () => ({ unreadCount: 1 }));
+    const refreshUnread = jest.fn(async () => undefined);
+    await renderScreen(
+      <NotificationsScreen />,
+      appValue({ '/notifications': list }, { api: { request } as never, refreshUnread }),
+    );
+
+    await fireEvent.press(await screen.findByTestId('notification-n2'));
+
+    await waitFor(() => expect(request).toHaveBeenCalledWith('POST', '/notifications/n2/read'));
+    expect(navigate).toHaveBeenCalledWith('Chat', { code: 'FG-AB12CD34' });
+    await waitFor(() => expect(refreshUnread).toHaveBeenCalled());
+  });
+
+  it('marks everything read', async () => {
+    const request = jest.fn(async () => ({ unreadCount: 0 }));
+    await renderScreen(
+      <NotificationsScreen />,
+      appValue({ '/notifications': list }, { api: { request } as never }),
+    );
+
+    await fireEvent.press(await screen.findByTestId('mark-all-read'));
+
+    await waitFor(() => expect(request).toHaveBeenCalledWith('POST', '/notifications/read-all'));
+  });
+
+  it('says so when there is nothing', async () => {
+    await renderScreen(
+      <NotificationsScreen />,
+      appValue({ '/notifications': { items: [], unreadCount: 0, next: null } }),
+    );
+    expect(await screen.findByText('Aucune notification.')).toBeTruthy();
+    expect(screen.queryByTestId('mark-all-read')).toBeNull();
+  });
+});
+
+describe('the chat (Coursier 4.8)', () => {
+  const thread = (overrides: Partial<ChatThread> = {}): { thread: ChatThread } => ({
+    thread: {
+      parcelCode: 'FG-AB12CD34',
+      state: 'OUVERT',
+      canPost: true,
+      refusal: null,
+      shopName: 'Boutique Yasmine',
+      sellerPhone: '50990001',
+      messages: [
+        {
+          id: 'm1',
+          kind: 'VENDEUR',
+          label: 'Boutique Yasmine',
+          mine: false,
+          body: 'Le client est disponible après 17 h',
+          createdAt: '2026-09-26T09:00:00.000Z',
+        },
+        {
+          id: 'm2',
+          kind: 'COURSIER',
+          label: 'Vous',
+          mine: true,
+          body: 'Je passe dans 10 min',
+          createdAt: '2026-09-26T09:05:00.000Z',
+        },
+      ],
+      ...overrides,
+    },
+  });
+  const route = routeProps<'Chat'>({ code: 'FG-AB12CD34' });
+  const path = '/chat/courier/FG-AB12CD34';
+
+  it('shows the seller by shop and his phone, and my messages as mine', async () => {
+    await renderScreen(<ChatScreen {...route} />, appValue({ [path]: thread() }));
+
+    expect(await screen.findByText('Le client est disponible après 17 h')).toBeTruthy();
+    // The shop heads the screen and signs its messages.
+    expect(screen.getAllByText('Boutique Yasmine', { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.getByText('Appeler le vendeur · 50990001', { exact: false })).toBeTruthy();
+    expect(screen.getByText('Vous')).toBeTruthy();
+    expect(screen.getByText('Ouvert')).toBeTruthy();
+  });
+
+  it('sends a quick reply at one tap: through the queue, in French, whatever the language', async () => {
+    const value = appValue({ [path]: thread() });
+    await renderScreen(<ChatScreen {...route} />, value, 'AR');
+
+    // The button reads Arabic; what goes out is the French text the seller reads.
+    await fireEvent.press(await screen.findByTestId('quick-Client ne répond pas'));
+
+    expect(value.recordOperation).toHaveBeenCalledWith({
+      kind: 'MESSAGE_CHAT',
+      parcelCode: 'FG-AB12CD34',
+      body: 'Client ne répond pas',
+    });
+  });
+
+  it('sends what he typed, and empties the box', async () => {
+    const value = appValue({ [path]: thread() });
+    await renderScreen(<ChatScreen {...route} />, value);
+
+    await fireEvent.changeText(await screen.findByLabelText('Votre message'), '  Je suis devant  ');
+    await fireEvent.press(screen.getByTestId('chat-send'));
+
+    expect(value.recordOperation).toHaveBeenCalledWith({
+      kind: 'MESSAGE_CHAT',
+      parcelCode: 'FG-AB12CD34',
+      body: 'Je suis devant',
+    });
+    await waitFor(() => expect(screen.getByLabelText('Votre message').props.value).toBe(''));
+  });
+
+  it('shows a message written offline as waiting, and one refused with why', async () => {
+    const row = (
+      id: string,
+      status: QueueRow['status'],
+      code: string | null,
+      message: string | null,
+    ) =>
+      ({
+        id,
+        seq: 1,
+        userId: 'u-ali',
+        kind: 'MESSAGE_CHAT',
+        action: null,
+        parcelCode: 'FG-AB12CD34',
+        operation: {
+          kind: 'MESSAGE_CHAT',
+          operationId: id,
+          parcelCode: 'FG-AB12CD34',
+          body: `texte ${id}`,
+          deviceTime: '2026-09-26T09:10:00.000Z',
+        },
+        deviceTime: '2026-09-26T09:10:00.000Z',
+        status,
+        code,
+        message,
+      }) as unknown as QueueRow;
+    const recent = [
+      row('w1', QueueStatus.EN_ATTENTE, null, null),
+      row(
+        'r1',
+        QueueStatus.REFUSE,
+        'CHAT_LECTURE_SEULE',
+        'Le colis est au dépôt : le chat est en lecture seule',
+      ),
+      // Already in the thread: shown once, by the thread.
+      row('m2', QueueStatus.ACCEPTE, null, null),
+    ];
+    await renderScreen(<ChatScreen {...route} />, appValue({ [path]: thread() }, { recent }));
+
+    expect(await screen.findByText('texte w1')).toBeTruthy();
+    expect(screen.getByTestId('outbox-status-w1')).toHaveTextContent('En attente d’envoi');
+    expect(screen.getByTestId('outbox-status-r1')).toHaveTextContent(
+      'Pas envoyé : Le colis est au dépôt : le chat est en lecture seule',
+    );
+    expect(screen.queryByTestId('outbox-m2')).toBeNull();
+  });
+
+  it('gives no box while the parcel is at the depot, and says why', async () => {
+    await renderScreen(
+      <ChatScreen {...route} />,
+      appValue({
+        [path]: thread({ state: 'VERROUILLE', canPost: false, refusal: 'CHAT_LECTURE_SEULE' }),
+      }),
+    );
+
+    expect(await screen.findByTestId('chat-refusal')).toHaveTextContent(
+      'Le colis est au dépôt : le chat est en lecture seule',
+    );
+    expect(screen.queryByTestId('chat-send')).toBeNull();
+    expect(screen.getByText('Lecture seule')).toBeTruthy();
+  });
+
+  it('says the refusal in Arabic for an Arabic reader', async () => {
+    await renderScreen(
+      <ChatScreen {...route} />,
+      appValue({ [path]: thread({ state: 'CLOS', canPost: false, refusal: 'CHAT_CLOS' }) }),
+      'AR',
+    );
+    expect(await screen.findByTestId('chat-refusal')).toHaveTextContent(
+      'الدردشة مغلقة: الطرد سُلّم وخُلِّص أو تم استلام إرجاعه',
+    );
+  });
+
+  it('is not open before the parcel is taken out', async () => {
+    await renderScreen(<ChatScreen {...route} />, appValue({ [path]: { thread: null } }));
+    expect(
+      await screen.findByText('Le chat s’ouvre quand vous prenez le colis en charge.'),
+    ).toBeTruthy();
+  });
+
+  it('lists the chats with what is new, each leading to its thread', async () => {
+    const list: ChatList = {
+      unreadCount: 2,
+      threads: [
+        {
+          parcelCode: 'FG-AB12CD34',
+          shopName: 'Boutique Yasmine',
+          state: 'OUVERT',
+          lastMessage: 'Le client est disponible après 17 h',
+          lastMessageAt: '2026-09-26T09:00:00.000Z',
+          unread: 2,
+        },
+      ],
+    };
+    await renderScreen(<ChatListScreen />, appValue({ '/chat/courier': list }));
+
+    expect(await screen.findByText('FG-AB12CD34  ·  2 nouveau(x)')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('chat-FG-AB12CD34'));
+    expect(navigate).toHaveBeenCalledWith('Chat', { code: 'FG-AB12CD34' });
+  });
+
+  it('is reached from the stop, next to the call to the seller', async () => {
+    await renderScreen(
+      <StopScreen {...routeProps<'Stop'>({ code: 'FG-AB12CD34' })} />,
+      appValue({ '/coursier/tournee': tour() }),
+    );
+    await fireEvent.press(await screen.findByTestId('open-stop-chat'));
+    expect(navigate).toHaveBeenCalledWith('Chat', { code: 'FG-AB12CD34' });
+  });
+
+  it('is reached from the menu with the count of what is new', async () => {
+    const value = appValue(
+      {
+        '/coursier/moi': {
+          role: 'LIVREUR',
+          zones: [],
+          firstName: 'Ali',
+          lastName: 'B',
+          phone: '1',
+          payPlan: null,
+        },
+      },
+      { unread: { notifications: 2, chats: 1 } },
+    );
+    await renderScreen(<MenuScreen />, value);
+    expect(await screen.findByText('Chat · 1 nouveau(x)')).toBeTruthy();
+    expect(screen.getByText('Notifications · 2 nouveau(x)')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('open-chat'));
+    expect(navigate).toHaveBeenCalledWith('ChatList');
+    await fireEvent.press(screen.getByTestId('open-notifications'));
+    expect(navigate).toHaveBeenCalledWith('Notifications');
+  });
+
+  it('gives the ramasseur Notifications and no chat (A-23)', async () => {
+    await renderScreen(
+      <MenuScreen />,
+      appValue({
+        '/coursier/moi': {
+          role: 'RAMASSEUR',
+          zones: [],
+          firstName: 'Hédi',
+          lastName: 'B',
+          phone: '2',
+          payPlan: null,
+        },
+      }),
+    );
+    expect(await screen.findByText('Rôle : Ramasseur')).toBeTruthy();
+    expect(screen.getByTestId('open-notifications')).toBeTruthy();
+    expect(screen.queryByTestId('open-chat')).toBeNull();
   });
 });

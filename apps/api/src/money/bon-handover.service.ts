@@ -17,6 +17,7 @@ import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { CaisseService } from './caisse.service';
 import { RetenueService } from './retenue.service';
@@ -59,6 +60,7 @@ export class BonHandoverService {
     private readonly events: ParcelEventService,
     private readonly caisse: CaisseService,
     private readonly retenue: RetenueService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -214,6 +216,9 @@ export class BonHandoverService {
           where: { id },
           data: { status: 'EN_ROUTE', ramasseurId: courierId, enRouteAt: now },
         });
+        await this.notifications.send(tx, { sellerId: bon.sellerId }, 'BON_VERSEMENT_EN_ROUTE', {
+          number: bon.number,
+        });
         await tx.caisseSessionBon.upsert({
           where: {
             caisseSessionId_bonVersementId: { caisseSessionId: session.id, bonVersementId: id },
@@ -262,6 +267,9 @@ export class BonHandoverService {
         await tx.bonRetour.update({
           where: { id },
           data: { status: 'EN_ROUTE', ramasseurId: courierId, enRouteAt: now },
+        });
+        await this.notifications.send(tx, { sellerId: bon.sellerId }, 'BON_RETOUR_EN_ROUTE', {
+          number: bon.number,
         });
       }
     });

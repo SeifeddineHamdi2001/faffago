@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { LogoutButton } from '@/components/logout-button';
+import { NotificationBell } from '@/components/notification-bell';
 import { SellerNav } from '@/components/seller-nav';
 import { requireMe, serverGetOrNull } from '@/lib/server/session';
 import type { SellerMoneyBadges, SellerVerifySummary } from '@/lib/types';
@@ -15,6 +16,11 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
   // The À vérifier badge (Vendeur 3). A failed count never blocks the page.
   const summary = await serverGetOrNull<SellerVerifySummary>('vendeur', '/a-verifier/resume');
   const money = await serverGetOrNull<SellerMoneyBadges>('vendeur', '/paiements/resume');
+  // The bell (Vendeur 3): always visible, with the unread count.
+  const bell = await serverGetOrNull<{ unreadCount: number }>(
+    'vendeur',
+    '/notifications/unread-count',
+  );
 
   return (
     <div className="min-h-screen">
@@ -23,7 +29,14 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
         <p className="font-display text-lg font-bold">
           Faffa <span className="text-orange">Go</span>
         </p>
-        <p className="font-semibold">{me.seller?.shopName}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-semibold">{me.seller?.shopName}</p>
+          <NotificationBell
+            initialCount={bell?.unreadCount ?? 0}
+            href="/vendeur/notifications"
+            live={!me.impersonation}
+          />
+        </div>
       </header>
       <SellerNav
         aVerifierCount={summary?.count ?? 0}

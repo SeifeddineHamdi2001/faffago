@@ -17,6 +17,7 @@ import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { attachWaitingBons } from '../money/bons-versement.service';
 import { ZoneCoverageService, dateColumnOf } from '../zones/zone-coverage.service';
 
@@ -106,6 +107,7 @@ export class RamassagesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly coverage: ZoneCoverageService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -224,6 +226,17 @@ export class RamassagesService {
       });
       // The seller's bons waiting for a visit travel with this one (D-80).
       await attachWaitingBons(tx, pickup);
+      // The seller and the ramasseur are told the day and the window (Vendeur 4.13, Coursier 4.11).
+      const seller = await tx.seller.findUniqueOrThrow({
+        where: { id: pickup.sellerId },
+        select: { shopName: true },
+      });
+      const notice = { pickupId: id, day: input.date, window: input.slot };
+      await this.notifications.send(tx, { sellerId: pickup.sellerId }, 'RAMASSAGE_PLANIFIE', notice);
+      await this.notifications.send(tx, { courierId: courier.id }, 'RAMASSAGE_PLANIFIE', {
+        ...notice,
+        shopName: seller.shopName,
+      });
       return tx.pickup.findUniqueOrThrow({ where: { id }, include: INCLUDE });
     });
     return this.view(row, null);

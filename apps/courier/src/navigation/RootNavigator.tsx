@@ -6,10 +6,12 @@ import { ActivityIndicator, View } from 'react-native';
 import { useI18n } from '../i18n';
 import { hasLocationPermission, requestLocationPermission } from '../location';
 import { CaisseScreen } from '../screens/CaisseScreen';
+import { ChatListScreen, ChatScreen } from '../screens/ChatScreens';
 import { LocationScreen, UpdateScreen } from '../screens/GateScreens';
 import { JourneeScreen } from '../screens/JourneeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { MenuScreen } from '../screens/MenuScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { PinScreen } from '../screens/PinScreen';
 import { ScannerScreen } from '../screens/ScannerScreen';
 import { DeliverScreen } from '../screens/livreur/DeliverScreen';
@@ -44,9 +46,10 @@ function ChangePinRoute({ navigation }: RootScreenProps<'ChangePin'>) {
  * navy text. The livreur has Tournée, the ramasseur Ramassages.
  */
 function Tabs() {
-  const { session } = useApp();
+  const { session, unread } = useApp();
   const { t } = useI18n();
   const isLivreur = session?.user.role === 'LIVREUR';
+  const news = unread.notifications + unread.chats;
   return (
     <Tab.Navigator
       screenOptions={{
@@ -80,7 +83,11 @@ function Tabs() {
         }}
       />
       <Tab.Screen name="Caisse" component={CaisseScreen} options={{ title: t('tabCaisse') }} />
-      <Tab.Screen name="Menu" component={MenuScreen} options={{ title: t('tabMenu') }} />
+      <Tab.Screen
+        name="Menu"
+        component={MenuScreen}
+        options={{ title: t('tabMenu'), tabBarBadge: news > 0 ? news : undefined }}
+      />
     </Tab.Navigator>
   );
 }
@@ -138,6 +145,13 @@ export function RootNavigator() {
           component={RetourDepotScreen}
           options={{ title: t('retourAuDepot') }}
         />
+        <Stack.Screen
+          name="Notifications"
+          component={NotificationsScreen}
+          options={{ title: t('notifications') }}
+        />
+        <Stack.Screen name="ChatList" component={ChatListScreen} options={{ title: t('chat') }} />
+        <Stack.Screen name="Chat" component={ChatScreen} options={{ title: t('chat') }} />
         <Stack.Screen
           name="ChangePin"
           component={ChangePinRoute}

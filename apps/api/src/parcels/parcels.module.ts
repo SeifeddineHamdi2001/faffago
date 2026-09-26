@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChatModule } from '../chat/chat.module';
 import { GeoModule } from '../geo/geo.module';
 import { ParcelImportsController } from './parcel-imports.controller';
 import { ParcelImportsService } from './parcel-imports.service';
@@ -14,7 +15,7 @@ import { ParcelsService } from './parcels.service';
  * through ParcelEventService.
  */
 @Module({
-  imports: [GeoModule],
+  imports: [GeoModule, ChatModule],
   // The imports route first: its fixed segment must not be read as a parcel code.
   controllers: [ParcelImportsController, ParcelsController],
   providers: [

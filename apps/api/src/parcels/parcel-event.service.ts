@@ -13,6 +13,7 @@ import {
   ParcelStatus,
   parcelWriteFor,
   Role,
+  sellerNoticesForParcel,
   SCAN_REFUSAL_MESSAGES_FR,
   ScanRefusal,
   SYSTEM_ACTOR,
@@ -28,7 +29,16 @@ import {
 import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { ChatThreadsService } from '../chat/chat-threads.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
+
+/** What a courier's scan can tell the seller: taken back when the scan is cancelled (A-11). */
+const SCAN_NOTICE_TYPES = [
+  'COLIS_A_VERIFIER',
+  'COLIS_REPORTE_PAR_CLIENT',
+  'COLIS_EN_RETOUR',
+] as const;
 
 /** A signed-in user, or a scheduled job (the 48-hour return). */
 export type ParcelActor = UserPrincipal | typeof SYSTEM_ACTOR;
@@ -114,6 +124,8 @@ export class ParcelEventService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly notifications: NotificationsService,
+    private readonly threads: ChatThreadsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -226,7 +238,34 @@ export class ParcelEventService {
       );
     }
 
+    await this.afterTransition(tx, updated, transition.events);
     return { ok: true, parcel: updated, events, charges };
+  }
+
+  /**
+   * What an action sets off beyond the parcel itself, in its transaction: the
+   * chat thread a Sortie coursier opens (Q14), and what the seller is told of
+   * a failure, a postponement or an automatic return (Vendeur 4.13).
+   */
+  private async afterTransition(
+    tx: Prisma.TransactionClient,
+    parcel: Parcel,
+    steps: readonly ParcelTransitionEvent[],
+  ): Promise<void> {
+    if (steps.some((step) => step.effects.includes(ParcelEffect.OUVRIR_CHAT))) {
+      await this.threads.openOnDispatch(tx, parcel);
+    }
+    const notices = sellerNoticesForParcel({
+      code: parcel.code,
+      events: steps,
+      failureReason: parcel.lastFailureReason,
+      relaunchDate: parcel.relaunchDate ? parcel.relaunchDate.toISOString().slice(0, 10) : null,
+    });
+    for (const notice of notices) {
+      await this.notifications.send(tx, { sellerId: parcel.sellerId }, notice.type, notice.params, {
+        parcelId: parcel.id,
+      });
+    }
   }
 
   /**
@@ -376,6 +415,14 @@ export class ParcelEventService {
       where: { scanId: input.scanId, status: 'EN_ATTENTE' },
       data: { status: 'ANNULEE' },
     });
+    // What the cancelled scan told the seller is taken back with it.
+    const scan = await tx.scan.findUnique({
+      where: { id: input.scanId },
+      select: { receivedAt: true },
+    });
+    if (scan) {
+      await this.notifications.retractSince(tx, current.id, SCAN_NOTICE_TYPES, scan.receivedAt);
+    }
     await tx.parcelEvent.create({
       data: {
         parcelId: current.id,
@@ -505,6 +552,10 @@ export class ParcelEventService {
         serverTime: this.clock.now(),
       },
     });
+    // A parcel the admin puts out with a livreur has the same chat as one scanned out.
+    if (updated.status === ParcelStatus.EN_LIVRAISON) {
+      await this.threads.openOnDispatch(tx, updated);
+    }
     return updated;
   }
 

@@ -128,6 +128,12 @@ export function StopScreen({ route, navigation }: RootScreenProps<'Stop'>) {
         label={`${t('callSeller')} · ${stop.sellerPhone}`}
         onPress={() => void Linking.openURL(telLink(stop.sellerPhone))}
       />
+      <BigButton
+        testID="open-stop-chat"
+        variant="secondary"
+        label={t('chatWithSeller')}
+        onPress={() => navigation.navigate('Chat', { code: stop.code })}
+      />
 
       <Card>
         <Field

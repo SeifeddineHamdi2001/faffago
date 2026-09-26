@@ -7,6 +7,7 @@ import {
   CaisseSessionStatus,
   CashTransition,
   ParcelAction,
+  Permission,
   Role,
   caisseCloseOutcome,
   caisseDayStatus,
@@ -25,6 +26,7 @@ import type { RequestMeta } from '../auth/sessions.service';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { dateColumn } from './document-numbers';
 
@@ -109,6 +111,7 @@ export class CaisseService {
     private readonly prisma: PrismaService,
     private readonly events: ParcelEventService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -529,6 +532,26 @@ export class CaisseService {
           },
         });
       }
+      if (outcome.ecartMillimes !== 0n) {
+        const who = await tx.user.findUniqueOrThrow({
+          where: { id: userId },
+          select: { firstName: true, lastName: true },
+        });
+        await this.notifications.send(
+          tx,
+          { permission: Permission.CAISSE_ECARTS },
+          'ECART_CAISSE',
+          {
+            courierName: `${who.firstName} ${who.lastName}`,
+            day,
+            direction: outcome.ecartMillimes < 0n ? 'MANQUANT' : 'EXCEDENT',
+            amountMillimes: (outcome.ecartMillimes < 0n
+              ? -outcome.ecartMillimes
+              : outcome.ecartMillimes
+            ).toString(),
+          },
+        );
+      }
       await this.audit.record(tx, {
         actor: { userId: actor.userId, role: actor.role },
         action: AuditAction.CLOTURE_CAISSE,
@@ -579,6 +602,12 @@ export class CaisseService {
           enRouteAt: null,
         },
       });
+      await this.notifications.send(
+        tx,
+        { permission: Permission.BONS_VERSEMENT },
+        'BON_NON_REMIS',
+        { number: line.bonVersement.number, kind: 'VERSEMENT' },
+      );
     }
 
     const bonsRetour = await tx.bonRetour.findMany({
@@ -611,6 +640,10 @@ export class CaisseService {
           plannedDate: null,
           enRouteAt: null,
         },
+      });
+      await this.notifications.send(tx, { permission: Permission.BONS_RETOUR }, 'BON_NON_REMIS', {
+        number: bon.number,
+        kind: 'RETOUR',
       });
     }
   }

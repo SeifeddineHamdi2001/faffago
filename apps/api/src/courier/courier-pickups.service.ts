@@ -18,6 +18,7 @@ import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { BonHandoverService, type SellerAEmporter } from '../money/bon-handover.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
 import { dateColumnOf } from '../zones/zone-coverage.service';
 import { applyOnce, type OperationAnswer } from './courier-operations';
@@ -82,6 +83,7 @@ export class CourierPickupsService {
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
     private readonly handover: BonHandoverService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -275,6 +277,10 @@ export class CourierPickupsService {
     await tx.pickup.update({
       where: { id: pickupId },
       data: { status: PickupStatus.EFFECTUE, completedAt: now, scannedCount, feeChargeId },
+    });
+    await this.notifications.send(tx, { sellerId: pickup.sellerId }, 'RAMASSAGE_EFFECTUE', {
+      pickupId,
+      count: scannedCount,
     });
     return {
       ok: true,

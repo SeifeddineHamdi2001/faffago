@@ -1,4 +1,6 @@
 import type {
+  ChatErrorCode,
+  NotificationType,
   ChangeRequestField,
   ChangeRequestStatus,
   CourierBlocker,
@@ -1086,4 +1088,60 @@ export interface LateBon {
   shopName: string;
   ramasseur: ZoneCourierRef | null;
   since: string;
+}
+
+// ── Phase 10A: notifications and the parcel chat ──
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  /** Parameters only: the text is made in the browser (A-24). */
+  params: Record<string, unknown>;
+  parcelId: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationList {
+  items: NotificationItem[];
+  unreadCount: number;
+  /** The cursor of the next page, or null. */
+  next: string | null;
+}
+
+export interface ChatMessageView {
+  id: string;
+  kind: 'VENDEUR' | 'COURSIER' | 'FAFFA_GO';
+  label: string;
+  mine: boolean;
+  body: string;
+  createdAt: string;
+}
+
+export interface ChatThreadView {
+  parcelCode: string;
+  state: 'OUVERT' | 'VERROUILLE' | 'CLOS';
+  canPost: boolean;
+  refusal: ChatErrorCode | null;
+  shopName: string;
+  courierName: string | null;
+  sellerPhone: string | null;
+  messages: ChatMessageView[];
+}
+
+export interface ChatInboxRow {
+  parcelCode: string;
+  sellerId: string;
+  shopName: string;
+  courier: { userId: string; name: string } | null;
+  state: 'OUVERT' | 'VERROUILLE' | 'CLOS';
+  lastMessage: string | null;
+  lastMessageKind: 'VENDEUR' | 'COURSIER' | 'FAFFA_GO' | null;
+  lastMessageAt: string | null;
+  unread: number;
+}
+
+export interface ChatInbox {
+  unreadCount: number;
+  threads: ChatInboxRow[];
 }

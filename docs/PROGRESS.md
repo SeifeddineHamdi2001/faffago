@@ -571,14 +571,14 @@ tests. Migration `20261011000000_bon_corrections`.
 
 ## Phase 10 — Communication and reports
 
-- [ ] In-app notifications (all roles)
-- [ ] Chat per parcel (seller ↔ livreur, staff can join), lifecycle as in
-      D-23 / Q15
+- [x] In-app notifications (all roles) — **Part A: done** on branch `phase-10a`
+      (2026-09-26), see below
+- [x] Chat per parcel (seller ↔ livreur, staff can join), lifecycle as in
+      D-23 / Q15 — **Part A: done**, see below
       **Part B: done** on branch `phase-10b` (2026-09-26), merged into `main` once
       `pnpm lint`, `pnpm typecheck`, `pnpm test` (785 API, 294 web, 665 shared, 42
       app tests) and `pnpm e2e` (45 browser tests) passed through turbo. The five
-      money answers are D-89; the choices made while building D-90. Part A
-      (notifications, chat) is still to build.
+      money answers are D-89; the choices made while building D-90.
 
 **Part B plan** (money questions sent first, answered as D-89):
 
@@ -595,6 +595,52 @@ tests. Migration `20261011000000_bon_corrections`.
 5. Web: Exceptions rows, Rapports (period, table, Exporter CSV / Excel), the
    seller's certificates in Paiements
 6. Browser test, decisions, ui-texts, merge
+
+**Part A plan** (branch `phase-10a`, 2026-09-26; no money, status or permission
+question was open: `CHATS_STAFF`, A-23 and Q14 to Q16 already answer them):
+
+1. Shared, tests first: notification texts (French, Arabic), which parcel
+   events notify whom, the reminder rules; chat messages, quick replies, who
+   sees which name, the queued `MESSAGE_CHAT` operation
+2. API: notifications (create in the caller's transaction, list, unread count,
+   mark read, mark all read) and every trigger of the list in the request
+3. API: parcel chat (thread opened by Sortie coursier, state read from the
+   parcel, seller, livreur and staff routes, the staff inbox) and the queued
+   message, applied once under the phone's UUID
+4. Web: the bell and its list (seller space and back office), the chat of the
+   parcel (seller, Colis) and the Chats inbox
+5. Courier app: Notifications with the unread count, the parcel chat with its
+   offline outbox
+6. Browser test, decisions, ui-texts, merge
+
+**Part A: done** on branch `phase-10a` (2026-09-26); merged into `main` once
+`pnpm lint`, `pnpm typecheck`, `pnpm test` (822 API, 320 web, 706 shared, 66 app
+tests) and `pnpm e2e` (52 browser tests) passed through turbo. No question was
+open on money, statuses or permissions (`CHATS_STAFF`, A-23, Q14 to Q16 answered
+them); the choices made while building are D-91. Steps, all done:
+
+1. [x] Shared, tests first (`notifications.ts`, `chat.ts`, `courier.ts`): the
+       twenty notification types and their parameters, French and Arabic
+       wording, who receives each, where each leads; which parcel events tell the
+       seller what; the two daily hours; chat messages, quick replies, sender
+       names, who may read and write; the queued `MESSAGE_CHAT` operation
+2. [x] API: notifications written in the transaction of the event that causes
+       them (parcel events, pickups, bons, suspension, change requests, the
+       Caisse, Tournées), the bell (list, count, read, read all), the scheduled
+       ones (24 h left, relancés today, end of day, pay due), a cancelled scan
+       taking its notices back
+3. [x] API: the parcel chat (thread opened by the Sortie coursier effect, state
+       read from the parcel, three doors, the staff inbox with per-person unread),
+       messages applied once under the sender's UUID, the courier's queue.
+       Migration `20261013000000_chat_message_operation`
+4. [x] Web: the bell in both layouts, Notifications, the chat on the parcel
+       (seller and Colis), Chats and its menu badge, "Voir comme le vendeur"
+       read-only
+5. [x] Courier app: Notifications and Chat in the menu with what is new (badge
+       on Menu), the chat from the stop, messages queued offline like scans,
+       French and Arabic
+6. [x] Demo data (the two demo failures now have their chat and the seller's
+       notices), `phase-10a.spec.ts` (7 browser tests), decisions, ui-texts
 
 - [x] Exceptions queue, the rest beyond the phase 5 first rows (D-50, D-90):
       À vérifier limit near, cash not handed over, bon en route > 24 h,
@@ -633,7 +679,12 @@ tests. Migration `20261011000000_bon_corrections`.
       the station (Archivage); a full day with a real Caisse count (D-79, D-80)
 - [ ] Full real-day test with real scans on a low-cost Android phone: the
       camera on thermal labels, a scan with no GPS fix, a day offline then
-      synced, a forced logout with scans waiting, the Arabic screens
+      synced, a forced logout with scans waiting, the Arabic screens; and, for
+      phase 10A, a chat message written offline and sent once on return, the
+      keyboard over the chat's box, the notification list in Arabic
+- [ ] Notifications (phase 10A) are in-app only: the courier sees them when the
+      app is open. The two daily hours (07:00 and 18:00 Tunis, D-91) are to be
+      confirmed with the operations team
 - [ ] The depot's scan station (phase 5), before launch: with a real USB
       barcode scanner — confirm `GUN_MAX_MEAN_KEY_INTERVAL_MS` (35 ms) tells
       it apart from typing — and with the camera on a phone over HTTPS

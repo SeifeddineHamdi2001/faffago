@@ -77,7 +77,8 @@ function rowOf(userId: string, operation: CourierOperationInput): NewQueueRow {
   const code =
     operation.kind === CourierOperationKind.SCAN
       ? codeOf(operation.rawCode)
-      : operation.kind === CourierOperationKind.NOTE_ADRESSE
+      : operation.kind === CourierOperationKind.NOTE_ADRESSE ||
+          operation.kind === CourierOperationKind.MESSAGE_CHAT
         ? normalizeParcelCode(operation.parcelCode)
         : null;
   return {

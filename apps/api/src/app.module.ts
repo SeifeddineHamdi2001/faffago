@@ -6,6 +6,7 @@ import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { ColisModule } from './colis/colis.module';
+import { ChatModule } from './chat/chat.module';
 import { ClockModule } from './common/clock.module';
 import { CourierModule } from './courier/courier.module';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -15,6 +16,8 @@ import { ReportsModule } from './reports/reports.module';
 import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
 import { MoneyModule } from './money/money.module';
+import { NoticesModule } from './notices/notices.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { ParcelsModule } from './parcels/parcels.module';
 import { PickupsModule } from './pickups/pickups.module';
@@ -44,6 +47,7 @@ import { ZonesModule } from './zones/zones.module';
     AuditModule,
     StorageModule,
     SettingsModule,
+    NotificationsModule,
     AuthModule,
     // Before any module that brings in ParcelsModule (Accounts does, through
     // Tournées): routes register in module order, and /parcels/labels must
@@ -65,6 +69,8 @@ import { ZonesModule } from './zones/zones.module';
     CourierModule,
     AVerifierModule,
     MoneyModule,
+    ChatModule,
+    NoticesModule,
     PublicModule,
   ],
 })

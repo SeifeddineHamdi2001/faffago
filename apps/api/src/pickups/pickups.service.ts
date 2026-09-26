@@ -5,6 +5,7 @@ import {
   PICKUP_MESSAGES,
   ParcelErrorCode,
   ParcelStatus,
+  Permission,
   PickupErrorCode,
   PickupStatus,
   canCancelPickup,
@@ -16,6 +17,7 @@ import { sellerIdOf, type Principal, type UserPrincipal } from '../auth/principa
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   PickupAddressesService,
   WITH_PLACE,
@@ -104,6 +106,7 @@ export class PickupsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly addresses: PickupAddressesService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -153,6 +156,13 @@ export class PickupsService {
             data: parcelIds.map((parcelId) => ({ pickupId: pickup.id, parcelId, expected: true })),
           });
         }
+        // Whoever plans pickups is told of the request (Admin 4.18).
+        await this.notifications.send(
+          tx,
+          { permission: Permission.PLANIFIER_RAMASSAGES_TOURNEES },
+          'NOUVELLE_DEMANDE_RAMASSAGE',
+          { pickupId: pickup.id, shopName: seller.shopName },
+        );
         return pickup.id;
       });
       return { pickup: await this.view(id), replayed: false };

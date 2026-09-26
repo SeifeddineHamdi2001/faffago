@@ -224,6 +224,12 @@ describe('Terminer le ramassage (A-13, D-61)', () => {
     const closed = await t.prisma.pickup.findUniqueOrThrow({ where: { id: p.id } });
     expect(closed).toMatchObject({ status: 'EFFECTUE', scannedCount: 3 });
     expect(closed.completedAt).toEqual(new Date(NOW));
+    // The seller is told the pickup is done, with the count (Vendeur 4.13).
+    expect(
+      await t.prisma.notification.findFirst({
+        where: { userId: seller.id, type: 'RAMASSAGE_EFFECTUE' },
+      }),
+    ).toMatchObject({ params: { pickupId: p.id, count: 3 } });
     const charge = await t.prisma.sellerCharge.findUniqueOrThrow({
       where: { id: closed.feeChargeId! },
     });
@@ -257,6 +263,12 @@ describe('Terminer le ramassage (A-13, D-61)', () => {
       cancelledByUserId: hedi.id,
       feeChargeId: null,
     });
+    // A visit that produced no pickup is not announced as done.
+    expect(
+      await t.prisma.notification.count({
+        where: { type: 'RAMASSAGE_EFFECTUE', params: { path: ['pickupId'], equals: p.id } },
+      }),
+    ).toBe(0);
     expect(await t.prisma.sellerCharge.count({ where: { pickupId: p.id } })).toBe(0);
   });
 

@@ -78,6 +78,13 @@ describe('Compter and Clôturer (Admin 4.9, D-79)', () => {
       ecartFlagged: false,
     });
     expect(closed.body.debt).toMatchObject({ amountMillimes: '2000', status: 'EN_COURS' });
+    // The admin is told of the shortfall (Admin 4.18): the one who checks écarts, not Dépôt.
+    const shortfall = await t.prisma.notification.findMany({
+      where: { type: 'ECART_CAISSE', params: { path: ['amountMillimes'], equals: '2000' } },
+      include: { user: { select: { role: true } } },
+    });
+    expect(shortfall.map((row) => row.user.role)).toEqual(['ADMIN']);
+    expect(shortfall[0]?.params).toMatchObject({ direction: 'MANQUANT', day: TODAY });
 
     for (const parcel of [a, b]) {
       expect(
@@ -183,6 +190,15 @@ describe('Compter and Clôturer (Admin 4.9, D-79)', () => {
     await count(t, depotToken, nour.user, '86,500');
     const closed = await close(t, depotToken, nour.user);
     expect(closed.body).toMatchObject({ ecartMillimes: '1500', ecartFlagged: true, debt: null });
+    expect(
+      await t.prisma.notification.count({
+        where: {
+          type: 'ECART_CAISSE',
+          user: { role: 'ADMIN' },
+          params: { path: ['direction'], equals: 'EXCEDENT' },
+        },
+      }),
+    ).toBe(1);
     const sessionId = closed.body.sessionId as string;
 
     const ecarts = await t.request('GET', '/caisse/ecarts', { token: adminToken });
