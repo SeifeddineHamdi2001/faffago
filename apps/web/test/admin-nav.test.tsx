@@ -21,6 +21,7 @@ describe('AdminNav', () => {
       'Tournées',
       'À vérifier',
       'Exceptions',
+      'Chats',
       'Caisse',
       'Paiements vendeurs',
       'Retours',
@@ -40,6 +41,7 @@ describe('AdminNav', () => {
       'Ramassages',
       'Tournées',
       'Exceptions',
+      'Chats',
       'Caisse',
       'Retours',
       'Vendeurs',
@@ -47,16 +49,27 @@ describe('AdminNav', () => {
     ]);
   });
 
-  it('gives Service client Colis, À vérifier, Exceptions, Retours, Vendeurs and Coursiers, no Scan nor money (D-11)', () => {
+  it('gives Service client Colis, À vérifier, Exceptions, Chats, Retours, Vendeurs and Coursiers, no Scan nor money (D-11)', () => {
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
     expect(links()).toEqual([
       'Colis',
       'À vérifier',
       'Exceptions',
+      'Chats',
       'Retours',
       'Vendeurs',
       'Coursiers',
     ]);
+  });
+
+  it('counts the chats with something new next to Chats (Admin 4.8)', () => {
+    render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} chatsUnread={3} />);
+    expect(screen.getByLabelText('3 chats avec du nouveau')).toHaveTextContent('3');
+  });
+
+  it('shows no count when nothing is new', () => {
+    render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.SERVICE_CLIENT]} />);
+    expect(screen.queryByLabelText(/avec du nouveau/)).toBeNull();
   });
 
   it('marks the current screen', () => {

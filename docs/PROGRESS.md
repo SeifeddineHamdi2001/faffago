@@ -596,6 +596,23 @@ tests. Migration `20261011000000_bon_corrections`.
    seller's certificates in Paiements
 6. Browser test, decisions, ui-texts, merge
 
+**Part A plan** (branch `phase-10a`, 2026-09-26; no money, status or permission
+question was open: `CHATS_STAFF`, A-23 and Q14 to Q16 already answer them):
+
+1. Shared, tests first: notification texts (French, Arabic), which parcel
+   events notify whom, the reminder rules; chat messages, quick replies, who
+   sees which name, the queued `MESSAGE_CHAT` operation
+2. API: notifications (create in the caller's transaction, list, unread count,
+   mark read, mark all read) and every trigger of the list in the request
+3. API: parcel chat (thread opened by Sortie coursier, state read from the
+   parcel, seller, livreur and staff routes, the staff inbox) and the queued
+   message, applied once under the phone's UUID
+4. Web: the bell and its list (seller space and back office), the chat of the
+   parcel (seller, Colis) and the Chats inbox
+5. Courier app: Notifications with the unread count, the parcel chat with its
+   offline outbox
+6. Browser test, decisions, ui-texts, merge
+
 - [x] Exceptions queue, the rest beyond the phase 5 first rows (D-50, D-90):
       À vérifier limit near, cash not handed over, bon en route > 24 h,
       signed bon not archived > 48 h, and CIN uniquement sellers without

@@ -33,6 +33,9 @@ const PROXIED_ROOTS = new Set([
   'retours',
   // Rapports (phase 10, D-89).
   'rapports',
+  // Notifications and the parcel chat (phase 10A): each person's own.
+  'notifications',
+  'chat',
 ]);
 
 export function isProxiedPath(segments: string[]): boolean {

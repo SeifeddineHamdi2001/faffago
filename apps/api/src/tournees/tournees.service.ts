@@ -17,6 +17,7 @@ import type { UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { ZoneCoverageService, dateColumnOf } from '../zones/zone-coverage.service';
 
@@ -99,6 +100,7 @@ export class TourneesService {
     private readonly prisma: PrismaService,
     private readonly events: ParcelEventService,
     private readonly coverage: ZoneCoverageService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -248,6 +250,15 @@ export class TourneesService {
           plannedLivreurId: target,
         });
         moved += 1;
+      }
+      // The livreur is told what was put in his column (Coursier 4.11).
+      if (target && moved > 0) {
+        await this.notifications.send(
+          tx,
+          { courierId: target },
+          'NOUVEAUX_COLIS_ASSIGNES',
+          { count: moved },
+        );
       }
       return { moved };
     });

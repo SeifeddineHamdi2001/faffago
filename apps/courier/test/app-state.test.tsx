@@ -147,3 +147,104 @@ describe('the app state (Coursier 4.9, Q12, D-7)', () => {
     });
   });
 });
+
+describe('what is new (Coursier 4.11, 4.8)', () => {
+  // The secure store is shared by the file's tests: each starts signed out.
+  beforeEach(() => storage.clearSession());
+
+  it('reads the unread notifications and chats of a livreur at login', async () => {
+    handler = (url) => {
+      if (url.endsWith('/auth/login/coursier')) return json(LOGIN);
+      if (url.endsWith('/notifications/unread-count')) return json({ unreadCount: 3 });
+      if (url.endsWith('/chat/courier/unread')) return json({ unreadCount: 2 });
+      return json({ results: [] });
+    };
+    const { app } = await mount();
+    await act(() => app().login('LIVREUR', '98111222', 'secret'));
+
+    await waitFor(() => expect(app().unread).toEqual({ notifications: 3, chats: 2 }));
+  });
+
+  it('never asks a ramasseur for chats: he has none (A-23)', async () => {
+    handler = (url) => {
+      if (url.endsWith('/auth/login/coursier')) {
+        return json({ ...LOGIN, user: { ...LOGIN.user, role: 'RAMASSEUR' } });
+      }
+      if (url.endsWith('/notifications/unread-count')) return json({ unreadCount: 1 });
+      return json({ results: [] });
+    };
+    const { app } = await mount();
+    await act(() => app().login('RAMASSEUR', '98111222', 'secret'));
+
+    await waitFor(() => expect(app().unread).toEqual({ notifications: 1, chats: 0 }));
+    expect(requests.some((r) => r.url.includes('/chat/'))).toBe(false);
+  });
+
+  it('keeps the last counts when the network is down', async () => {
+    let down = false;
+    handler = (url) => {
+      if (down) throw new TypeError('Network request failed');
+      if (url.endsWith('/auth/login/coursier')) return json(LOGIN);
+      if (url.endsWith('/notifications/unread-count')) return json({ unreadCount: 4 });
+      if (url.endsWith('/chat/courier/unread')) return json({ unreadCount: 0 });
+      return json({ results: [] });
+    };
+    const { app } = await mount();
+    await act(() => app().login('LIVREUR', '98111222', 'secret'));
+    await waitFor(() => expect(app().unread.notifications).toBe(4));
+
+    down = true;
+    await act(() => app().refreshUnread());
+
+    expect(app().unread.notifications).toBe(4);
+  });
+
+  it('queues a chat message like a scan, under its own id, and sends it', async () => {
+    handler = (url, init) => {
+      if (url.endsWith('/auth/login/coursier')) return json(LOGIN);
+      if (url.endsWith('/scans/courier')) {
+        const { operations } = JSON.parse(init.body as string) as {
+          operations: { operationId: string }[];
+        };
+        return json({
+          results: operations.map((o) => ({
+            kind: 'MESSAGE_CHAT',
+            id: o.operationId,
+            ok: true,
+            replayed: false,
+            code: null,
+            message: 'Message envoyé',
+            parcel: null,
+          })),
+        });
+      }
+      if (url.endsWith('/notifications/unread-count')) return json({ unreadCount: 0 });
+      return json({ unreadCount: 0 });
+    };
+    const { store, app } = await mount();
+    await act(() => app().login('LIVREUR', '98111222', 'secret'));
+    await act(() => app().setPin('1234'));
+
+    await act(async () => {
+      await app().recordOperation({
+        kind: 'MESSAGE_CHAT',
+        parcelCode: 'FG-AB12CD34',
+        body: 'Client ne répond pas',
+      });
+    });
+
+    await waitFor(() => expect(store.rows[0]?.status).toBe(QueueStatus.ACCEPTE));
+    expect(store.rows[0]).toMatchObject({ kind: 'MESSAGE_CHAT', parcelCode: 'FG-AB12CD34' });
+    const upload = requests.find((r) => r.url.endsWith('/scans/courier'))!;
+    expect(upload.body).toMatchObject({
+      operations: [
+        {
+          kind: 'MESSAGE_CHAT',
+          parcelCode: 'FG-AB12CD34',
+          body: 'Client ne répond pas',
+          operationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        },
+      ],
+    });
+  });
+});

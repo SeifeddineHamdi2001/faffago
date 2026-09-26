@@ -8,7 +8,7 @@ import { Permission } from '@faffago/shared';
  * The back office menu (Admin 3): "each role only sees the menu items it can
  * use". Only the screens built so far are listed; each phase adds its own.
  */
-const ITEMS: { href: string; label: string; permission: Permission }[] = [
+const ITEMS: { href: string; label: string; permission: Permission; badge?: 'chats' }[] = [
   { href: '/admin/scan', label: 'Scan', permission: Permission.SCAN_DEPOT },
   { href: '/admin/colis', label: 'Colis', permission: Permission.COLIS_LECTURE },
   {
@@ -23,6 +23,7 @@ const ITEMS: { href: string; label: string; permission: Permission }[] = [
   },
   { href: '/admin/a-verifier', label: 'À vérifier', permission: Permission.SUIVI_A_VERIFIER },
   { href: '/admin/exceptions', label: 'Exceptions', permission: Permission.EXCEPTIONS_LECTURE },
+  { href: '/admin/chats', label: 'Chats', permission: Permission.CHATS_STAFF, badge: 'chats' },
   // Argent (Admin 3).
   { href: '/admin/caisse', label: 'Caisse', permission: Permission.CAISSE },
   { href: '/admin/paiements', label: 'Paiements vendeurs', permission: Permission.BONS_VERSEMENT },
@@ -34,7 +35,14 @@ const ITEMS: { href: string; label: string; permission: Permission }[] = [
   { href: '/admin/parametres', label: 'Paramètres', permission: Permission.PARAMETRES },
 ];
 
-export function AdminNav({ permissions }: { permissions: Permission[] }) {
+export function AdminNav({
+  permissions,
+  chatsUnread = 0,
+}: {
+  permissions: Permission[];
+  /** Conversations with something new for this person (Admin 4.8). */
+  chatsUnread?: number;
+}) {
   const pathname = usePathname();
   const items = ITEMS.filter((item) => permissions.includes(item.permission));
 
@@ -52,6 +60,14 @@ export function AdminNav({ permissions }: { permissions: Permission[] }) {
             }`}
           >
             {item.label}
+            {item.badge === 'chats' && chatsUnread > 0 && (
+              <span
+                className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-orange px-1.5 text-xs font-bold text-navy"
+                aria-label={`${chatsUnread} chat${chatsUnread > 1 ? 's' : ''} avec du nouveau`}
+              >
+                {chatsUnread}
+              </span>
+            )}
           </Link>
         );
       })}

@@ -73,11 +73,20 @@ export interface AppContextValue {
           parcelCode: string;
           note?: string;
           meetingPoint?: string;
+        }
+      | {
+          /** Written offline or not, it joins the queue like a scan and is sent once. */
+          kind: typeof CourierOperationKind.MESSAGE_CHAT;
+          parcelCode: string;
+          body: string;
         },
   ) => Promise<void>;
   syncNow: () => Promise<void>;
   /** A screen's data: from the API when online, else the last answer kept on the phone. */
   load: <T>(path: string) => Promise<{ data: T | null; fromCache: boolean }>;
+  /** What is new for him: notifications, and chats for a livreur (Coursier 4.11, 4.8). */
+  unread: { notifications: number; chats: number };
+  refreshUnread: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppContextValue | null>(null);
@@ -89,6 +98,7 @@ export function useApp(): AppContextValue {
 }
 
 const TWO_DAYS_MS = 2 * 86_400_000;
+const UNREAD_INTERVAL_MS = 30_000;
 
 export function AppProvider({
   children,
@@ -110,6 +120,7 @@ export function AppProvider({
   const [pendingCount, setPendingCount] = useState(0);
   const [recent, setRecent] = useState<QueueRow[]>([]);
   const [cancelWindowSeconds, setCancelWindow] = useState(60);
+  const [unread, setUnread] = useState({ notifications: 0, chats: 0 });
   const syncing = useRef(false);
   const backgroundAt = useRef<number | null>(null);
 
@@ -182,6 +193,31 @@ export function AppProvider({
     }
   }, [api, refreshQueue, store]);
 
+  const refreshUnread = useCallback(async () => {
+    const user = sessionRef.current?.user;
+    if (!user) {
+      setUnread({ notifications: 0, chats: 0 });
+      return;
+    }
+    try {
+      const notifications = await api.request<{ unreadCount: number }>(
+        'GET',
+        '/notifications/unread-count',
+      );
+      // The ramasseur has no chat (A-23).
+      const chats =
+        user.role === 'LIVREUR'
+          ? await api.request<{ unreadCount: number }>('GET', '/chat/courier/unread')
+          : { unreadCount: 0 };
+      setUnread({
+        notifications: notifications.unreadCount ?? 0,
+        chats: chats.unreadCount ?? 0,
+      });
+    } catch {
+      // Offline or refused: the last counts stay, and the next look tries again.
+    }
+  }, [api]);
+
   // Start: language, session, PIN.
   useEffect(() => {
     void (async () => {
@@ -221,6 +257,13 @@ export function AppProvider({
     return () => clearInterval(timer);
   }, [syncNow]);
 
+  // What is new: at login, every half minute, and when the app comes back.
+  useEffect(() => {
+    void refreshUnread();
+    const timer = setInterval(() => void refreshUnread(), UNREAD_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [session?.user.id, session?.user.role, refreshUnread]);
+
   // Back from the background after a while: the PIN again (Coursier 2).
   useEffect(() => {
     const subscription = RNAppState.addEventListener('change', (state) => {
@@ -229,10 +272,11 @@ export function AppProvider({
         if (Date.now() - backgroundAt.current > PIN_RELOCK_AFTER_MS) setLocked(true);
         backgroundAt.current = null;
         void syncNow();
+        void refreshUnread();
       }
     });
     return () => subscription.remove();
-  }, [syncNow]);
+  }, [syncNow, refreshUnread]);
 
   const load = useCallback(
     async <T,>(path: string) => {
@@ -360,6 +404,8 @@ export function AppProvider({
     },
     syncNow,
     load,
+    unread,
+    refreshUnread,
   };
 
   return (

@@ -97,6 +97,8 @@ export function appValue(
     cancelLastScan: jest.fn(async () => 'REMOVED' as const),
     recordOperation: jest.fn(async () => undefined),
     syncNow: jest.fn(async () => undefined),
+    unread: { notifications: 0, chats: 0 },
+    refreshUnread: jest.fn(async () => undefined),
     load: jest.fn(async (path: string) => ({
       data: (responses[path] ?? null) as never,
       fromCache: false,

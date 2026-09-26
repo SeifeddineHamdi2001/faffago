@@ -1,7 +1,8 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 export type RootStackParams = {
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<TabParams> | undefined;
   /** Trouver le client (Coursier 4.3). */
   Stop: { code: string };
   /** Livré or Échec for one parcel (Coursier 4.4). */
@@ -18,6 +19,11 @@ export type RootStackParams = {
   Gains: undefined;
   RetourDepot: undefined;
   ChangePin: undefined;
+  /** Notifications, both roles (Coursier 4.11). */
+  Notifications: undefined;
+  /** The livreur's chats (Coursier 4.8); the ramasseur has none (A-23). */
+  ChatList: undefined;
+  Chat: { code: string };
 };
 
 export type TabParams = {

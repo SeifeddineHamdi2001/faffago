@@ -28,6 +28,7 @@ import {
 import { sellerIdOf, type Principal, type UserPrincipal } from '../auth/principal';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { ParcelCodeGenerator } from './parcel-code.generator';
@@ -238,6 +239,7 @@ export class ParcelsService {
     private readonly settings: SettingsService,
     private readonly events: ParcelEventService,
     private readonly codes: ParcelCodeGenerator,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -453,6 +455,18 @@ export class ParcelsService {
           ...(await this.requestContent(tx, values)),
         },
       });
+      const seller = await tx.seller.findUniqueOrThrow({
+        where: { id: parcel.sellerId },
+        select: { shopName: true },
+      });
+      // Service client and the admin, who apply it (Admin 4.18).
+      await this.notifications.send(
+        tx,
+        { permission: Permission.DEMANDES_VENDEUR },
+        'DEMANDE_MODIFICATION',
+        { code: parcel.code, shopName: seller.shopName },
+        { parcelId: parcel.id },
+      );
       return this.requestView(tx, request);
     });
   }

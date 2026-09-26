@@ -31,6 +31,7 @@ import type { RequestMeta } from '../auth/sessions.service';
 import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   SellerDocumentsService,
   documentView,
@@ -128,6 +129,7 @@ export class SellersService {
     private readonly passwords: PasswordsService,
     private readonly documents: SellerDocumentsService,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -507,6 +509,12 @@ export class SellersService {
         ip: meta.ip,
         userAgent: meta.userAgent,
       });
+      await this.notifications.send(
+        tx,
+        { sellerId },
+        state === SellerAccountState.SUSPENDU ? 'COMPTE_SUSPENDU' : 'COMPTE_REACTIVE',
+        {},
+      );
       return adminView(updated);
     });
   }

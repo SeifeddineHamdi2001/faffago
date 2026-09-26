@@ -149,3 +149,94 @@ describe('Annuler le dernier scan on the phone (A-11)', () => {
     expect(store.rows).toHaveLength(1);
   });
 });
+
+describe('chat messages in the queue (Coursier 4.8, 4.9)', () => {
+  const message = (body: string, parcelCode = 'fg-ab12cd34'): CourierOperationInput => ({
+    kind: 'MESSAGE_CHAT',
+    operationId: uuid(),
+    parcelCode,
+    body,
+    deviceTime: NOW.toISOString(),
+  });
+
+  it('is a row like any other: its own id, its parcel, in the order it was written', async () => {
+    const store = memoryStore();
+    const first = message('Client ne répond pas');
+    await enqueue(store, 'ali', livre('FG-AAAAAAAA'));
+    await enqueue(store, 'ali', first);
+    await enqueue(store, 'ali', message('Je passe dans 10 min'));
+
+    expect(store.rows.map((row) => row.kind)).toEqual(['SCAN', 'MESSAGE_CHAT', 'MESSAGE_CHAT']);
+    expect(store.rows[1]).toMatchObject({
+      id: first.kind === 'MESSAGE_CHAT' ? first.operationId : '',
+      // Typed in any case, kept as the parcel's code.
+      parcelCode: 'FG-AB12CD34',
+      action: null,
+      userId: 'ali',
+    });
+    const sent: CourierOperationInput[][] = [];
+    await syncOnce(store, 'ali', async (operations) => {
+      sent.push(operations);
+      return operations.map(() => ({
+        ...accepted([livre('x')])[0]!,
+        kind: 'MESSAGE_CHAT' as const,
+      }));
+    });
+    expect(sent[0]!.map((op) => op.kind)).toEqual(['SCAN', 'MESSAGE_CHAT', 'MESSAGE_CHAT']);
+  });
+
+  it('is never sent twice: an answered message leaves the pending list', async () => {
+    const store = memoryStore();
+    await enqueue(store, 'ali', message('Bonjour'));
+    const upload = jest.fn(async (operations: CourierOperationInput[]) =>
+      operations.map(() => ({
+        kind: 'MESSAGE_CHAT' as const,
+        id: 'x',
+        ok: true,
+        replayed: false,
+        code: null,
+        message: 'Message envoyé',
+        parcel: null,
+      })),
+    );
+
+    await syncOnce(store, 'ali', upload);
+    await syncOnce(store, 'ali', upload);
+
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(store.rows[0]!.status).toBe(QueueStatus.ACCEPTE);
+  });
+
+  it('keeps a refused message with its reason, and does not send it again', async () => {
+    const store = memoryStore();
+    await enqueue(store, 'ali', message('Écrit hors ligne'));
+    const upload = jest.fn(async (operations: CourierOperationInput[]) =>
+      operations.map(() => ({
+        kind: 'MESSAGE_CHAT' as const,
+        id: 'x',
+        ok: false,
+        replayed: false,
+        code: 'CHAT_LECTURE_SEULE',
+        message: 'Le colis est au dépôt : le chat est en lecture seule',
+        parcel: null,
+      })),
+    );
+
+    const outcome = await syncOnce(store, 'ali', upload);
+    await syncOnce(store, 'ali', upload);
+
+    expect(outcome.refused.map((r) => r.code)).toEqual(['CHAT_LECTURE_SEULE']);
+    expect(store.rows[0]).toMatchObject({
+      status: QueueStatus.REFUSE,
+      code: 'CHAT_LECTURE_SEULE',
+    });
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it('is not a scan: it is neither "Déjà scanné" nor the last scan to cancel', async () => {
+    const store = memoryStore();
+    await enqueue(store, 'ali', message('Bonjour'));
+    expect(findPreviousScan(store.rows, 'FG-AB12CD34', 'LIVRE')).toBeNull();
+    expect(lastScan(store.rows)).toBeNull();
+  });
+});

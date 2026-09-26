@@ -14,12 +14,12 @@ type Nav = NativeStackNavigationProp<RootStackParams>;
 /**
  * Menu and Profil (Coursier 3, 4.12): role, zones and pay plan read-only, set
  * by the admin; language and PIN set on the phone; no password change (Q7).
- * Mes gains for a livreur (D-82); Chat and Notifications come after launch
- * (CLAUDE.md).
+ * Mes gains for a livreur (D-82); Notifications for both, Chat for a livreur
+ * (Coursier 3), each with what is new.
  */
 export function MenuScreen() {
   const navigation = useNavigation<Nav>();
-  const { lang, setLang, logout, pendingCount } = useApp();
+  const { lang, setLang, logout, pendingCount, unread } = useApp();
   const i18n = useI18n();
   const { t } = i18n;
   const dir = useDir();
@@ -85,6 +85,26 @@ export function MenuScreen() {
           />
         </View>
       </Card>
+      {data?.role === 'LIVREUR' ? (
+        <BigButton
+          testID="open-chat"
+          label={
+            unread.chats > 0
+              ? `${t('chat')} · ${t('chatUnread', { count: unread.chats })}`
+              : t('chat')
+          }
+          onPress={() => navigation.navigate('ChatList')}
+        />
+      ) : null}
+      <BigButton
+        testID="open-notifications"
+        label={
+          unread.notifications > 0
+            ? `${t('notifications')} · ${t('chatUnread', { count: unread.notifications })}`
+            : t('notifications')
+        }
+        onPress={() => navigation.navigate('Notifications')}
+      />
       {data?.role === 'LIVREUR' ? (
         <BigButton
           testID="open-gains"

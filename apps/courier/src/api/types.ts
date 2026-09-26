@@ -1,4 +1,4 @@
-import type { CourierOperationResult } from '@faffago/shared';
+import type { ChatErrorCode, CourierOperationResult, NotificationType } from '@faffago/shared';
 import type { Tokens } from './client';
 
 /** Money travels as digit strings in JSON (tech-stack 2). */
@@ -184,4 +184,52 @@ export interface Profile {
 
 export interface SyncResponse {
   results: CourierOperationResult[];
+}
+
+/** GET /notifications: parameters only, worded here in French or Arabic (A-24). */
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  params: Record<string, unknown>;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface NotificationList {
+  items: NotificationItem[];
+  unreadCount: number;
+  next: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  kind: 'VENDEUR' | 'COURSIER' | 'FAFFA_GO';
+  label: string;
+  mine: boolean;
+  body: string;
+  createdAt: string;
+}
+
+/** GET /chat/courier/:code (Coursier 4.8). */
+export interface ChatThread {
+  parcelCode: string;
+  state: 'OUVERT' | 'VERROUILLE' | 'CLOS';
+  canPost: boolean;
+  refusal: ChatErrorCode | null;
+  shopName: string;
+  sellerPhone: string | null;
+  messages: ChatMessage[];
+}
+
+/** GET /chat/courier. */
+export interface ChatList {
+  unreadCount: number;
+  threads: {
+    parcelCode: string;
+    shopName: string;
+    state: 'OUVERT' | 'VERROUILLE' | 'CLOS';
+    lastMessage: string | null;
+    lastMessageAt: string | null;
+    unread: number;
+  }[];
 }

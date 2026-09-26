@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { chatMessageSchema } from './chat.js';
 import { normalizePhone } from './codes.js';
 import { businessDateOf } from './fees.js';
 import { sumMillimes, type Millimes } from './money.js';
@@ -82,6 +83,8 @@ export const CourierOperationKind = {
   TERMINER_RAMASSAGE: 'TERMINER_RAMASSAGE',
   /** Mémoire d'adresse: a note, a meeting point (Coursier 4.3). */
   NOTE_ADRESSE: 'NOTE_ADRESSE',
+  /** A message in a parcel chat, written offline or not (Coursier 4.8, 4.9). */
+  MESSAGE_CHAT: 'MESSAGE_CHAT',
 } as const;
 export type CourierOperationKind = (typeof CourierOperationKind)[keyof typeof CourierOperationKind];
 
@@ -185,11 +188,24 @@ export const courierAddressNoteOperationSchema = z
   .strict();
 export type CourierAddressNoteOperation = z.output<typeof courierAddressNoteOperationSchema>;
 
+export const courierChatMessageOperationSchema = z
+  .object({
+    kind: z.literal(CourierOperationKind.MESSAGE_CHAT),
+    /** Also the message's id: sent twice, it is stored once. */
+    operationId: z.string().uuid(),
+    parcelCode: z.string().trim().min(1).max(300),
+    body: chatMessageSchema.shape.body,
+    deviceTime,
+  })
+  .strict();
+export type CourierChatMessageOperation = z.output<typeof courierChatMessageOperationSchema>;
+
 export const courierOperationSchema = z.discriminatedUnion('kind', [
   courierScanOperationSchema,
   courierCancelOperationSchema,
   courierFinishPickupOperationSchema,
   courierAddressNoteOperationSchema,
+  courierChatMessageOperationSchema,
 ]);
 export type CourierOperation = z.output<typeof courierOperationSchema>;
 export type CourierOperationInput = z.input<typeof courierOperationSchema>;

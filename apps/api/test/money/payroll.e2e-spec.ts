@@ -1,3 +1,4 @@
+import { NoticesJob } from '../../src/notices/notices.job';
 import {
   COURIER_APP_HEADERS,
   createTestApp,
@@ -93,6 +94,17 @@ describe('Paie coursiers (Admin 4.12, D-82)', () => {
         debtsMillimes: '5000',
       }),
     );
+
+    // The admin is told the fiche is due, once per period (Admin 4.18).
+    const noticesJob = t.app.get(NoticesJob);
+    expect(await noticesJob.couriersDueForPay()).toBeGreaterThanOrEqual(1);
+    expect(await noticesJob.couriersDueForPay()).toBe(0);
+    expect(
+      await t.prisma.notification.findMany({
+        where: { type: 'COURSIER_A_PAYER', params: { path: ['day'], equals: '2026-09-27' } },
+        include: { user: { select: { role: true } } },
+      }),
+    ).toEqual([expect.objectContaining({ user: { role: 'ADMIN' } })]);
 
     const prepared = await t.request('POST', '/paie/fiches', {
       token: adminToken,

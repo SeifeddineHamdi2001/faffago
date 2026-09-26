@@ -257,6 +257,12 @@ describe('the bon travels (D-80, answers 4 and 5)', () => {
     expect(out.body).toMatchObject({
       expected: { bonCashMillimes: '78000', totalMillimes: '78000' },
     });
+    // The seller is told his payment is on its way (Vendeur 4.13).
+    expect(
+      await t.prisma.notification.findFirst({
+        where: { userId: seller.id, type: 'BON_VERSEMENT_EN_ROUTE' },
+      }),
+    ).toMatchObject({ params: { number: bon.number } });
 
     const day = await t.request('GET', '/coursier/ramassages', {
       token: ramasseurToken,
@@ -363,6 +369,12 @@ describe('the bon travels (D-80, answers 4 and 5)', () => {
     await count(t, depotToken, r2, '78,000');
     const closed = await close(t, depotToken, r2);
     expect(closed.body).toMatchObject({ status: 'CLOTUREE', ecartMillimes: '0' });
+    // The admin, who prepares bons de versement, is told it was not handed over.
+    const notRemis = await t.prisma.notification.findMany({
+      where: { type: 'BON_NON_REMIS', params: { path: ['number'], equals: bon.number } },
+      include: { user: { select: { role: true } } },
+    });
+    expect(notRemis.map((row) => row.user.role)).toEqual(['ADMIN']);
     const line = await t.prisma.caisseSessionBon.findFirstOrThrow({
       where: { bonVersementId: bon.id },
     });

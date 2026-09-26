@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ChatModule } from '../chat/chat.module';
 import { MoneyModule } from '../money/money.module';
 import { ParcelsModule } from '../parcels/parcels.module';
 import { AddressMemoryService } from './address-memory.service';
@@ -10,7 +11,7 @@ import { CourierSyncService } from './courier-sync.service';
 
 /** The courier app's routes (Coursier, phase 6). */
 @Module({
-  imports: [ParcelsModule, MoneyModule],
+  imports: [ParcelsModule, MoneyModule, ChatModule],
   controllers: [CourierSyncController, CourierController],
   providers: [
     AddressMemoryService,
