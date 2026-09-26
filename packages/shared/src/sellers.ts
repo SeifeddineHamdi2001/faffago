@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { cinNumberSchema } from './retenue.js';
 import { tunisianPhone } from './schemas.js';
 import { SellerStatut } from './statuses.js';
 
@@ -147,6 +148,26 @@ export const sellerEmail = z
   .max(254, '254 caractères maximum')
   .email('Email invalide');
 
+/** Sent as a multipart field: empty means not given. */
+const optionalCinNumber = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  cinNumberSchema.optional(),
+);
+
+/** The retenue certificate prints it: required for CIN uniquement (D-89). */
+function requireCinNumberFor(
+  value: { statut: SellerStatut; cinNumber?: string },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.statut === SellerStatut.CIN_UNIQUEMENT && !value.cinNumber) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['cinNumber'],
+      message: SELLER_MESSAGES.cinObligatoire,
+    });
+  }
+}
+
 const sellerFields = {
   shopName: z.string().trim().min(2, 'Nom de la boutique obligatoire').max(120),
   productCategory: z.nativeEnum(ProductCategory, {
@@ -163,10 +184,13 @@ const sellerFields = {
  * Créer un vendeur (Admin 4.14). Sent as multipart form fields beside the
  * document files, so every value arrives as a string.
  */
-export const createSellerSchema = z.object({
-  ...sellerFields,
-  statut: z.nativeEnum(SellerStatut, { errorMap: () => ({ message: 'Statut obligatoire' }) }),
-});
+export const createSellerSchema = z
+  .object({
+    ...sellerFields,
+    statut: z.nativeEnum(SellerStatut, { errorMap: () => ({ message: 'Statut obligatoire' }) }),
+    cinNumber: optionalCinNumber,
+  })
+  .superRefine(requireCinNumberFor);
 export type CreateSellerInput = z.input<typeof createSellerSchema>;
 export type CreateSellerValues = z.output<typeof createSellerSchema>;
 
@@ -178,9 +202,18 @@ export const updateSellerSchema = z
   .refine((value) => Object.keys(value).length > 0, 'Aucune modification');
 export type UpdateSellerValues = z.output<typeof updateSellerSchema>;
 
+/**
+ * The CIN number may come with the change to CIN uniquement; the service
+ * refuses the change when the seller has none recorded and none is sent (D-89).
+ */
 export const changeSellerStatutSchema = z.object({
   statut: z.nativeEnum(SellerStatut, { errorMap: () => ({ message: 'Statut obligatoire' }) }),
+  cinNumber: optionalCinNumber,
 });
+
+/** Numéro de CIN (D-89): admin only, like the documents. */
+export const setSellerCinSchema = z.object({ cinNumber: cinNumberSchema }).strict();
+export type SetSellerCinValues = z.output<typeof setSellerCinSchema>;
 export type ChangeSellerStatutValues = z.output<typeof changeSellerStatutSchema>;
 
 /**
@@ -218,6 +251,7 @@ export const SellerErrorCode = {
   DOCUMENT_TROP_VOLUMINEUX: 'DOCUMENT_TROP_VOLUMINEUX',
   DOCUMENT_ILLISIBLE: 'DOCUMENT_ILLISIBLE',
   STATUT_INCHANGE: 'STATUT_INCHANGE',
+  CIN_OBLIGATOIRE: 'CIN_OBLIGATOIRE',
   COMPTE_DEJA_SUSPENDU: 'COMPTE_DEJA_SUSPENDU',
   COMPTE_DEJA_ACTIF: 'COMPTE_DEJA_ACTIF',
 } as const;
@@ -238,6 +272,7 @@ export const SELLER_MESSAGES = {
   documentIllisible: 'Fichier illisible. Reprenez la photo ou envoyez un autre fichier.',
   fichierObligatoire: 'Fichier obligatoire.',
   statutInchange: 'Le vendeur a déjà ce statut.',
+  cinObligatoire: 'Numéro de CIN obligatoire pour le statut CIN uniquement',
   compteDejaSuspendu: 'Ce compte est déjà suspendu.',
   compteDejaActif: 'Ce compte est déjà actif.',
 } as const;

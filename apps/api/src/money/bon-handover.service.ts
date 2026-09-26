@@ -19,6 +19,7 @@ import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
 import { CaisseService } from './caisse.service';
+import { RetenueService } from './retenue.service';
 import type { ScanStep } from './bons-retour.service';
 
 type Db = Prisma.TransactionClient;
@@ -57,6 +58,7 @@ export class BonHandoverService {
     private readonly prisma: PrismaService,
     private readonly events: ParcelEventService,
     private readonly caisse: CaisseService,
+    private readonly retenue: RetenueService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -383,6 +385,8 @@ export class BonHandoverService {
       where: { id: bon.id },
       data: { status: 'REMIS', remisAt: now, remisScanId: scan.id },
     });
+    // The retenue is paid now: its certificate, numbered this year (D-89).
+    await this.retenue.issueAtRemis(tx, bon.id, now);
     const lines = await tx.bonVersementParcel.findMany({
       where: { bonVersementId: bon.id, releasedAt: null },
     });

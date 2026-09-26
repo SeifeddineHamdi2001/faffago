@@ -9,7 +9,13 @@ import {
   type ParcelStatus,
 } from '@faffago/shared';
 import { dt, when } from '@/lib/money';
-import type { BonRetourRow, BonVersementRow, SellerPaiements, SellerRetours } from '@/lib/types';
+import type {
+  BonRetourRow,
+  BonVersementRow,
+  SellerCertificates,
+  SellerPaiements,
+  SellerRetours,
+} from '@/lib/types';
 
 /**
  * Paiements (Vendeur 4.11, D-83): what he is owed, parcel by parcel, and his
@@ -18,9 +24,11 @@ import type { BonRetourRow, BonVersementRow, SellerPaiements, SellerRetours } fr
  */
 export function SellerPaiementsScreen({
   data,
+  certificates,
   canPrint,
 }: {
   data: SellerPaiements;
+  certificates?: SellerCertificates;
   canPrint: boolean;
 }) {
   const { aRecevoir, bons } = data;
@@ -106,6 +114,69 @@ export function SellerPaiementsScreen({
           </ul>
         )}
       </section>
+
+      {certificates && (certificates.certificates.length > 0 || certificates.years.length > 0) && (
+        <Certificates data={certificates} canPrint={canPrint} />
+      )}
+    </section>
+  );
+}
+
+/**
+ * Certificats de retenue à la source (Vendeur 4.11, D-89): one per bon that
+ * withheld something, and the yearly summary. A bon corrected by Faffa Go
+ * leaves its certificate Annulé; the next one replaces it.
+ */
+function Certificates({ data, canPrint }: { data: SellerCertificates; canPrint: boolean }) {
+  return (
+    <section className="card mt-6" aria-labelledby="certificats-title">
+      <h2 id="certificats-title" className="mb-2 font-display text-lg font-bold text-navy">
+        Certificats de retenue à la source
+      </h2>
+      {data.years.length > 0 && (
+        <p className="mb-2 flex flex-wrap gap-2 text-sm">
+          {data.years.map((year) =>
+            canPrint ? (
+              <a
+                key={year}
+                className="btn-secondary"
+                href={`/api/bff/paiements/certificats/annuel/${year}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Récapitulatif {year}
+              </a>
+            ) : (
+              <span key={year}>Récapitulatif {year}</span>
+            ),
+          )}
+        </p>
+      )}
+      <ul className="divide-y divide-navy/10 text-sm">
+        {data.certificates.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span>
+              <strong>{c.number}</strong> · bon {c.bonNumber} · {when(c.issuedAt)} ·{' '}
+              {dt(c.amountMillimes)}
+              {c.cancelled && (
+                <span className="ml-2 rounded bg-navy/10 px-1 text-xs text-navy">
+                  Annulé · {BON_CORRECTION_LABEL_FR}
+                </span>
+              )}
+            </span>
+            {canPrint && (
+              <a
+                className="btn-secondary"
+                href={`/api/bff/paiements/certificats/${c.id}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Télécharger
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

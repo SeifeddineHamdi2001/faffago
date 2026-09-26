@@ -11,7 +11,16 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 const bff = vi.fn();
 vi.mock('@/lib/client/call', () => ({ bff: (...args: unknown[]) => bff(...args) }));
 
+const EMPTY_REST = {
+  verifyNearLimit: [],
+  cashNotHandedOver: [],
+  bonsEnRoute: [],
+  bonsNotArchived: [],
+  sellersMissingCin: [],
+};
+
 const queue: ExceptionsQueue = {
+  ...EMPTY_REST,
   depotWaiting: [
     {
       code: 'FG-AAAAAAAA',
@@ -78,9 +87,14 @@ describe('ExceptionsScreen (Admin 4.7, D-50)', () => {
     render(<ExceptionsScreen queue={queue} permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'Colis au dépôt depuis plus de 48 h sans tournée (1)',
+      'Colis proche de la limite À vérifier (0)',
+      'Coursier n’ayant pas remis son argent (0)',
+      'Bon en route non remis après 24 h (0)',
+      'Bon signé non archivé après 48 h (0)',
       'Ramassage planifié non effectué (1)',
       'Demande de modification du vendeur en attente (1)',
       'Saisie manuelle du code (1)',
+      'Vendeur CIN uniquement sans numéro de CIN (0)',
     ]);
   });
 
@@ -144,10 +158,72 @@ describe('ExceptionsScreen (Admin 4.7, D-50)', () => {
   it('says so when a row has nothing', () => {
     render(
       <ExceptionsScreen
-        queue={{ depotWaiting: [], pickupsLate: [], changeRequests: [], manualEntries: [] }}
+        queue={{
+          ...EMPTY_REST,
+          depotWaiting: [],
+          pickupsLate: [],
+          changeRequests: [],
+          manualEntries: [],
+        }}
         permissions={[...PERMISSIONS_BY_ROLE.ADMIN]}
       />,
     );
-    expect(screen.getAllByText('Rien à signaler.')).toHaveLength(4);
+    expect(screen.getAllByText('Rien à signaler.')).toHaveLength(9);
+  });
+
+  it('shows the rest of the queue (D-89): cash of a past day, bons late, a CIN missing', () => {
+    render(
+      <ExceptionsScreen
+        queue={{
+          ...queue,
+          cashNotHandedOver: [
+            {
+              courier: {
+                userId: 'u-ali',
+                firstName: 'Ali',
+                lastName: 'Ben Salah',
+                role: 'LIVREUR',
+              },
+              day: '2026-09-24',
+              amountMillimes: '85000',
+            },
+          ],
+          bonsNotArchived: [
+            {
+              id: 'b1',
+              number: 'BV-2026-0922-01',
+              kind: 'BON_VERSEMENT',
+              shopName: 'Chic Tunis',
+              ramasseur: null,
+              since: '2026-09-22T08:00:00.000Z',
+            },
+          ],
+          sellersMissingCin: [{ sellerId: 's9', shopName: 'Sans CIN', contactFullName: 'Amel B' }],
+        }}
+        permissions={[...PERMISSIONS_BY_ROLE.ADMIN]}
+      />,
+    );
+    expect(
+      screen.getByText(/Ali Ben Salah \(Livreur\) · 24\/09\/2026 · 85,000 DT/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ouvrir la caisse' })).toHaveAttribute(
+      'href',
+      '/admin/caisse/u-ali/2026-09-24',
+    );
+    expect(screen.getByText('BV-2026-0922-01')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ajouter le numéro de CIN' })).toHaveAttribute(
+      'href',
+      '/admin/vendeurs/s9',
+    );
+  });
+
+  it('hides the CIN row from the roles that do not see it', () => {
+    render(
+      <ExceptionsScreen
+        queue={{ ...queue, sellersMissingCin: null }}
+        permissions={[...PERMISSIONS_BY_ROLE.DEPOT]}
+      />,
+    );
+    expect(screen.queryByText(/sans numéro de CIN/)).toBeNull();
   });
 });

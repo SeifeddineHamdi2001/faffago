@@ -11,8 +11,8 @@ export class ExceptionsController {
 
   @Get()
   @RequirePermission(Permission.EXCEPTIONS_LECTURE)
-  queue() {
-    return this.exceptions.queue();
+  queue(@CurrentPrincipal() principal: Principal) {
+    return this.exceptions.queue((principal as UserPrincipal).role);
   }
 
   /** Marquer comme traité (Admin, Dépôt, A-22): the entry leaves the queue. */

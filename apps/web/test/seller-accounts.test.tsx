@@ -88,6 +88,11 @@ describe('Créer un vendeur (Admin 4.14, D-33)', () => {
     await fillSeller(user);
     await user.upload(screen.getByLabelText('CIN (recto)'), file('recto.jpg'));
     await user.upload(screen.getByLabelText('CIN (verso)'), file('verso.jpg'));
+    // CIN uniquement: the CIN number is required, printed on the certificates (D-89).
+    await user.click(screen.getByRole('button', { name: 'Créer' }));
+    expect(bff).not.toHaveBeenCalled();
+    expect(screen.getByText('Numéro de CIN obligatoire pour le statut CIN uniquement')).toBeTruthy();
+    await user.type(screen.getByLabelText(/Numéro de CIN/), '01234567');
     await user.click(screen.getByRole('button', { name: 'Créer' }));
 
     expect(bff).toHaveBeenCalledTimes(1);
@@ -96,6 +101,7 @@ describe('Créer un vendeur (Admin 4.14, D-33)', () => {
     const form = body as FormData;
     expect(form.get('email')).toBe('yasmine@exemple.tn');
     expect(form.get('statut')).toBe('CIN_UNIQUEMENT');
+    expect(form.get('cinNumber')).toBe('01234567');
     expect((form.get('CIN_RECTO') as File).name).toBe('recto.jpg');
     expect((form.get('CIN_VERSO') as File).name).toBe('verso.jpg');
     expect(form.get('PATENTE')).toBeNull();

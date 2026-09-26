@@ -5,6 +5,9 @@ import {
   CHARGE_TYPE_LABELS_FR,
   PAYABLE_REFUSAL_MESSAGES_FR,
   PickupStatus,
+  RETENUE_REFUSAL_MESSAGES_FR,
+  RetenueRefusal,
+  SellerStatut,
   bonQrContent,
   bonVisitOf,
   buildBonVersement,
@@ -225,6 +228,10 @@ export class BonsVersementService {
         SELECT "id" FROM "sellers" WHERE "id" = ${input.sellerId}::uuid FOR UPDATE`;
       if (locked.length === 0) throw apiError(404, 'VENDEUR_INTROUVABLE', 'Vendeur introuvable');
       const seller = await tx.seller.findUniqueOrThrow({ where: { id: input.sellerId } });
+      // The certificate of the retenue names him by his CIN number (D-89).
+      if (seller.statut === SellerStatut.CIN_UNIQUEMENT && !seller.cinNumber) {
+        throw apiError(409, RetenueRefusal.CIN_MANQUANT, RETENUE_REFUSAL_MESSAGES_FR.CIN_MANQUANT);
+      }
 
       await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "id" = ANY(${input.parcelIds}::uuid[]) FOR UPDATE`;
       const parcels = await tx.parcel.findMany({

@@ -16,7 +16,8 @@ import {
   type ScanAction,
 } from '@faffago/shared';
 import { bff } from '@/lib/client/call';
-import type { ExceptionsQueue } from '@/lib/types';
+import { dt } from '@/lib/money';
+import type { ExceptionsQueue, LateBon } from '@/lib/types';
 
 const dateTime = new Intl.DateTimeFormat('fr-FR', {
   timeZone: 'Africa/Tunis',
@@ -63,6 +64,8 @@ export function ExceptionsScreen({
   const canPlan = permissions.includes(Permission.PLANIFIER_RAMASSAGES_TOURNEES);
   const canApply = permissions.includes(Permission.DEMANDES_VENDEUR);
   const canTreat = permissions.includes(Permission.SCAN_DEPOT);
+  const canCaisse = permissions.includes(Permission.CAISSE);
+  const canArchive = permissions.includes(Permission.SCAN_DEPOT);
   const [treating, setTreating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +80,26 @@ export function ExceptionsScreen({
     }
     router.refresh();
   }
+
+  const lateBons = (rows: LateBon[], verb: string, action: React.ReactNode) => (
+    <ul className="divide-y divide-navy/10 text-sm">
+      {rows.map((row) => (
+        <li
+          key={`${row.kind}-${row.id}`}
+          className="flex flex-wrap items-center justify-between gap-2 py-2"
+        >
+          <span>
+            <strong>{row.number}</strong> · {row.shopName}
+            {row.ramasseur && ` · ${row.ramasseur.firstName} ${row.ramasseur.lastName}`}
+            <span className="block text-navy/70">
+              {verb} le {dateTime.format(new Date(row.since))}
+            </span>
+          </span>
+          {action}
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <section>
@@ -107,6 +130,73 @@ export function ExceptionsScreen({
             </li>
           ))}
         </ul>
+      </Row>
+
+      <Row kind={ExceptionKind.A_VERIFIER_LIMITE_PROCHE} count={queue.verifyNearLimit.length}>
+        <ul className="divide-y divide-navy/10 text-sm">
+          {queue.verifyNearLimit.map((row) => (
+            <li key={row.code} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span>
+                <Link
+                  href={`/admin/colis/${row.code}`}
+                  className="font-mono font-semibold text-orange-dark underline"
+                >
+                  {row.code}
+                </Link>{' '}
+                · {row.shopName}
+                <span className="block text-navy/70">
+                  Retour automatique le {dateTime.format(new Date(row.deadline))} · client{' '}
+                  {row.recipientPhone} · vendeur {row.sellerPhone}
+                </span>
+              </span>
+              <Link href="/admin/a-verifier" className="btn-secondary">
+                Appeler le client / le vendeur
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Row>
+
+      <Row kind={ExceptionKind.ARGENT_NON_REMIS} count={queue.cashNotHandedOver.length}>
+        <ul className="divide-y divide-navy/10 text-sm">
+          {queue.cashNotHandedOver.map((row) => (
+            <li
+              key={`${row.courier.userId}-${row.day}`}
+              className="flex flex-wrap items-center justify-between gap-2 py-2"
+            >
+              <span>
+                {row.courier.firstName} {row.courier.lastName} (
+                {ROLE_LABELS_FR[row.courier.role as Role]}) · {formatTunisDay(row.day)} ·{' '}
+                {dt(row.amountMillimes)}
+              </span>
+              {canCaisse && (
+                <Link
+                  href={`/admin/caisse/${row.courier.userId}/${row.day}`}
+                  className="btn-secondary"
+                >
+                  Ouvrir la caisse
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Row>
+
+      <Row kind={ExceptionKind.BON_EN_ROUTE_NON_REMIS} count={queue.bonsEnRoute.length}>
+        {lateBons(queue.bonsEnRoute, 'En route depuis', null)}
+        <p className="mt-2 text-sm text-navy/70">Contactez le ramasseur.</p>
+      </Row>
+
+      <Row kind={ExceptionKind.BON_SIGNE_NON_ARCHIVE} count={queue.bonsNotArchived.length}>
+        {lateBons(
+          queue.bonsNotArchived,
+          'Remis',
+          canArchive ? (
+            <Link href="/admin/scan" className="btn-secondary">
+              Archiver
+            </Link>
+          ) : null,
+        )}
       </Row>
 
       <Row kind={ExceptionKind.RAMASSAGE_NON_EFFECTUE} count={queue.pickupsLate.length}>
@@ -188,6 +278,25 @@ export function ExceptionsScreen({
           ))}
         </ul>
       </Row>
+      {queue.sellersMissingCin && (
+        <Row kind={ExceptionKind.CIN_MANQUANT} count={queue.sellersMissingCin.length}>
+          <ul className="divide-y divide-navy/10 text-sm">
+            {queue.sellersMissingCin.map((row) => (
+              <li
+                key={row.sellerId}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <span>
+                  {row.shopName} · {row.contactFullName}
+                </span>
+                <Link href={`/admin/vendeurs/${row.sellerId}`} className="btn-secondary">
+                  Ajouter le numéro de CIN
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Row>
+      )}
     </section>
   );
 }

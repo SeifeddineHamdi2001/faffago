@@ -431,6 +431,9 @@ model Seller {
   contactFullName String
   contactPhone    String             @db.VarChar(8)
   statut          SellerStatut
+  /// Printed on the retenue certificates; admin only, like the documents.
+  /// Required for CIN uniquement (D-89).
+  cinNumber       String?            @db.VarChar(8)
   accountState    SellerAccountState @default(ACTIF)
   createdByUserId String             @db.Uuid
   createdAt       DateTime           @default(now())
@@ -1097,14 +1100,14 @@ model BonVersement {
   cancelReason      String?
   pdfStorageKey     String?
 
-  seller      Seller               @relation(fields: [sellerId], references: [id])
-  ramasseur   Courier?             @relation(fields: [ramasseurId], references: [id])
-  pickup      Pickup?              @relation(fields: [pickupId], references: [id])
-  parcels     BonVersementParcel[]
-  charges     SellerCharge[]
-  certificate RetenueCertificate?
-  caisseLines CaisseSessionBon[]
-  corrections BonCorrection[]
+  seller       Seller               @relation(fields: [sellerId], references: [id])
+  ramasseur    Courier?             @relation(fields: [ramasseurId], references: [id])
+  pickup       Pickup?              @relation(fields: [pickupId], references: [id])
+  parcels      BonVersementParcel[]
+  charges      SellerCharge[]
+  certificates RetenueCertificate[]
+  caisseLines  CaisseSessionBon[]
+  corrections  BonCorrection[]
 
   @@index([sellerId, status])
   @@index([status, preparedAt])
@@ -1128,19 +1131,30 @@ model BonVersementParcel {
   @@map("bon_versement_parcels")
 }
 
-/// One certificate per bon that withheld something, plus a yearly summary the
-/// seller downloads (Vendeur 4.11).
+/// One certificate per bon that withheld something, given at its first Remis,
+/// plus a yearly summary the seller downloads (Vendeur 4.11, D-89). A bon
+/// corrected out of Remis (D-88) has its certificate Annulé, kept, its number
+/// never reused; one active certificate per bon (partial unique index).
 model RetenueCertificate {
-  id             String   @id @default(uuid()) @db.Uuid
-  number         String   @unique
-  bonVersementId String   @unique @db.Uuid
-  sellerId       String   @db.Uuid
-  year           Int
-  baseMillimes   BigInt
-  rateBps        Int
-  amountMillimes BigInt
-  issuedAt       DateTime @default(now())
-  pdfStorageKey  String?
+  id                String    @id @default(uuid()) @db.Uuid
+  /// RS-2026-0001, one sequence per year.
+  number            String    @unique
+  bonVersementId    String    @db.Uuid
+  sellerId          String    @db.Uuid
+  year              Int
+  baseMillimes      BigInt
+  rateBps           Int
+  amountMillimes    BigInt
+  /// The bon's Remis: the retenue's month (D-89).
+  issuedAt          DateTime  @default(now())
+  /// Who the certificate names, as at its Remis.
+  sellerName        String
+  shopName          String
+  cinNumber         String    @db.VarChar(8)
+  sellerAddress     String
+  cancelledAt       DateTime?
+  cancelledByUserId String?   @db.Uuid
+  pdfStorageKey     String?
 
   bonVersement BonVersement @relation(fields: [bonVersementId], references: [id])
   seller       Seller       @relation(fields: [sellerId], references: [id])

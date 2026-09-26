@@ -51,6 +51,7 @@ import { BonsVersementService } from './bons-versement.service';
 import { CaisseService } from './caisse.service';
 import { renderBonRetour, renderBonVersement, renderPayslip } from './money-pdf';
 import { PayrollService } from './payroll.service';
+import { RetenueService } from './retenue.service';
 import { SellerMoneyService } from './seller-money.service';
 
 const dayPipe = new ZodValidationPipe(caisseDaySchema);
@@ -68,7 +69,7 @@ const payslipQuery = new ZodValidationPipe(
   }),
 );
 
-function pdf(response: Response, file: Buffer, name: string): StreamableFile {
+export function pdf(response: Response, file: Buffer, name: string): StreamableFile {
   response.setHeader('Cache-Control', 'no-store');
   response.setHeader('X-Content-Type-Options', 'nosniff');
   return new StreamableFile(file, {
@@ -444,7 +445,40 @@ export class SellerMoneyController {
     private readonly money: SellerMoneyService,
     private readonly bonsVersement: BonsVersementService,
     private readonly bonsRetour: BonsRetourService,
+    private readonly retenue: RetenueService,
   ) {}
+
+  /** His certificats de retenue à la source (Vendeur 4.11, D-89). */
+  @Get('paiements/certificats')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @AllowImpersonation()
+  certificates(@CurrentPrincipal() principal: Principal) {
+    return this.retenue.ofSeller(sellerIdOf(principal));
+  }
+
+  @Get('paiements/certificats/annuel/:year/pdf')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @AllowImpersonation()
+  async yearlyCertificate(
+    @Param('year', new ZodValidationPipe(z.string().regex(/^\d{4}$/))) year: string,
+    @CurrentPrincipal() principal: Principal,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.retenue.yearlyPdf(sellerIdOf(principal), year);
+    return pdf(response, file, `retenue-${year}`);
+  }
+
+  @Get('paiements/certificats/:id/pdf')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @AllowImpersonation()
+  async certificate(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentPrincipal() principal: Principal,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const file = await this.retenue.certificatePdf(id, sellerIdOf(principal));
+    return pdf(response, file.pdf, file.number);
+  }
 
   @Get('paiements')
   @RequirePermission(Permission.ESPACE_VENDEUR)

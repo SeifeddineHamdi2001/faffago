@@ -11,6 +11,13 @@ export const ExceptionKind = {
   DEMANDE_VENDEUR: 'DEMANDE_VENDEUR',
   /** A-22: a code typed by hand, allowed but flagged to the admin. */
   SAISIE_MANUELLE: 'SAISIE_MANUELLE',
+  // ── Phase 10 (Admin 4.7, D-89) ──
+  A_VERIFIER_LIMITE_PROCHE: 'A_VERIFIER_LIMITE_PROCHE',
+  ARGENT_NON_REMIS: 'ARGENT_NON_REMIS',
+  BON_EN_ROUTE_NON_REMIS: 'BON_EN_ROUTE_NON_REMIS',
+  BON_SIGNE_NON_ARCHIVE: 'BON_SIGNE_NON_ARCHIVE',
+  /** D-89: a CIN uniquement seller whose CIN number is missing: no bon for him. */
+  CIN_MANQUANT: 'CIN_MANQUANT',
 } as const;
 export type ExceptionKind = (typeof ExceptionKind)[keyof typeof ExceptionKind];
 
@@ -19,7 +26,32 @@ export const EXCEPTION_KIND_LABELS_FR: Record<ExceptionKind, string> = {
   RAMASSAGE_NON_EFFECTUE: 'Ramassage planifié non effectué',
   DEMANDE_VENDEUR: 'Demande de modification du vendeur en attente',
   SAISIE_MANUELLE: 'Saisie manuelle du code',
+  A_VERIFIER_LIMITE_PROCHE: 'Colis proche de la limite À vérifier',
+  ARGENT_NON_REMIS: 'Coursier n’ayant pas remis son argent',
+  BON_EN_ROUTE_NON_REMIS: 'Bon en route non remis après 24 h',
+  BON_SIGNE_NON_ARCHIVE: 'Bon signé non archivé après 48 h',
+  CIN_MANQUANT: 'Vendeur CIN uniquement sans numéro de CIN',
 };
+
+/** Admin 4.7: "Bon en route not marked Remis after 24 h". */
+export const BON_EN_ROUTE_EXCEPTION_HOURS = 24;
+
+/** Admin 4.7: "Signed bon not archived after 48 h". */
+export const BON_ARCHIVE_EXCEPTION_HOURS = 48;
+
+/** Past `hours` since `since`? */
+export function olderThanHours(since: Date, now: Date, hours: number): boolean {
+  return now.getTime() - since.getTime() > hours * 3_600_000;
+}
+
+/**
+ * Admin 4.7: "Courier has not handed over his cash today". Cash of a day
+ * already over is waiting at the courier's: his caisse of that day was never
+ * closed. Today's cash is not late until the day ends (D-89).
+ */
+export function cashLate(dayKey: string, todayKey: string): boolean {
+  return dayKey < todayKey;
+}
 
 /** Admin 4.7: "Parcel at the depot more than 48 h without a tour". */
 export const DEPOT_WAIT_EXCEPTION_HOURS = 48;

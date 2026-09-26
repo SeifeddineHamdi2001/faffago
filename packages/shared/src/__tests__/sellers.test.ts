@@ -102,6 +102,7 @@ describe('Créer un vendeur', () => {
     contactPhone: '22 123 456',
     email: ' Yasmine@Example.TN ',
     statut: 'CIN_UNIQUEMENT',
+    cinNumber: '01234567',
   };
 
   it('normalises the phone and lowercases the email (Q13)', () => {

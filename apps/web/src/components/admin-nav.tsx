@@ -28,6 +28,7 @@ const ITEMS: { href: string; label: string; permission: Permission }[] = [
   { href: '/admin/paiements', label: 'Paiements vendeurs', permission: Permission.BONS_VERSEMENT },
   { href: '/admin/retours', label: 'Retours', permission: Permission.RETOURS_LECTURE },
   { href: '/admin/paie', label: 'Paie coursiers', permission: Permission.PAIE_COURSIERS },
+  { href: '/admin/rapports', label: 'Rapports', permission: Permission.RAPPORTS },
   { href: '/admin/vendeurs', label: 'Vendeurs', permission: Permission.VENDEURS_LECTURE },
   { href: '/admin/coursiers', label: 'Coursiers', permission: Permission.COURSIERS_LECTURE },
   { href: '/admin/parametres', label: 'Paramètres', permission: Permission.PARAMETRES },

@@ -77,6 +77,7 @@ async function sellerForm({ fields = {}, files }: SellerForm = {}): Promise<Form
     contactPhone: nextPhone(),
     email: uniqueEmail(),
     statut: 'CIN_UNIQUEMENT',
+    cinNumber: '01234567',
     ...fields,
   };
   for (const [key, value] of Object.entries(values)) form.append(key, value);
@@ -507,7 +508,7 @@ describe('Changer le statut (D-33, D-34)', () => {
     const [entry] = await t.prisma.auditLog.findMany({
       where: { entityId: seller.id, action: 'CHANGEMENT_STATUT_VENDEUR' },
     });
-    expect(entry!.before).toEqual({ statut: 'CIN_UNIQUEMENT' });
+    expect(entry!.before).toMatchObject({ statut: 'CIN_UNIQUEMENT' });
     expect(entry!.after).toMatchObject({ statut: 'PATENTE' });
   });
 
@@ -530,6 +531,33 @@ describe('Changer le statut (D-33, D-34)', () => {
     const response = await changeStatut(seller.id, 'CIN_UNIQUEMENT');
     expect(response.status).toBe(200);
     expect(response.body.statut).toBe('CIN_UNIQUEMENT');
+  });
+
+  it('to CIN uniquement needs the CIN number, recorded or sent with it (D-89)', async () => {
+    const { seller } = await createdSeller({
+      fields: { statut: 'PATENTE', cinNumber: '' },
+      files: { CIN_RECTO: await png(), CIN_VERSO: await png(), PATENTE: PDF },
+    });
+    const refused = await changeStatut(seller.id, 'CIN_UNIQUEMENT');
+    expect(refused.status).toBe(400);
+    expect(refused.body.code).toBe('CIN_OBLIGATOIRE');
+    const form = new FormData();
+    form.append('statut', 'CIN_UNIQUEMENT');
+    form.append('cinNumber', '07654321');
+    const response = await t.request('POST', `/sellers/${seller.id}/statut`, {
+      token: adminToken,
+      form,
+    });
+    expect(response.status).toBe(200);
+    expect((await t.prisma.seller.findUniqueOrThrow({ where: { id: seller.id } })).cinNumber).toBe(
+      '07654321',
+    );
+  });
+
+  it('refuses to create a CIN uniquement seller without his CIN number (D-89)', async () => {
+    const response = await createSeller(await sellerForm({ fields: { cinNumber: '' } }));
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(response.body)).toContain('Numéro de CIN obligatoire');
   });
 
   it('refuses the statut the seller already has', async () => {

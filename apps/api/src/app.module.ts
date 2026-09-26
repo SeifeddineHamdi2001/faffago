@@ -11,6 +11,7 @@ import { CourierModule } from './courier/courier.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DemandesModule } from './demandes/demandes.module';
 import { ExceptionsModule } from './exceptions/exceptions.module';
+import { ReportsModule } from './reports/reports.module';
 import { GeoModule } from './geo/geo.module';
 import { LabelsModule } from './labels/labels.module';
 import { MoneyModule } from './money/money.module';
@@ -59,6 +60,7 @@ import { ZonesModule } from './zones/zones.module';
     ColisModule,
     DemandesModule,
     ExceptionsModule,
+    ReportsModule,
     DashboardModule,
     CourierModule,
     AVerifierModule,

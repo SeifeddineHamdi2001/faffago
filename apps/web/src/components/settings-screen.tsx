@@ -87,6 +87,13 @@ const ADS: FieldDef[] = [
   { key: SettingKey.META_PIXEL_ID, label: 'Identifiant Meta Pixel', kind: 'optional' },
 ];
 
+/** Printed on the retenue certificates (D-89); none is generated while one is empty. */
+const SOCIETE: FieldDef[] = [
+  { key: SettingKey.SOCIETE_RAISON_SOCIALE, label: 'Raison sociale', kind: 'optional' },
+  { key: SettingKey.SOCIETE_MATRICULE_FISCAL, label: 'Matricule fiscal', kind: 'optional' },
+  { key: SettingKey.SOCIETE_ADRESSE, label: 'Adresse', kind: 'optional' },
+];
+
 const CONTACT_FIELDS: Array<{ key: keyof ContactLinks; label: string }> = [
   { key: 'phone', label: 'Téléphone' },
   { key: 'whatsapp', label: 'WhatsApp' },
@@ -322,6 +329,12 @@ export function SettingsScreen({
         values={values}
       />
       <SettingsSection title="Retenue à la source" fields={RETENUE} values={values} />
+      <SettingsSection
+        title="Société"
+        note="Imprimé sur les certificats de retenue à la source. Aucun certificat n’est généré tant qu’un champ est vide."
+        fields={SOCIETE}
+        values={values}
+      />
       <SettingsSection title="Règles" fields={RULES} values={values} />
       <ContactLinksSection links={values[SettingKey.CONTACT_LINKS] as ContactLinks} />
       <SettingsSection

@@ -41,3 +41,5 @@ export * from './caisse.js';
 export * from './bons.js';
 export * from './payroll.js';
 export * from './seller-money.js';
+export * from './retenue.js';
+export * from './reports.js';
