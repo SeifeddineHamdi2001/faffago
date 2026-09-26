@@ -21,7 +21,7 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
 
   return (
     <>
-      <Hero locale={locale} texts={texts} />
+      <Hero locale={locale} texts={texts} info={info} />
       <HowItWorks texts={texts} />
       <WhyFaffaGo texts={texts} />
       <Prices locale={locale} texts={texts} info={info} />

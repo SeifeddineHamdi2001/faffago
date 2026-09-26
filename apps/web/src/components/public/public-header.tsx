@@ -1,14 +1,24 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Locale } from '@/lib/locale';
 import type { PublicTexts } from '@/lib/public-texts';
+import { Icon } from './icons';
 import { LanguageSwitch } from './language-switch';
 
-export function Wordmark({ className = '' }: { className?: string }) {
-  // The brand name stays in Latin letters in both languages.
+/**
+ * The logo: the chevron mark and "Faffa Go", white and orange, so it sits on
+ * the navy header and footer only. The name stays in Latin letters in both
+ * languages.
+ */
+export function Logo({ className = 'h-10' }: { className?: string }) {
   return (
-    <span dir="ltr" className={`font-display font-bold whitespace-nowrap ${className}`}>
-      Faffa <span className="text-orange">Go</span>
-    </span>
+    <Image
+      src="/logo-faffago.png"
+      alt="Faffa Go"
+      width={440}
+      height={108}
+      className={`w-auto object-contain ${className}`}
+    />
   );
 }
 
@@ -26,24 +36,25 @@ export function PublicHeader({ locale, texts }: { locale: Locale; texts: PublicT
     { href: `${home}#faq`, label: texts.nav.faq },
   ];
   return (
-    <header className="sticky top-0 z-30 bg-navy text-white shadow">
-      <div className="mx-auto flex max-w-6xl items-center gap-1 px-3 py-2 sm:gap-2 sm:px-4">
-        <Link href={home} className="me-auto inline-flex min-h-11 items-center text-xl sm:text-2xl">
-          <Wordmark />
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-navy/95 text-white backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:h-20 sm:gap-3 sm:px-6 lg:px-8">
+        <Link href={home} className="me-auto inline-flex min-h-11 shrink-0 items-center rounded-lg">
+          <Logo className="h-8 sm:h-10" />
         </Link>
-        <nav aria-label={texts.nav.menu} className="hidden items-center gap-1 md:flex">
-          {links.map((link) => (
+        <nav aria-label={texts.nav.menu} className="hidden items-center gap-1 lg:flex">
+          {links.map((link, index) => (
             <a
               key={link.href}
               href={link.href}
-              className="inline-flex min-h-11 items-center rounded-lg px-3 text-white/90 hover:bg-white/10"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-white/80 transition-colors hover:text-orange"
             >
+              {index === 0 && <Icon name="search" className="size-3.5 text-orange" />}
               {link.label}
             </a>
           ))}
           <Link
             href="/vendeur/connexion"
-            className="inline-flex min-h-11 items-center rounded-lg px-3 text-white/90 hover:bg-white/10"
+            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-white/80 transition-colors hover:text-white"
           >
             {texts.nav.login}
           </Link>
@@ -51,20 +62,23 @@ export function PublicHeader({ locale, texts }: { locale: Locale; texts: PublicT
         <LanguageSwitch locale={locale} label={texts.nav.otherLanguage} />
         <a
           href={`${home}#contact`}
-          className="btn-primary px-3 text-sm whitespace-nowrap sm:px-4 sm:text-base"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-orange px-3 text-sm font-bold whitespace-nowrap text-navy shadow-lg shadow-orange/25 transition hover:-translate-y-0.5 hover:brightness-105 sm:px-5"
         >
           {texts.nav.partner}
         </a>
-        <details className="relative md:hidden">
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center rounded-lg px-2 hover:bg-white/10">
-            {texts.nav.menu}
+        <details className="relative lg:hidden">
+          <summary
+            aria-label={texts.nav.menu}
+            className="inline-flex min-h-11 min-w-11 cursor-pointer list-none items-center justify-center rounded-lg text-white/80 hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden"
+          >
+            <Icon name="menu" className="size-6" />
           </summary>
-          <ul className="absolute end-0 mt-2 w-56 rounded-xl bg-white p-2 text-navy shadow-lg">
+          <ul className="absolute inset-e-0 mt-2 w-60 rounded-2xl border border-navy/10 bg-white p-2 text-navy shadow-xl">
             {links.map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
-                  className="flex min-h-11 items-center rounded-lg px-3 hover:bg-navy/5"
+                  className="flex min-h-11 items-center rounded-lg px-3 font-medium hover:bg-navy/5"
                 >
                   {link.label}
                 </a>
@@ -73,7 +87,7 @@ export function PublicHeader({ locale, texts }: { locale: Locale; texts: PublicT
             <li>
               <Link
                 href="/vendeur/connexion"
-                className="flex min-h-11 items-center rounded-lg px-3 hover:bg-navy/5"
+                className="flex min-h-11 items-center rounded-lg px-3 font-medium hover:bg-navy/5"
               >
                 {texts.nav.login}
               </Link>

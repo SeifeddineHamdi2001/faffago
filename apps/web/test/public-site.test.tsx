@@ -9,7 +9,7 @@ import {
   type PublicTrackingView,
 } from '@faffago/shared';
 import { ContactLinks } from '@/components/public/contact-links';
-import { Prices, Zones } from '@/components/public/landing-sections';
+import { Hero, Prices, Zones } from '@/components/public/landing-sections';
 import { MetaPixel } from '@/components/public/meta-pixel';
 import { TrackingResult } from '@/components/public/tracking-result';
 import { publicTexts } from '@/lib/public-texts';
@@ -114,9 +114,9 @@ describe('the landing page', () => {
     expect(within(table).getByRole('row', { name: /Changer de client/ })).toHaveTextContent(
       '1,000 DT',
     );
-    expect(within(table).getByRole('row', { name: /Ramassage/ })).toHaveTextContent(
-      'Gratuit dès 5 colis · 2,000 DT en dessous de 5 colis',
-    );
+    const pickup = within(table).getByRole('row', { name: /Ramassage/ });
+    expect(pickup).toHaveTextContent('Gratuit dès 5 colis');
+    expect(pickup).toHaveTextContent('2,000 DT en dessous de 5 colis');
     expect(screen.getByText(/retenue à la source de 3 %/)).toBeInTheDocument();
   });
 
@@ -128,6 +128,27 @@ describe('the landing page', () => {
     );
     render(<Prices locale="fr" texts={publicTexts('fr')} info={info} />);
     expect(screen.getByText('7,000 DT')).toBeInTheDocument();
+  });
+
+  it('opens on the headline, with only figures Paramètres holds under it', () => {
+    render(<Hero locale="fr" texts={publicTexts('fr')} info={INFO} />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Un échec de livraison n’est pas un retour. Chez Faffa Go, c’est vous qui décidez.',
+    );
+    expect(screen.getByText('5,500 DT')).toBeInTheDocument();
+    expect(screen.getByText('Gratuite')).toBeInTheDocument();
+    // Two délégations in the test zones.
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByRole('search')).toBeInTheDocument();
+  });
+
+  it('shows no figures in the hero when the API has never answered', () => {
+    render(<Hero locale="fr" texts={publicTexts('fr')} info={null} />);
+    expect(screen.queryByText('5,500 DT')).toBeNull();
+    expect(screen.getByRole('link', { name: /Devenir partenaire/ })).toHaveAttribute(
+      'href',
+      '/fr#contact',
+    );
   });
 
   it('says the prices are unavailable rather than showing none', () => {

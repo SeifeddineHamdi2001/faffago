@@ -30,10 +30,28 @@ export interface PublicTexts {
     /** The other language's name, written in that language. */
     otherLanguage: string;
   };
-  hero: { title: string; lead: string; visual: string };
+  hero: {
+    /** Above the headline. */
+    badge: string;
+    title: string;
+    /** The part of `title` drawn in the brand gradient; must appear in it. */
+    highlight: string;
+    lead: string;
+    visual: string;
+    /** The two labels floating over the visual. */
+    statusBadge: { label: string; value: string };
+    bonBadge: { label: string; value: string };
+    /** Under the actions: the delivery fee, the free relance, the délégations. */
+    stats: { delivery: string; relaunch: string; zones: string };
+  };
   trackBox: { title: string; label: string; submit: string; hint: string };
-  how: { title: string; steps: Array<{ title: string; text: string }> };
-  why: { title: string; items: Array<{ title: string; text: string }> };
+  how: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    steps: Array<{ title: string; text: string; tag: string }>;
+  };
+  why: { title: string; lead: string; items: Array<{ title: string; text: string }> };
   prices: {
     title: string;
     lead: string;
@@ -45,14 +63,31 @@ export interface PublicTexts {
     free: string;
     changeClient: string;
     pickup: string;
-    pickupPrice: (threshold: number, fee: string) => string;
+    /** One line under each service. */
+    notes: {
+      delivery: string;
+      return: string;
+      relaunch: string;
+      changeClient: string;
+      pickup: string;
+    };
+    pickupFree: (threshold: number) => string;
+    pickupBelow: (threshold: number, fee: string) => string;
     retenueNote: (rate: string) => string;
     faqLink: string;
     unavailable: string;
   };
-  zones: { title: string; lead: string; unavailable: string };
-  faq: {
+  zones: {
+    eyebrow: string;
     title: string;
+    lead: string;
+    count: (n: number) => string;
+    unavailable: string;
+  };
+  faq: {
+    eyebrow: string;
+    title: string;
+    lead: string;
     items: (v: {
       retenueRate: string;
       verifyHours: number;
@@ -60,6 +95,7 @@ export interface PublicTexts {
     }) => Array<{ q: string; a: string; link?: { href: string; label: string } }>;
   };
   contact: {
+    eyebrow: string;
     title: string;
     lead: string;
     whatsapp: string;
@@ -68,7 +104,7 @@ export interface PublicTexts {
     instagram: string;
     tiktok: string;
   };
-  footer: { tagline: string; contact: string; follow: string };
+  footer: { tagline: string; contact: string; follow: string; language: string };
   tracking: {
     title: string;
     status: string;
@@ -107,9 +143,14 @@ const FR: PublicTexts = {
     otherLanguage: 'العربية',
   },
   hero: {
+    badge: 'Livraison express contre remboursement • Grand Tunis',
     title: 'Un échec de livraison n’est pas un retour. Chez Faffa Go, c’est vous qui décidez.',
+    highlight: 'n’est pas un retour',
     lead: 'Livraison express contre remboursement dans le Grand Tunis. Chaque échec est vérifié avec vous avant tout retour, et votre cash vous est apporté avec un bon signé qui liste chaque colis.',
     visual: 'Un livreur Faffa Go à moto',
+    statusBadge: { label: 'Suivi du colis', value: 'Livré' },
+    bonBadge: { label: 'Bon de versement', value: 'Chaque colis listé' },
+    stats: { delivery: 'Livraison', relaunch: 'Relance', zones: 'Délégations couvertes' },
   },
   trackBox: {
     title: 'Suivre mon colis',
@@ -118,25 +159,35 @@ const FR: PublicTexts = {
     hint: 'Le code est imprimé sur l’étiquette du colis.',
   },
   how: {
+    eyebrow: 'Simple et efficace',
     title: 'Comment ça marche',
+    lead: 'De la création du colis à votre cash, en quatre étapes.',
     steps: [
       {
         title: 'Vous créez vos colis',
         text: 'Dans votre espace vendeur, un par un ou par import CSV, puis vous imprimez les étiquettes.',
+        tag: 'Espace vendeur',
       },
-      { title: 'On ramasse', text: 'Un ramasseur Faffa Go passe chez vous prendre vos colis.' },
+      {
+        title: 'On ramasse',
+        text: 'Un ramasseur Faffa Go passe chez vous prendre vos colis.',
+        tag: 'Ramassage chez vous',
+      },
       {
         title: 'On livre',
         text: 'Le livreur de la zone livre votre client et encaisse le montant.',
+        tag: 'Paiement à la livraison',
       },
       {
         title: 'Votre cash + bon signé',
         text: 'Le ramasseur vous apporte votre argent avec un bon de versement qui liste chaque colis.',
+        tag: 'Compté et signé',
       },
     ],
   },
   why: {
     title: 'Pourquoi Faffa Go',
+    lead: 'Pensé pour les vendeurs en ligne du Grand Tunis.',
     items: [
       {
         title: 'Un échec n’est pas un retour',
@@ -171,20 +222,31 @@ const FR: PublicTexts = {
     free: 'Gratuite',
     changeClient: 'Changer de client',
     pickup: 'Ramassage chez vous',
-    pickupPrice: (threshold, fee) =>
-      `Gratuit dès ${threshold} colis · ${fee} en dessous de ${threshold} colis`,
+    notes: {
+      delivery: 'Livré chez votre client, montant encaissé en espèces.',
+      return: 'Le colis vous est rapporté.',
+      relaunch: 'Une nouvelle tentative, quand vous la demandez.',
+      changeClient: 'Le colis part vers un autre client, depuis le dépôt.',
+      pickup: 'Un ramasseur passe prendre vos colis chez vous.',
+    },
+    pickupFree: (threshold) => `Gratuit dès ${threshold} colis`,
+    pickupBelow: (threshold, fee) => `${fee} en dessous de ${threshold} colis`,
     retenueNote: (rate) =>
       `Vendeurs sans patente ni carte auto-entrepreneur : retenue à la source de ${rate} % sur les paiements.`,
     faqLink: 'Voir la FAQ',
     unavailable: 'Les tarifs sont momentanément indisponibles. Contactez-nous.',
   },
   zones: {
+    eyebrow: 'Grand Tunis',
     title: 'Zones couvertes',
     lead: 'Nous livrons dans ces délégations du Grand Tunis.',
+    count: (n) => (n === 1 ? '1 délégation' : `${n} délégations`),
     unavailable: 'La liste des zones est momentanément indisponible. Contactez-nous.',
   },
   faq: {
+    eyebrow: 'Assistance et transparence',
     title: 'Questions fréquentes',
+    lead: 'L’essentiel pour démarrer vos livraisons avec Faffa Go.',
     items: ({ retenueRate, verifyHours, maxAttempts }) => [
       {
         q: 'Quand et comment suis-je payé ?',
@@ -210,6 +272,7 @@ const FR: PublicTexts = {
     ],
   },
   contact: {
+    eyebrow: 'Sans formulaire',
     title: 'Devenir partenaire',
     lead: 'Pas de formulaire : parlez-nous directement. Nous créons votre compte et planifions votre premier ramassage.',
     whatsapp: 'WhatsApp',
@@ -222,6 +285,7 @@ const FR: PublicTexts = {
     tagline: 'Livraison express contre remboursement dans le Grand Tunis.',
     contact: 'Contact',
     follow: 'Suivez-nous',
+    language: 'Langue',
   },
   tracking: {
     title: 'Suivi du colis',
@@ -263,9 +327,14 @@ const AR: PublicTexts = {
     otherLanguage: 'Français',
   },
   hero: {
+    badge: 'توصيل سريع مع الدفع عند الاستلام • تونس الكبرى',
     title: 'فشل التوصيل ليس إرجاعاً. مع Faffa Go، القرار لك.',
+    highlight: 'ليس إرجاعاً',
     lead: 'توصيل سريع مع الدفع عند الاستلام في تونس الكبرى. نتحقق معك من كل محاولة فاشلة قبل أي إرجاع، وتصلك أموالك نقداً مع وصل ممضى يذكر كل طرد.',
     visual: 'عامل توصيل Faffa Go على دراجة نارية',
+    statusBadge: { label: 'تتبّع الطرد', value: 'تم التوصيل' },
+    bonBadge: { label: 'وصل الدفع', value: 'كل طرد مذكور' },
+    stats: { delivery: 'التوصيل', relaunch: 'إعادة المحاولة', zones: 'معتمدية مغطّاة' },
   },
   trackBox: {
     title: 'تتبّع طردي',
@@ -274,22 +343,35 @@ const AR: PublicTexts = {
     hint: 'الرمز مطبوع على ملصق الطرد.',
   },
   how: {
+    eyebrow: 'بسيط وفعّال',
     title: 'كيف نعمل',
+    lead: 'من إنشاء الطرد إلى أموالك، في أربع خطوات.',
     steps: [
       {
         title: 'تُنشئ طرودك',
         text: 'من فضاء البائع، طرداً بطرد أو باستيراد ملف CSV، ثم تطبع الملصقات.',
+        tag: 'فضاء البائع',
       },
-      { title: 'نستلمها منك', text: 'يمرّ عندك مستلم من Faffa Go لأخذ طرودك.' },
-      { title: 'نوصلها', text: 'عامل توصيل المنطقة يوصل الطرد إلى حريفك ويقبض المبلغ.' },
+      {
+        title: 'نستلمها منك',
+        text: 'يمرّ عندك مستلم من Faffa Go لأخذ طرودك.',
+        tag: 'الاستلام من عندك',
+      },
+      {
+        title: 'نوصلها',
+        text: 'عامل توصيل المنطقة يوصل الطرد إلى حريفك ويقبض المبلغ.',
+        tag: 'الدفع عند الاستلام',
+      },
       {
         title: 'أموالك + وصل ممضى',
         text: 'يُحضر لك المستلم أموالك مع وصل دفع يذكر كل طرد.',
+        tag: 'تعدّ وتُمضي',
       },
     ],
   },
   why: {
     title: 'لماذا Faffa Go',
+    lead: 'مصمَّم للبائعين عبر الإنترنت في تونس الكبرى.',
     items: [
       {
         title: 'الفشل ليس إرجاعاً',
@@ -324,20 +406,38 @@ const AR: PublicTexts = {
     free: 'مجاناً',
     changeClient: 'تغيير الحريف',
     pickup: 'الاستلام من عندك',
-    pickupPrice: (threshold, fee) =>
-      `مجاناً ابتداءً من ${threshold} طرود · ${fee} لأقل من ${threshold} طرود`,
+    notes: {
+      delivery: 'يُسلَّم إلى حريفك ويُقبض المبلغ نقداً.',
+      return: 'يُعاد إليك الطرد.',
+      relaunch: 'محاولة جديدة عندما تطلبها.',
+      changeClient: 'يتوجّه الطرد إلى حريف آخر انطلاقاً من المستودع.',
+      pickup: 'يمرّ عندك مستلم لأخذ طرودك.',
+    },
+    pickupFree: (threshold) => `مجاناً ابتداءً من ${threshold} طرود`,
+    pickupBelow: (threshold, fee) => `${fee} لأقل من ${threshold} طرود`,
     retenueNote: (rate) =>
       `البائعون الذين ليست لهم باتيندة ولا بطاقة مبادر ذاتي: خصم من المورد بنسبة ${rate} % على الدفعات.`,
     faqLink: 'انظر الأسئلة الشائعة',
     unavailable: 'الأسعار غير متاحة حالياً. اتصل بنا.',
   },
   zones: {
+    eyebrow: 'تونس الكبرى',
     title: 'مناطق التغطية',
     lead: 'نوصل إلى هذه المعتمديات في تونس الكبرى.',
+    count: (n) =>
+      n === 1
+        ? 'معتمدية واحدة'
+        : n === 2
+          ? 'معتمديتان'
+          : n <= 10
+            ? `${n} معتمديات`
+            : `${n} معتمدية`,
     unavailable: 'قائمة المناطق غير متاحة حالياً. اتصل بنا.',
   },
   faq: {
+    eyebrow: 'مساعدة وشفافية',
     title: 'أسئلة شائعة',
+    lead: 'كل ما تحتاج معرفته لبدء التوصيل مع Faffa Go.',
     items: ({ retenueRate, verifyHours, maxAttempts }) => [
       {
         q: 'متى وكيف أتحصّل على أموالي؟',
@@ -363,6 +463,7 @@ const AR: PublicTexts = {
     ],
   },
   contact: {
+    eyebrow: 'بدون استمارة',
     title: 'كن شريكاً',
     lead: 'لا توجد استمارة: تحدّث معنا مباشرة. ننشئ حسابك ونبرمج أول عملية استلام.',
     whatsapp: 'واتساب',
@@ -375,6 +476,7 @@ const AR: PublicTexts = {
     tagline: 'توصيل سريع مع الدفع عند الاستلام في تونس الكبرى.',
     contact: 'اتصل بنا',
     follow: 'تابعنا',
+    language: 'اللغة',
   },
   tracking: {
     title: 'تتبّع الطرد',

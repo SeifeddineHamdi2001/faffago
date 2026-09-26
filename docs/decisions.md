@@ -2015,6 +2015,35 @@ courier app's queue only.
 
 ---
 
+### D-92 · The landing page's new design
+
+Decided 2026-09-26, from the design mockup supplied by the owner (none touches
+a fee, a status or a permission). It restyles D-87's landing page; the
+sections, their order, the texts of the specs and every figure read from
+Paramètres are unchanged.
+
+- **Kept from the platform, not the mockup**: brand orange #FF6B35 and navy
+  #1A1B2E (plus `navy-deep` #11121F for the footer), Manrope and IBM Plex
+  Sans Arabic. Every orange button carries navy text (the mockup's white text
+  on orange fails AA); WhatsApp is white on emerald-700.
+- **Left out of the mockup, because nothing in operations guarantees them**
+  (Landing 1): "98.4% taux de réussite", "Reversement cash sous 24h", "100%
+  Grand Tunis", "Cash collecté : 145 DT", "Exclusif Faffa Go", "Populaire",
+  "Tarifs HT", "Support 6j/7 de 08:30 à 18:30", "compte généré dans l'heure",
+  "ramassage le jour même", "48 délégations", and the links to Conditions
+  générales and Confidentialité (no such pages). The FAQ answers stay D-87's.
+- **In their place**, under the hero: the delivery fee and "Gratuite" for the
+  relance, from Paramètres, and the number of délégations served, from the
+  délégation list; none shown while the API has never answered.
+- **The hero visual** is the mockup's illustration, cropped to remove another
+  company's name painted in it, self-hosted in `apps/web/public`, like the
+  logo. Both are served `unoptimized` (60 KB and 10 KB; `sharp` is not
+  installed). To be replaced by a Faffa Go illustration or photo.
+- **Icons**: drawn inline (`components/public/icons.tsx`), no icon font or
+  CDN script. Directional ones (arrow, chevron) turn round in Arabic.
+- Comment ça marche: four cards joined by a chevron on wide screens. The FAQ's
+  first question starts open. Délégation lists scroll past 20 rem.
+
 ## Money
 
 ### A-1 · The delivery fee is charged only on a delivered parcel

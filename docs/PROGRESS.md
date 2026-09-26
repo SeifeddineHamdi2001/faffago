@@ -561,6 +561,11 @@ session refresh of D-15 lives there), `next build` moves to Turbopack, and
 `@next/eslint-plugin-next` to 16. Not trivial on the eve of launch, so
 proposed as its own branch before phase 11, behind the full `pnpm e2e` gate.
 
+- **Landing page redesign (D-92, 2026-09-26)**: the owner's mockup applied
+  to the existing sections, French and Arabic; claims operations do not
+  guarantee left out. To do before launch: a real Faffa Go hero illustration
+  or photo in place of the cropped mockup image.
+
 ## Bon corrections (D-88)
 
 Built on `main` after phase 9 (2026-09-25), as approved with two additions: a

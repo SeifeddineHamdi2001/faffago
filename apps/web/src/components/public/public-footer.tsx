@@ -3,7 +3,7 @@ import type { Locale } from '@/lib/locale';
 import type { PublicTexts } from '@/lib/public-texts';
 import { ContactLinks } from './contact-links';
 import { LanguageSwitch } from './language-switch';
-import { Wordmark } from './public-header';
+import { Logo } from './public-header';
 
 /**
  * Footer (Landing 2.8): logo, contact, social links, language switch. The
@@ -20,25 +20,36 @@ export function PublicFooter({
   links: Links | null;
 }) {
   return (
-    <footer className="bg-navy text-white">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-2xl">
-            <Wordmark />
-          </p>
-          <p className="text-white/80">{texts.footer.tagline}</p>
-        </div>
-        {links && (
-          <div>
-            <h2 className="mb-2 font-display font-bold">{texts.footer.contact}</h2>
-            <ContactLinks links={links} texts={texts.contact} variant="list" />
+    <footer className="border-t border-white/10 bg-navy-deep text-white/70">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div className="grid gap-10 border-b border-white/10 pb-10 md:grid-cols-12">
+          <div className="space-y-4 md:col-span-6">
+            <Logo className="h-9" />
+            <p className="max-w-sm text-sm leading-relaxed">{texts.footer.tagline}</p>
           </div>
-        )}
-        <div className="space-y-2">
-          <LanguageSwitch locale={locale} label={texts.nav.otherLanguage} />
-          <p className="text-sm text-white/60" dir="ltr">
-            © {new Date().getFullYear()} Faffa Go
-          </p>
+          {links && (
+            <div className="space-y-3 md:col-span-3">
+              <h2 className="text-xs font-bold tracking-wider text-white uppercase">
+                {texts.footer.contact}
+              </h2>
+              <ContactLinks links={links} texts={texts.contact} variant="list" />
+            </div>
+          )}
+          <div className="space-y-3 md:col-span-3">
+            <h2 className="text-xs font-bold tracking-wider text-white uppercase">
+              {texts.footer.language}
+            </h2>
+            <LanguageSwitch locale={locale} label={texts.nav.otherLanguage} />
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-between gap-4 pt-8 text-xs sm:flex-row">
+          <p dir="ltr">© {new Date().getFullYear()} Faffa Go</p>
+          <a
+            href={`/${locale}#suivre`}
+            className="inline-flex min-h-11 items-center transition-colors hover:text-orange"
+          >
+            {texts.nav.track}
+          </a>
         </div>
       </div>
     </footer>
