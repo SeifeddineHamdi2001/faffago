@@ -55,7 +55,10 @@ describe('an unknown code', () => {
   });
 
   it('reads a code typed without the prefix or in lower case the same way (labels.ts)', async () => {
-    const id = await createParcel(t.prisma, { sellerId: seller.sellerId!, createdByUserId: seller.id });
+    const id = await createParcel(t.prisma, {
+      sellerId: seller.sellerId!,
+      createdByUserId: seller.id,
+    });
     const parcelCode = await code(id);
     const response = await track(parcelCode.replace('FG-', '').toLowerCase());
     expect(response.status).toBe(200);
@@ -65,7 +68,10 @@ describe('an unknown code', () => {
 
 describe('what the customer sees, and never sees (Landing 4.1, 4.3)', () => {
   it('gives only the public fields: amount, shop, délégation, status, never the customer or an internal note', async () => {
-    const id = await createParcel(t.prisma, { sellerId: seller.sellerId!, createdByUserId: seller.id });
+    const id = await createParcel(t.prisma, {
+      sellerId: seller.sellerId!,
+      createdByUserId: seller.id,
+    });
     const parcelCode = await code(id);
     const response = await track(parcelCode);
     expect(response.status).toBe(200);
@@ -96,7 +102,10 @@ describe('what the customer sees, and never sees (Landing 4.1, 4.3)', () => {
   });
 
   it('resolves the délégation name in Arabic when asked (Q4)', async () => {
-    const id = await createParcel(t.prisma, { sellerId: seller.sellerId!, createdByUserId: seller.id });
+    const id = await createParcel(t.prisma, {
+      sellerId: seller.sellerId!,
+      createdByUserId: seller.id,
+    });
     const response = await track(await code(id), '?langue=AR');
     expect(response.body.delegationName).toBe('باردو');
   });
@@ -224,7 +233,10 @@ describe('rate limiting (Landing 4.4)', () => {
   });
 
   it('lets a good lookup through without waiting', async () => {
-    const id = await createParcel(t.prisma, { sellerId: seller.sellerId!, createdByUserId: seller.id });
+    const id = await createParcel(t.prisma, {
+      sellerId: seller.sellerId!,
+      createdByUserId: seller.id,
+    });
     const response = await track(await code(id));
     expect(response.status).toBe(200);
   });

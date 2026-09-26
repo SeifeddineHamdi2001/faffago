@@ -16,6 +16,7 @@ import {
   CONTACT_DOCUMENTS,
   changeSellerContactSchema,
   requiredDocumentsFor,
+  setSellerCinSchema,
   updateSellerSchema,
   type ProductCategory as ProductCategoryT,
   type SellerAccountState,
@@ -42,7 +43,13 @@ function documentHref(sellerId: string, documentId: string): string {
 }
 
 type Open =
-  'modifier' | 'contact' | 'statut' | 'suspendre' | 'reactiver' | { remplacer: SellerDocumentType };
+  | 'modifier'
+  | 'contact'
+  | 'statut'
+  | 'suspendre'
+  | 'reactiver'
+  | 'cin'
+  | { remplacer: SellerDocumentType };
 
 /**
  * The seller page (Admin 4.14). Dépôt and Service client read the shop and
@@ -127,6 +134,22 @@ export function SellerDetailScreen({
             }
           />
         )}
+        {canSeeDocuments && seller.cinNumber !== undefined && (
+          <div>
+            <Item
+              label="Numéro de CIN"
+              value={seller.cinNumber ?? 'Non renseigné'}
+              note={
+                statut === SellerStatut.CIN_UNIQUEMENT && !seller.cinNumber
+                  ? 'Obligatoire pour préparer ses bons (certificat de retenue).'
+                  : undefined
+              }
+            />
+            <button type="button" className="btn-secondary mt-1" onClick={() => setOpen('cin')}>
+              {seller.cinNumber ? 'Corriger le numéro de CIN' : 'Ajouter le numéro de CIN'}
+            </button>
+          </div>
+        )}
         {seller.createdAt && (
           <Item label="Créé le" value={dateTime.format(new Date(seller.createdAt))} />
         )}
@@ -186,10 +209,19 @@ export function SellerDetailScreen({
       {open === 'contact' && (
         <ChangeContactDialog sellerId={seller.id} onDone={done} onCancel={() => setOpen(null)} />
       )}
+      {open === 'cin' && (
+        <CinNumberDialog
+          sellerId={seller.id}
+          current={seller.cinNumber ?? ''}
+          onDone={done}
+          onCancel={() => setOpen(null)}
+        />
+      )}
       {open === 'statut' && statut && (
         <ChangeStatutDialog
           sellerId={seller.id}
           current={statut}
+          hasCinNumber={Boolean(seller.cinNumber)}
           onDone={done}
           onCancel={() => setOpen(null)}
         />
@@ -545,14 +577,69 @@ function ChangeContactDialog({
 }
 
 /** D-33, D-34: Patente and Auto-entrepreneur come with their document. */
-function ChangeStatutDialog({
+/** Numéro de CIN (D-89): admin only, audited; printed on the retenue certificates. */
+function CinNumberDialog({
   sellerId,
   current,
   onDone,
   onCancel,
 }: {
   sellerId: string;
+  current: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [cinNumber, setCinNumber] = useState(current);
+  const [fieldError, setFieldError] = useState<string | undefined>();
+  const [apiError, setApiError] = useState<ApiError | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const parsed = setSellerCinSchema.safeParse({ cinNumber });
+    if (!parsed.success) return setFieldError(parsed.error.issues[0]?.message);
+    setBusy(true);
+    const result = await bff('PUT', `sellers/${sellerId}/cin`, parsed.data);
+    setBusy(false);
+    if (result.ok) onDone();
+    else setApiError(result.error);
+  }
+
+  return (
+    <Dialog title="Numéro de CIN" onDismiss={onCancel}>
+      {apiError && <ErrorAlert error={apiError} />}
+      <form onSubmit={submit} className="space-y-3" noValidate>
+        <Field
+          id="cin-number"
+          label="Numéro de CIN (8 chiffres)"
+          value={cinNumber}
+          onChange={setCinNumber}
+          error={fieldError}
+          inputMode="decimal"
+        />
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" className="btn-secondary" onClick={onCancel}>
+            Annuler
+          </button>
+          <button type="submit" className="btn-primary" disabled={busy}>
+            Enregistrer
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function ChangeStatutDialog({
+  sellerId,
+  current,
+  hasCinNumber,
+  onDone,
+  onCancel,
+}: {
+  sellerId: string;
   current: SellerStatut;
+  hasCinNumber: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -563,13 +650,21 @@ function ChangeStatutDialog({
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
   const needed = STATUT_DOCUMENT[statut];
+  const [cinNumber, setCinNumber] = useState('');
+  const [cinError, setCinError] = useState<string | undefined>();
+  const askCin = statut === SellerStatut.CIN_UNIQUEMENT && !hasCinNumber;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (askCin) {
+      const parsed = setSellerCinSchema.safeParse({ cinNumber });
+      if (!parsed.success) return setCinError(parsed.error.issues[0]?.message);
+    }
     if (needed && !file) return setFileError('Document obligatoire');
     if (file && file.size > SELLER_DOCUMENT_POLICY.maxBytes) return setFileError(FILE_TOO_LARGE);
     const form = new FormData();
     form.append('statut', statut);
+    if (askCin) form.append('cinNumber', cinNumber.trim());
     if (needed && file) form.append('document', file, file.name);
     setBusy(true);
     const result = await bff('POST', `sellers/${sellerId}/statut`, form);
@@ -605,6 +700,16 @@ function ChangeStatutDialog({
             ))}
           </div>
         </fieldset>
+        {askCin && (
+          <Field
+            id="statut-cin"
+            label="Numéro de CIN (8 chiffres)"
+            value={cinNumber}
+            onChange={setCinNumber}
+            error={cinError}
+            inputMode="decimal"
+          />
+        )}
         {needed && (
           <DocumentInput
             id="statut-document"

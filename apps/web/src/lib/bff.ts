@@ -31,6 +31,8 @@ const PROXIED_ROOTS = new Set([
   'paie',
   'paiements',
   'retours',
+  // Rapports (phase 10, D-89).
+  'rapports',
 ]);
 
 export function isProxiedPath(segments: string[]): boolean {

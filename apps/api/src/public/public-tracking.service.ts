@@ -15,7 +15,11 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { PublicTrackingThrottleService } from './public-tracking-throttle.service';
 
 const codeInconnu = () =>
-  apiError(404, 'CODE_INCONNU', 'Aucun colis trouvé avec ce code. Vérifiez le code sur l’étiquette.');
+  apiError(
+    404,
+    'CODE_INCONNU',
+    'Aucun colis trouvé avec ce code. Vérifiez le code sur l’étiquette.',
+  );
 
 /**
  * The return trip of a cancellation after pickup (D-28) is never shown: the

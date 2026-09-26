@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Res,
   StreamableFile,
   UploadedFile,
@@ -28,6 +29,8 @@ import {
   changeSellerContactSchema,
   changeSellerStatutSchema,
   createSellerSchema,
+  setSellerCinSchema,
+  type SetSellerCinValues,
   updateSellerSchema,
   type AddSellerDocumentValues,
   type ChangeSellerContactValues,
@@ -183,6 +186,18 @@ export class SellersController {
       SellerAccountState.ACTIF,
       meta,
     );
+  }
+
+  /** Numéro de CIN (D-89): admin only, like the documents; audited. */
+  @Put(':id/cin')
+  @RequirePermission(Permission.VENDEURS_DOCUMENTS)
+  setCin(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(setSellerCinSchema)) body: SetSellerCinValues,
+    @CurrentPrincipal() principal: Principal,
+    @Meta() meta: RequestMeta,
+  ) {
+    return this.sellers.setCinNumber(principal as UserPrincipal, id, body.cinNumber, meta);
   }
 
   /** A new version of a document; the old one is kept (D-32). */

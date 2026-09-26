@@ -459,3 +459,163 @@ export async function renderPayslip(slip: PayslipPdf): Promise<Buffer> {
   doc.end();
   return done;
 }
+
+// ── Certificats de retenue à la source (D-89) ───────────────
+
+interface RetenueParties {
+  societe: { raisonSociale: string; matriculeFiscal: string; adresse: string };
+  sellerName: string;
+  shopName: string;
+  cinNumber: string;
+  sellerAddress: string;
+}
+
+/** The payer (Faffa Go, from Paramètres › Société) and the beneficiary, side by side. */
+function retenueParties(doc: Doc, y: number, parties: RetenueParties): number {
+  const half = WIDTH / 2 - 5 * MM;
+  const right = MARGIN + half + 10 * MM;
+  line(doc, 'Payeur (retenue effectuée par)', MARGIN, y, half, {
+    size: 8,
+    bold: true,
+    color: GREY,
+  });
+  line(doc, 'Bénéficiaire', right, y, half, { size: 8, bold: true, color: GREY });
+  const left = [
+    parties.societe.raisonSociale,
+    `Matricule fiscal : ${parties.societe.matriculeFiscal}`,
+    parties.societe.adresse,
+  ];
+  const beneficiary = [
+    parties.sellerName,
+    parties.shopName,
+    `N° CIN : ${parties.cinNumber || '—'}`,
+    parties.sellerAddress || '—',
+  ];
+  for (let i = 0; i < Math.max(left.length, beneficiary.length); i += 1) {
+    if (left[i]) line(doc, left[i]!, MARGIN, y + 14 + i * 13, half);
+    if (beneficiary[i]) line(doc, beneficiary[i]!, right, y + 14 + i * 13, half);
+  }
+  return y + 14 + 4 * 13 + 8;
+}
+
+function retenueHeader(doc: Doc, title: string, subtitle: string, cancelled: boolean): number {
+  let y = MARGIN;
+  line(doc, 'Faffa Go', MARGIN, y, WIDTH, { size: 16, bold: true });
+  y += 26;
+  line(doc, title, MARGIN, y, WIDTH, { size: 13, bold: true });
+  y += 20;
+  line(doc, subtitle, MARGIN, y, WIDTH, { bold: true });
+  y += 16;
+  if (cancelled) {
+    line(
+      doc,
+      'ANNULÉ — le bon a été corrigé ; un nouveau certificat suit sa remise.',
+      MARGIN,
+      y,
+      WIDTH,
+      {
+        bold: true,
+        color: '#B3261E',
+      },
+    );
+    y += 16;
+  }
+  return y + 6;
+}
+
+export interface RetenueCertificatePdf extends RetenueParties {
+  number: string;
+  issuedAt: Date;
+  cancelled: boolean;
+  bonNumber: string;
+  bonDate: Date;
+  baseMillimes: Millimes;
+  rateBps: number;
+  amountMillimes: Millimes;
+}
+
+/** One bon's certificate (Vendeur 4.11, D-89). */
+export async function renderRetenueCertificate(c: RetenueCertificatePdf): Promise<Buffer> {
+  const { doc, done } = open();
+  doc.addPage();
+  let y = retenueHeader(
+    doc,
+    'Certificat de retenue à la source',
+    `N° ${c.number} · du ${day(c.issuedAt)}`,
+    c.cancelled,
+  );
+  rule(doc, y);
+  y = retenueParties(doc, y + 8, c);
+  rule(doc, y);
+  y += 8;
+  line(doc, `Bon de versement ${c.bonNumber}, remis le ${day(c.bonDate)}`, MARGIN, y, WIDTH);
+  y += 20;
+  totals(doc, y, [
+    { label: 'Base (après frais Faffa Go)', amount: formatDT(c.baseMillimes) },
+    { label: 'Taux', amount: `${formatRatePercent(c.rateBps)} %` },
+    { label: 'Retenue à la source', amount: formatDT(c.amountMillimes), bold: true },
+  ]);
+  doc.end();
+  return done;
+}
+
+export interface RetenueYearlyPdf extends RetenueParties {
+  year: string;
+  lines: {
+    kind: string;
+    number: string;
+    bonNumber: string;
+    at: Date;
+    baseMillimes: Millimes;
+    rateBps: number;
+    amountMillimes: Millimes;
+  }[];
+  totals: { count: number; baseMillimes: Millimes; amountMillimes: Millimes };
+}
+
+/** The yearly summary (Vendeur 4.11, D-89): every line of the year, régularisations included. */
+export async function renderRetenueYearly(r: RetenueYearlyPdf): Promise<Buffer> {
+  const { doc, done } = open();
+  const newPage = () => {
+    doc.addPage();
+    line(doc, `Récapitulatif ${r.year} (suite)`, MARGIN, MARGIN, WIDTH, { size: 8, color: GREY });
+    return MARGIN + 18;
+  };
+  doc.addPage();
+  let y = retenueHeader(
+    doc,
+    'Récapitulatif annuel des retenues à la source',
+    `Année ${r.year}`,
+    false,
+  );
+  rule(doc, y);
+  y = retenueParties(doc, y + 8, r);
+  y = table(
+    doc,
+    y,
+    [
+      { title: 'Date', width: 24 * MM },
+      { title: 'Ligne', width: 28 * MM },
+      { title: 'Certificat', width: 30 * MM },
+      { title: 'Bon', width: 34 * MM },
+      { title: 'Base', width: 32 * MM, align: 'right' },
+      { title: 'Retenue', width: WIDTH - 148 * MM, align: 'right' },
+    ],
+    r.lines.map((l) => [
+      day(l.at),
+      l.kind,
+      l.number,
+      l.bonNumber,
+      formatDT(l.baseMillimes),
+      formatDT(l.amountMillimes),
+    ]),
+    newPage,
+  );
+  if (y + 60 > BOTTOM) y = newPage();
+  totals(doc, y + 8, [
+    { label: 'Base totale', amount: formatDT(r.totals.baseMillimes) },
+    { label: `Total retenu en ${r.year}`, amount: formatDT(r.totals.amountMillimes), bold: true },
+  ]);
+  doc.end();
+  return done;
+}

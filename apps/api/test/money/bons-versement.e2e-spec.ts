@@ -39,7 +39,11 @@ let otherToken: string;
 
 async function newSeller(email: string, statut: 'PATENTE' | 'CIN_UNIQUEMENT' = 'PATENTE') {
   const seller = await createUser(t.prisma, { role: 'VENDEUR', email });
-  await t.prisma.seller.update({ where: { id: seller.sellerId! }, data: { statut } });
+  await t.prisma.seller.update({
+    where: { id: seller.sellerId! },
+    // A CIN uniquement seller has his CIN number (D-89).
+    data: { statut, cinNumber: statut === 'CIN_UNIQUEMENT' ? '01234567' : null },
+  });
   return seller;
 }
 

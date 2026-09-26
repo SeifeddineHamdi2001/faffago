@@ -94,6 +94,8 @@ export interface SellerDocumentRow {
 /** GET /sellers/:id. Dépôt and Service client get the four contact fields only. */
 export interface SellerDetail extends SellerRow {
   documents?: SellerDocumentRow[];
+  /** Admin only, like the documents (D-89). */
+  cinNumber?: string | null;
 }
 
 /** POST /sellers: the account, and its password shown once. */
@@ -585,6 +587,23 @@ export interface CaisseSession {
   debt: { id: string; amountMillimes: string; status: string } | null;
 }
 
+/** GET /paiements/certificats (Vendeur 4.11, D-89). */
+export interface SellerCertificates {
+  parBon: boolean;
+  annuel: boolean;
+  certificates: {
+    id: string;
+    number: string;
+    bonNumber: string;
+    issuedAt: string;
+    baseMillimes: string;
+    rateBps: number;
+    amountMillimes: string;
+    cancelled: boolean;
+  }[];
+  years: string[];
+}
+
 /** A bon corrected after the ramasseur's caisse was closed, not covered by a surplus (D-88). */
 export interface BonShortfallRow {
   correctionId: string;
@@ -1041,4 +1060,30 @@ export interface ExceptionsQueue {
     parcelCode: string | null;
     actor: { name: string; role: string };
   }[];
+  // ── Phase 10 (Admin 4.7, D-89) ──
+  verifyNearLimit: {
+    code: string;
+    shopName: string;
+    sellerPhone: string;
+    recipientPhone: string;
+    deadline: string;
+  }[];
+  cashNotHandedOver: {
+    courier: PersonRef & { role: string };
+    day: string;
+    amountMillimes: string;
+  }[];
+  bonsEnRoute: LateBon[];
+  bonsNotArchived: LateBon[];
+  /** Null for the roles that do not see the statut and the CIN number. */
+  sellersMissingCin: { sellerId: string; shopName: string; contactFullName: string }[] | null;
+}
+
+export interface LateBon {
+  id: string;
+  number: string;
+  kind: 'BON_VERSEMENT' | 'BON_RETOUR';
+  shopName: string;
+  ramasseur: ZoneCourierRef | null;
+  since: string;
 }

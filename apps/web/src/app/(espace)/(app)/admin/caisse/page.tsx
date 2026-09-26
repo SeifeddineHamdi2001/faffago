@@ -17,10 +17,7 @@ export default async function CaissePage({
   const asked = typeof raw === 'string' && caisseDaySchema.safeParse(raw).success ? raw : today;
   const summary = await serverGet<CaisseSummary>('admin', `/caisse?date=${asked}`);
   const ecarts = me.permissions.includes(Permission.CAISSE_ECARTS)
-    ? await serverGet<CaisseEcarts>(
-        'admin',
-        '/caisse/ecarts',
-      )
+    ? await serverGet<CaisseEcarts>('admin', '/caisse/ecarts')
     : null;
   return <CaisseScreen summary={summary} today={today} ecarts={ecarts} />;
 }

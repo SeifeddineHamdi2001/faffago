@@ -6,10 +6,12 @@ import {
   documentDateKey,
   formatBonNumber,
   formatPayslipNumber,
+  formatRetenueCertificateNumber,
 } from '@faffago/shared';
 
 /**
  * The next number of a document for the Tunis day of `now`: BV-, BR- and FP-
+ * per day, RS- per year (D-89)
  * (Vendeur 4.11, 4.12, D-82). The counter row is taken with an upsert that
  * locks it, inside the caller's transaction, so two documents prepared at the
  * same second never share a number, and a rolled-back one leaves no gap used.
@@ -20,7 +22,9 @@ export async function nextDocumentNumber(
   now: Date,
 ): Promise<string> {
   const day = businessDateOf(now);
-  const dateKey = documentDateKey(day);
+  // Certificates run on one sequence per year (D-89); the others per day.
+  const dateKey =
+    kind === 'CERTIFICAT_RETENUE' ? documentDateKey(day).slice(0, 4) : documentDateKey(day);
   const rows = await tx.$queryRaw<{ lastValue: number }[]>`
     INSERT INTO "document_counters" ("kind", "dateKey", "lastValue")
     VALUES (${kind}::"DocumentCounterKind", ${dateKey}, 1)
@@ -35,6 +39,8 @@ export async function nextDocumentNumber(
       return formatBonNumber(BonNumberKind.BON_RETOUR, day, sequence);
     case 'FICHE_PAIE':
       return formatPayslipNumber(day, sequence);
+    case 'CERTIFICAT_RETENUE':
+      return formatRetenueCertificateNumber(Number.parseInt(dateKey, 10), sequence);
     default:
       throw new Error(`Pas de numérotation pour ${kind}`);
   }

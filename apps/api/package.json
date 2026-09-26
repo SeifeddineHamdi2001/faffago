@@ -37,6 +37,7 @@
     "argon2": "^0.41.1",
     "bidi-js": "^1.1.0",
     "bwip-js": "^4.11.4",
+    "exceljs": "^4.4.0",
     "fontkit": "^2.0.4",
     "pdfkit": "^0.20.2",
     "reflect-metadata": "^0.2.2",

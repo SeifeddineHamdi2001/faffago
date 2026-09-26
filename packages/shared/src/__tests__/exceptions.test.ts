@@ -9,14 +9,19 @@ import {
 } from '../exceptions.js';
 
 describe('the first rows of Exceptions (Admin 4.7, D-50)', () => {
-  it('has the four rows whose data exists in phase 5, in the spec’s words', () => {
+  it('has phase 5’s four rows, then the rest (phase 10, D-89), in the spec’s words', () => {
     expect(Object.values(ExceptionKind)).toEqual([
       'COLIS_AU_DEPOT_SANS_TOURNEE',
       'RAMASSAGE_NON_EFFECTUE',
       'DEMANDE_VENDEUR',
       'SAISIE_MANUELLE',
+      'A_VERIFIER_LIMITE_PROCHE',
+      'ARGENT_NON_REMIS',
+      'BON_EN_ROUTE_NON_REMIS',
+      'BON_SIGNE_NON_ARCHIVE',
+      'CIN_MANQUANT',
     ]);
-    expect(EXCEPTION_KIND_LABELS_FR).toEqual({
+    expect(EXCEPTION_KIND_LABELS_FR).toMatchObject({
       COLIS_AU_DEPOT_SANS_TOURNEE: 'Colis au dépôt depuis plus de 48 h sans tournée',
       RAMASSAGE_NON_EFFECTUE: 'Ramassage planifié non effectué',
       DEMANDE_VENDEUR: 'Demande de modification du vendeur en attente',

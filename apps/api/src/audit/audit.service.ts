@@ -33,6 +33,8 @@ export const AuditAction = {
   MODIFICATION_VENDEUR: 'MODIFICATION_VENDEUR',
   /** Applies to the bons prepared after it (D-34). */
   CHANGEMENT_STATUT_VENDEUR: 'CHANGEMENT_STATUT_VENDEUR',
+  /** The seller's CIN number, printed on the retenue certificates (D-89). */
+  MODIFICATION_CIN_VENDEUR: 'MODIFICATION_CIN_VENDEUR',
   /** A different contact person, with his CIN (D-42). */
   CHANGEMENT_CONTACT_VENDEUR: 'CHANGEMENT_CONTACT_VENDEUR',
   SUSPENSION_VENDEUR: 'SUSPENSION_VENDEUR',

@@ -17,6 +17,7 @@ import {
   type ProductCategory,
   type SellerDocumentType,
   type UpdateSellerValues,
+  SellerStatut,
 } from '@faffago/shared';
 import {
   identifiantDejaUtilise,
@@ -63,6 +64,8 @@ export interface SellerAdminView extends SellerContactView {
 /** The seller page for the admin, with the list of documents (never the files). */
 export interface SellerDetailView extends SellerAdminView {
   documents: SellerDocumentView[];
+  /** Printed on the retenue certificates: admin only, like the documents (D-89). */
+  cinNumber: string | null;
 }
 
 /** An uploaded file as the controller hands it over. */
@@ -148,6 +151,7 @@ export class SellersService {
     return {
       ...adminView(seller),
       documents: can(role, Permission.VENDEURS_DOCUMENTS) ? seller.documents.map(documentView) : [],
+      cinNumber: can(role, Permission.VENDEURS_DOCUMENTS) ? seller.cinNumber : null,
     };
   }
 
@@ -199,6 +203,7 @@ export class SellersService {
               contactFullName: `${values.contactFirstName} ${values.contactLastName}`,
               contactPhone: values.contactPhone,
               statut: values.statut,
+              cinNumber: values.cinNumber ?? null,
               createdByUserId: principal.userId,
             },
             include: { user: true },
@@ -219,6 +224,7 @@ export class SellersService {
               productCategory: created.productCategory,
               storeLink: created.storeLink,
               statut: created.statut,
+              cinNumber: created.cinNumber,
             },
             ip: meta.ip,
             userAgent: meta.userAgent,
@@ -310,6 +316,10 @@ export class SellersService {
     const current = await this.prisma.seller.findUnique({ where: { id: sellerId } });
     if (!current) throw vendeurIntrouvable();
     if (current.statut === values.statut) throw this.statutInchange();
+    // CIN uniquement: the certificates print his CIN number (D-89).
+    if (values.statut === SellerStatut.CIN_UNIQUEMENT && !values.cinNumber && !current.cinNumber) {
+      throw apiError(400, SellerErrorCode.CIN_OBLIGATOIRE, SELLER_MESSAGES.cinObligatoire);
+    }
 
     const staged =
       needed && upload ? await this.documents.stageAll([{ type: needed, bytes: upload }]) : [];
@@ -320,7 +330,10 @@ export class SellersService {
         if (seller.statut === values.statut) throw this.statutInchange();
         const updated = await tx.seller.update({
           where: { id: sellerId },
-          data: { statut: values.statut },
+          data: {
+            statut: values.statut,
+            ...(values.cinNumber ? { cinNumber: values.cinNumber } : {}),
+          },
           include: { user: true },
         });
         await this.audit.record(tx, {
@@ -328,8 +341,12 @@ export class SellersService {
           action: AuditAction.CHANGEMENT_STATUT_VENDEUR,
           entityType: 'seller',
           entityId: sellerId,
-          before: { statut: seller.statut },
-          after: { statut: values.statut, documentId: staged[0]?.id ?? null },
+          before: { statut: seller.statut, cinNumber: seller.cinNumber },
+          after: {
+            statut: values.statut,
+            documentId: staged[0]?.id ?? null,
+            cinNumber: updated.cinNumber,
+          },
           ip: meta.ip,
           userAgent: meta.userAgent,
         });
@@ -337,6 +354,31 @@ export class SellersService {
         return adminView(updated);
       }),
     );
+  }
+
+  /** Numéro de CIN (D-89): recorded or corrected by the admin, audited. */
+  async setCinNumber(
+    principal: UserPrincipal,
+    sellerId: string,
+    cinNumber: string,
+    meta: RequestMeta,
+  ): Promise<{ cinNumber: string }> {
+    return this.prisma.$transaction(async (tx) => {
+      const seller = await this.lockSeller(tx, sellerId);
+      if (seller.cinNumber === cinNumber) return { cinNumber };
+      await tx.seller.update({ where: { id: sellerId }, data: { cinNumber } });
+      await this.audit.record(tx, {
+        actor: actorOf(principal),
+        action: AuditAction.MODIFICATION_CIN_VENDEUR,
+        entityType: 'seller',
+        entityId: sellerId,
+        before: { cinNumber: seller.cinNumber },
+        after: { cinNumber },
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+      });
+      return { cinNumber };
+    });
   }
 
   /**

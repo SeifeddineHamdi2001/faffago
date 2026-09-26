@@ -574,7 +574,13 @@ tests. Migration `20261011000000_bon_corrections`.
 - [ ] In-app notifications (all roles)
 - [ ] Chat per parcel (seller ↔ livreur, staff can join), lifecycle as in
       D-23 / Q15
-**Part B plan** (branch `phase-10b`, 2026-09-25; money questions sent first):
+      **Part B: done** on branch `phase-10b` (2026-09-26), merged into `main` once
+      `pnpm lint`, `pnpm typecheck`, `pnpm test` (785 API, 294 web, 665 shared, 42
+      app tests) and `pnpm e2e` (45 browser tests) passed through turbo. The five
+      money answers are D-89; the choices made while building D-90. Part A
+      (notifications, chat) is still to build.
+
+**Part B plan** (money questions sent first, answered as D-89):
 
 1. Shared, tests first: exception rules (48 h À vérifier limit near, cash not
    handed over, bon en route > 24 h, signed bon not archived > 48 h), the
@@ -590,12 +596,16 @@ tests. Migration `20261011000000_bon_corrections`.
    seller's certificates in Paiements
 6. Browser test, decisions, ui-texts, merge
 
-- [ ] Exceptions queue, the rest beyond the phase 5 first rows (D-50).
+- [x] Exceptions queue, the rest beyond the phase 5 first rows (D-50, D-90):
+      À vérifier limit near, cash not handed over, bon en route > 24 h,
+      signed bon not archived > 48 h, and CIN uniquement sellers without
+      their CIN number (D-89)
       Phase 5 already has: parcels at the depot without a tour, pickups
       planned but not done, seller change requests waiting, codes typed by
       hand (with Marquer comme traité, D-59)
-- [ ] Reports (retenue, revenue, activity, cash, pay) + CSV/Excel export
-- [ ] Retenue à la source certificates + monthly report (the retenue amount
+- [x] Reports (retenue, revenue, activity, cash, pay, ramasseurs' écarts) +
+      CSV/Excel export (D-89, D-90): Rapports, admin only
+- [x] Retenue à la source certificates + monthly report (the retenue amount
       itself is computed and stored on every bon in phase 8, per CLAUDE.md,
       Money). Must be ready before the first tax declaration deadline
       for the retenue (decided 2026-09-25); the date comes from the
@@ -1322,6 +1332,10 @@ tests. Migration `20261011000000_bon_corrections`.
   site-info endpoints, landing page in French and Arabic, SEO, Meta Pixel
   behind a setting (off), language detection and memory; Next.js 16 evaluated,
   not upgraded.
+- 2026-09-26 — **Phase 10B** (D-89, D-90): certificates RS-AAAA-NNNN at the
+  first Remis, Annulé at a correction, the yearly summary; Paramètres ›
+  Société; the seller's CIN number; Rapports with CSV and Excel; the rest of
+  Exceptions. Migration `20261012000000_retenue_certificates`.
 - 2026-09-25 — **Next.js 16.3.6**, on branch `next-16`: `middleware.ts` renamed
   `proxy.ts` (the function `proxy`, same matcher and behaviour), `next build`
   on Turbopack, `@next/eslint-plugin-next` 16. No other code change; lint,
@@ -1345,9 +1359,10 @@ tests. Migration `20261011000000_bon_corrections`.
   a Paramètres change. Whether a cookie notice is needed for it is a question
   for the same legal check as the backups (loi organique 2004-63).
 
-- **Retenue à la source certificates**: phase 10, before launch and **before
-  the first tax declaration deadline for the retenue**. The date comes from
-  the accountant.
+- **Retenue à la source certificates**: built (D-89). Still for the
+  accountant: per bon, yearly or both (`RETENUE_CERTIFICATES`), the base and
+  rounding (A-3), and the certificate's layout; the Société block to fill in
+  Paramètres before the first certificate is printed.
 - **The Arabic of the courier app's phase 8 texts** (À emporter, Mes gains,
   Ma caisse) is to be read by a native speaker with the rest (ui-texts).
 - **A Remis scan synced after the ramasseur's Clôturer** is refused (the bon

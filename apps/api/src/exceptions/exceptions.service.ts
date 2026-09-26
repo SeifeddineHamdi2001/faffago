@@ -1,5 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  BON_ARCHIVE_EXCEPTION_HOURS,
+  BON_EN_ROUTE_EXCEPTION_HOURS,
+  Permission,
+  SellerStatut,
+  VERIFY_WARNING_HOURS,
+  can,
+  cashLate,
+  type Role,
   MANUAL_ENTRY_EXCEPTION_DAYS,
   MANUAL_ENTRY_TREAT_REFUSAL_MESSAGES_FR,
   ManualEntryTreatRefusal,
@@ -43,16 +51,187 @@ export class ExceptionsService {
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
-  async queue() {
+  async queue(role: Role) {
     const now = this.clock.now();
     const todayKey = tunisDayKey(now);
-    const [depotWaiting, pickupsLate, changeRequests, manualEntries] = await Promise.all([
+    const [
+      depotWaiting,
+      pickupsLate,
+      changeRequests,
+      manualEntries,
+      verifyNearLimit,
+      cashNotHandedOver,
+      bonsEnRoute,
+      bonsNotArchived,
+      sellersMissingCin,
+    ] = await Promise.all([
       this.depotWaiting(now, todayKey),
       this.pickupsLate(todayKey),
       this.changeRequests.waiting(),
       this.manualEntries(todayKey),
+      this.verifyNearLimit(now),
+      this.cashNotHandedOver(todayKey),
+      this.bonsEnRoute(now),
+      this.bonsNotArchived(now),
+      // The statut and the CIN number are the admin's (D-11, D-89).
+      can(role, Permission.VENDEURS_DOCUMENTS) ? this.sellersMissingCin() : Promise.resolve(null),
     ]);
-    return { depotWaiting, pickupsLate, changeRequests, manualEntries };
+    return {
+      depotWaiting,
+      pickupsLate,
+      changeRequests,
+      manualEntries,
+      verifyNearLimit,
+      cashNotHandedOver,
+      bonsEnRoute,
+      bonsNotArchived,
+      sellersMissingCin,
+    };
+  }
+
+  /** Admin 4.7: close to the À vérifier limit — under 24 h left (D-76's mark). */
+  private async verifyNearLimit(now: Date) {
+    const rows = await this.prisma.parcel.findMany({
+      where: {
+        status: ParcelStatus.A_VERIFIER,
+        verifyDeadlineAt: {
+          gt: now,
+          lt: new Date(now.getTime() + VERIFY_WARNING_HOURS * 3_600_000),
+        },
+      },
+      orderBy: { verifyDeadlineAt: 'asc' },
+      take: 200,
+      include: { seller: { select: { shopName: true, contactPhone: true } } },
+    });
+    return rows.map((p) => ({
+      code: p.code,
+      shopName: p.seller.shopName,
+      sellerPhone: p.seller.contactPhone,
+      recipientPhone: p.recipientPhone,
+      deadline: p.verifyDeadlineAt!,
+    }));
+  }
+
+  /**
+   * Admin 4.7: a courier who has not handed over his cash. The cash of a day
+   * already over is still with him — his caisse of that day never closed:
+   * a livreur's deliveries, a ramasseur's bon cash (D-79, D-89).
+   */
+  private async cashNotHandedOver(todayKey: string) {
+    const today = dateColumnOf(todayKey);
+    const deliveries = await this.prisma.scan.findMany({
+      where: {
+        action: 'LIVRE',
+        accepted: true,
+        cancelledAt: null,
+        businessDate: { lt: today },
+        parcel: { status: 'LIVRE', cashStatus: 'CHEZ_LE_COURSIER' },
+      },
+      select: {
+        businessDate: true,
+        actorUserId: true,
+        parcel: { select: { codAmountMillimes: true } },
+      },
+    });
+    const sessions = await this.prisma.caisseSession.findMany({
+      where: { businessDate: { lt: today }, status: { not: 'CLOTUREE' }, bons: { some: {} } },
+      include: { bons: true, courier: { select: { userId: true } } },
+    });
+    const byKey = new Map<string, { userId: string; day: string; amount: bigint }>();
+    const add = (userId: string, day: string, amount: bigint) => {
+      const key = `${userId}|${day}`;
+      const entry = byKey.get(key) ?? { userId, day, amount: 0n };
+      entry.amount += amount;
+      byKey.set(key, entry);
+    };
+    for (const scan of deliveries) {
+      add(scan.actorUserId, documentDateKey(scan.businessDate), scan.parcel!.codAmountMillimes);
+    }
+    for (const session of sessions) {
+      const held = session.bons.reduce(
+        (sum, line) => sum + line.takenOutMillimes - line.remisMillimes - line.returnedMillimes,
+        0n,
+      );
+      if (held > 0n) add(session.courier.userId, documentDateKey(session.businessDate), held);
+    }
+    const entries = [...byKey.values()].filter((entry) => cashLate(entry.day, todayKey));
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(entries.map((e) => e.userId))] } },
+      select: { id: true, firstName: true, lastName: true, role: true },
+    });
+    return entries
+      .sort((a, b) => a.day.localeCompare(b.day))
+      .map((entry) => {
+        const user = users.find((u) => u.id === entry.userId)!;
+        return {
+          courier: {
+            userId: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+          day: entry.day,
+          amountMillimes: entry.amount,
+        };
+      });
+  }
+
+  /** Admin 4.7: a bon en route not marked Remis after 24 h (versement and retour). */
+  private async bonsEnRoute(now: Date) {
+    const before = new Date(now.getTime() - BON_EN_ROUTE_EXCEPTION_HOURS * 3_600_000);
+    const where = { status: 'EN_ROUTE' as const, enRouteAt: { lt: before } };
+    const include = {
+      seller: { select: { shopName: true } },
+      ramasseur: { select: { user: { select: { id: true, firstName: true, lastName: true } } } },
+    };
+    const [versement, retour] = await Promise.all([
+      this.prisma.bonVersement.findMany({ where, include, orderBy: { enRouteAt: 'asc' } }),
+      this.prisma.bonRetour.findMany({ where, include, orderBy: { enRouteAt: 'asc' } }),
+    ]);
+    return [
+      ...versement.map((b) => ({
+        ...bonRef(b),
+        kind: 'BON_VERSEMENT' as const,
+        since: b.enRouteAt!,
+      })),
+      ...retour.map((b) => ({ ...bonRef(b), kind: 'BON_RETOUR' as const, since: b.enRouteAt! })),
+    ].sort((a, b) => a.since.getTime() - b.since.getTime());
+  }
+
+  /** Admin 4.7: a signed bon not archived after 48 h. */
+  private async bonsNotArchived(now: Date) {
+    const before = new Date(now.getTime() - BON_ARCHIVE_EXCEPTION_HOURS * 3_600_000);
+    const where = { status: 'REMIS' as const, remisAt: { lt: before } };
+    const include = {
+      seller: { select: { shopName: true } },
+      ramasseur: { select: { user: { select: { id: true, firstName: true, lastName: true } } } },
+    };
+    const [versement, retour] = await Promise.all([
+      this.prisma.bonVersement.findMany({ where, include, orderBy: { remisAt: 'asc' } }),
+      this.prisma.bonRetour.findMany({ where, include, orderBy: { remisAt: 'asc' } }),
+    ]);
+    return [
+      ...versement.map((b) => ({
+        ...bonRef(b),
+        kind: 'BON_VERSEMENT' as const,
+        since: b.remisAt!,
+      })),
+      ...retour.map((b) => ({ ...bonRef(b), kind: 'BON_RETOUR' as const, since: b.remisAt! })),
+    ].sort((a, b) => a.since.getTime() - b.since.getTime());
+  }
+
+  /** D-89: a CIN uniquement seller without his CIN number gets no bon. */
+  private async sellersMissingCin() {
+    const rows = await this.prisma.seller.findMany({
+      where: { statut: SellerStatut.CIN_UNIQUEMENT, cinNumber: null },
+      orderBy: { shopName: 'asc' },
+      select: { id: true, shopName: true, contactFullName: true },
+    });
+    return rows.map((s) => ({
+      sellerId: s.id,
+      shopName: s.shopName,
+      contactFullName: s.contactFullName,
+    }));
   }
 
   /**
@@ -177,4 +356,18 @@ export class ExceptionsService {
         });
     return { scanId: treated.id, treated: true as const, treatedAt: treated.treatedAt! };
   }
+}
+
+function bonRef(bon: {
+  id: string;
+  number: string;
+  seller: { shopName: string };
+  ramasseur: { user: { id: string; firstName: string; lastName: string } } | null;
+}) {
+  return {
+    id: bon.id,
+    number: bon.number,
+    shopName: bon.seller.shopName,
+    ramasseur: bon.ramasseur?.user ?? null,
+  };
 }

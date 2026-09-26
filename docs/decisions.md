@@ -116,6 +116,9 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-85 · Forcer un statut on money](#d-85--forcer-un-statut-on-money)
 - [D-86 · Choices made building phase 8](#d-86--choices-made-building-phase-8)
 - [D-87 · Choices made building phase 9](#d-87--choices-made-building-phase-9)
+- [D-88 · Correcting a bon scanned by mistake](#d-88--correcting-a-bon-scanned-by-mistake)
+- [D-89 · Retenue certificates and the phase 10B reports](#d-89--retenue-certificates-and-the-phase-10b-reports)
+- [D-90 · Choices made building phase 10B](#d-90--choices-made-building-phase-10b)
 
 **Money — A-1 to A-5**
 
@@ -1851,6 +1854,78 @@ no path behind it.
 `CashTransition.BON_CORRIGE` in `parcel-state-machine.ts`;
 `apps/api/src/money/bon-corrections.service.ts`; migration
 `20261011000000_bon_corrections`.
+
+### D-89 · Retenue certificates and the phase 10B reports
+
+Decided 2026-09-26, answering the five phase 10B money questions.
+
+- **The retenue's month is the month the bon is Remis** (the payment date).
+  A correction (D-88) **never changes a past month**: a bon of an earlier
+  month corrected now shows as a **régularisation** line (the amount taken
+  back) in the month of the correction; the earlier month stays as it was. The
+  same rule makes the certificate totals and the yearly summary.
+- **Certificates**: `RS-AAAA-NNNN`, one sequence per year, given at the
+  bon's **first Remis** when it withheld something. A corrected bon's
+  certificate is marked **Annulé**, kept, its number never reused; the next
+  Remis gets a new number. The seller downloads each certificate and a
+  **yearly summary**. Per bon and yearly are both on; which the accountant
+  keeps is one constant (`RETENUE_CERTIFICATES`, TO CONFIRM).
+- **Société** block in Paramètres (raison sociale, matricule fiscal,
+  adresse), admin only. No certificate is generated while it is incomplete.
+- **CIN number** on the seller, admin only (same visibility as the
+  documents), required for the statut CIN uniquement. A bon for a CIN
+  uniquement seller without it is refused with a clear message; Exceptions
+  lists those sellers. The certificate prints the company block, the seller's
+  name, CIN number and address (his default pickup address), the bon's number
+  and date, the base, the rate and the amount.
+- **Chiffre d'affaires** (a management report, labelled so): each fee counted
+  on the day it was charged, cancelled fees left out, pickup fees in their own
+  column, deducted (on a bon) and still pending beside.
+- **Argent**: collected = the COD of accepted, not cancelled Livré scans by
+  the phone's business day; handed over = counted at Clôturer; paid to
+  sellers = the net of bons Remis; retenue withheld on its own line; still
+  held = with couriers + at the depot unpaid; courier debts outstanding.
+- **Approved own choices**: the Exceptions time limits, `.xlsx` for Excel,
+  the periods, the reports admin only under `RAPPORTS`.
+
+### D-90 · Choices made building phase 10B
+
+Decided 2026-09-26, building phase 10B (none touches a fee, a status or a
+permission beyond D-89).
+
+- **Exceptions**: the rows in Admin 4.7's order, then Saisie manuelle and the
+  CIN row. Near the À vérifier limit = under 24 h left (D-76's mark). Cash not
+  handed over = a livreur's Livré of a day already over, cash still with him,
+  or a ramasseur's bon cash of a past day whose caisse is not closed; today's
+  cash is never late. Bon en route > 24 h from `enRouteAt`, signed bon not
+  archived > 48 h from `remisAt`, bons de versement and de retour alike. The
+  CIN row shows only to the roles that see the statut (the admin).
+- **Certificates**: numbered from the `document_counters` row of the year;
+  the seller's name, shop, CIN number and address (default pickup address)
+  are copied onto the certificate at Remis, so a later change never rewrites
+  one issued. The company block is read when the PDF is made. A cancelled
+  certificate stays downloadable, marked ANNULÉ. The seller sees
+  "Annulé · Correction Faffa Go" beside it.
+- **CIN number**: 8 digits; asked in Créer un vendeur and in Changer le
+  statut towards CIN uniquement when none is recorded; corrected on its own
+  (`PUT /sellers/:id/cin`, audited `MODIFICATION_CIN_VENDEUR`).
+- **Reports**: one screen, one report at a time, the period in the address;
+  the retenue and the ramasseurs' écarts by month, the others by a range of
+  366 days at most. Chiffre d'affaires by day up to 62 days, by month beyond.
+  Activité counts a parcel on its Livré or Retour reçu event (the phone's
+  day, a cancelled scan taken back, as D-83), the delay from pickup to
+  delivery; a livreur's rate is delivered ÷ (delivered + failures). Argent's
+  "held" figures are as of now. Écarts ramasseurs: shortfalls of closed
+  caisses of the month by caisse day, and D-88 shortfalls by the day of the
+  correction.
+- **Exports**: CSV `;`-separated with a byte-order mark, as the parcel
+  exports; Excel `.xlsx` (exceljs) with amounts kept as whole millimes and
+  shown as dinars by the cell format `0\,000`, so no amount passes through a
+  float and Excel still sums them.
+
+**Where.** `packages/shared/src/retenue.ts`, `reports.ts`, `exceptions.ts`;
+`apps/api/src/money/retenue.service.ts`, `apps/api/src/reports`; migration
+`20261012000000_retenue_certificates`.
 
 ---
 

@@ -43,6 +43,7 @@ export function CreateSellerForm({
     contactPhone: '',
     email: '',
     statut: SellerStatut.CIN_UNIQUEMENT as SellerStatut,
+    cinNumber: '',
   });
   const [files, setFiles] = useState<Partial<Record<SellerDocumentType, File>>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -166,9 +167,21 @@ export function CreateSellerForm({
             ))}
           </div>
           {values.statut === SellerStatut.CIN_UNIQUEMENT && (
-            <p className="mt-1 text-sm text-navy/70">
-              Retenue à la source sur chaque paiement, après les frais Faffa Go.
-            </p>
+            <>
+              <p className="mt-1 text-sm text-navy/70">
+                Retenue à la source sur chaque paiement, après les frais Faffa Go.
+              </p>
+              <div className="mt-3">
+                <Field
+                  id="seller-cin"
+                  label="Numéro de CIN (imprimé sur les certificats de retenue)"
+                  value={values.cinNumber}
+                  onChange={set('cinNumber')}
+                  error={errors.cinNumber}
+                  inputMode="decimal"
+                />
+              </div>
+            </>
           )}
         </fieldset>
         <fieldset className="space-y-3">

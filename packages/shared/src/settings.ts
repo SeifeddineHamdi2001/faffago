@@ -27,6 +27,10 @@ export const SettingKey = {
   COURIER_MIN_APP_VERSION: 'courier_min_app_version',
   /** Empty = off. Landing 6, "TO CONFIRM"; kept easy to switch off (D-20 style). */
   META_PIXEL_ID: 'meta_pixel_id',
+  /** Paramètres › Société (D-89): printed on the retenue certificates. */
+  SOCIETE_RAISON_SOCIALE: 'societe_raison_sociale',
+  SOCIETE_MATRICULE_FISCAL: 'societe_matricule_fiscal',
+  SOCIETE_ADRESSE: 'societe_adresse',
 } as const;
 export type SettingKey = (typeof SettingKey)[keyof typeof SettingKey];
 
@@ -57,6 +61,10 @@ export interface PlatformSettings {
   courierMinAppVersion: string;
   /** The public site's Meta Pixel id, or "" when tracking is off (default). */
   metaPixelId: string;
+  /** Paramètres › Société (D-89); empty until the admin fills it. */
+  societeRaisonSociale: string;
+  societeMatriculeFiscal: string;
+  societeAdresse: string;
 }
 
 /**
@@ -82,6 +90,9 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   clockSkewFlagMinutes: 15,
   courierMinAppVersion: '1.0.0',
   metaPixelId: '',
+  societeRaisonSociale: '',
+  societeMatriculeFiscal: '',
+  societeAdresse: '',
 };
 
 /** Contact links behind "Devenir partenaire". Landing 2.8, Admin 4.16. */
@@ -172,6 +183,9 @@ export const SETTING_VALUE_SCHEMAS: Record<SettingKey, z.ZodType<SettingJsonValu
     .string()
     .trim()
     .regex(/^\d{0,20}$/, 'Identifiant Meta Pixel : chiffres uniquement, ou vide pour désactiver'),
+  [SettingKey.SOCIETE_RAISON_SOCIALE]: z.string().trim().max(200, '200 caractères maximum'),
+  [SettingKey.SOCIETE_MATRICULE_FISCAL]: z.string().trim().max(40, '40 caractères maximum'),
+  [SettingKey.SOCIETE_ADRESSE]: z.string().trim().max(300, '300 caractères maximum'),
 };
 
 export type SettingParseResult =
@@ -209,6 +223,9 @@ export function settingValuesOf(
     [SettingKey.COURIER_MIN_APP_VERSION]: d.courierMinAppVersion,
     [SettingKey.CONTACT_LINKS]: { ...contactLinks },
     [SettingKey.META_PIXEL_ID]: d.metaPixelId,
+    [SettingKey.SOCIETE_RAISON_SOCIALE]: d.societeRaisonSociale,
+    [SettingKey.SOCIETE_MATRICULE_FISCAL]: d.societeMatriculeFiscal,
+    [SettingKey.SOCIETE_ADRESSE]: d.societeAdresse,
   };
 }
 
@@ -239,6 +256,10 @@ export function readPlatformSettings(stored: Readonly<Record<string, unknown>>):
   const version = stored[SettingKey.COURIER_MIN_APP_VERSION];
   const links = stored[SettingKey.CONTACT_LINKS];
   const pixelId = stored[SettingKey.META_PIXEL_ID];
+  const text = (key: SettingKey, fallback: string): string => {
+    const value = stored[key];
+    return typeof value === 'string' ? value : fallback;
+  };
 
   return {
     settings: {
@@ -268,6 +289,9 @@ export function readPlatformSettings(stored: Readonly<Record<string, unknown>>):
       clockSkewFlagMinutes: whole(SettingKey.CLOCK_SKEW_FLAG_MINUTES, d.clockSkewFlagMinutes),
       courierMinAppVersion: typeof version === 'string' ? version : d.courierMinAppVersion,
       metaPixelId: typeof pixelId === 'string' ? pixelId : d.metaPixelId,
+      societeRaisonSociale: text(SettingKey.SOCIETE_RAISON_SOCIALE, d.societeRaisonSociale),
+      societeMatriculeFiscal: text(SettingKey.SOCIETE_MATRICULE_FISCAL, d.societeMatriculeFiscal),
+      societeAdresse: text(SettingKey.SOCIETE_ADRESSE, d.societeAdresse),
     },
     contactLinks: {
       ...DEFAULT_CONTACT_LINKS,

@@ -19,6 +19,7 @@ import { CLOCK, type Clock } from '../common/clock';
 import { apiError } from '../common/errors';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ParcelEventService } from '../parcels/parcel-event.service';
+import { RetenueService } from './retenue.service';
 
 type Db = Prisma.TransactionClient;
 
@@ -40,6 +41,7 @@ export class BonCorrectionsService {
     private readonly prisma: PrismaService,
     private readonly events: ParcelEventService,
     private readonly audit: AuditService,
+    private readonly retenue: RetenueService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
@@ -98,6 +100,8 @@ export class BonCorrectionsService {
         });
       }
       if (bon.remisScanId) await this.cancelScan(tx, bon.remisScanId, actor, reason, now);
+      // Not paid after all: its certificate is Annulé; the next Remis numbers a new one (D-89).
+      await this.retenue.cancelAtCorrection(tx, id, actor.userId, now);
 
       if (outcome.bonStatusAfter === 'EN_ROUTE') {
         await tx.bonVersement.update({

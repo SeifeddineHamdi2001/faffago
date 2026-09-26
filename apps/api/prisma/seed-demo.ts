@@ -252,6 +252,8 @@ export async function seedDemo(
                   contactFullName: 'Vendeur Démo',
                   contactPhone: account.phone,
                   statut: 'CIN_UNIQUEMENT',
+                  // Required for CIN uniquement (D-89); a demo value.
+                  cinNumber: '01234567',
                   createdByUserId: admin.id,
                 },
               }

@@ -195,7 +195,8 @@ describe('the Paramètres (D-20)', () => {
   it('writes the starting values, money as digit strings', async () => {
     const rows = await prisma.setting.findMany();
     const values = Object.fromEntries(rows.map((row) => [row.key, row.value]));
-    expect(rows).toHaveLength(15);
+    // 15, and the Société block (D-89).
+    expect(rows).toHaveLength(18);
     expect(values.delivery_fee_millimes).toBe('5500');
     expect(values.return_fee_millimes).toBe('2000');
     expect(values.courier_rate_per_parcel_millimes).toBe('3500');

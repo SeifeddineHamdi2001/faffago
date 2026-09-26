@@ -14,6 +14,7 @@ import {
   SellerMoneyController,
 } from './money.controller';
 import { PayrollService } from './payroll.service';
+import { RetenueService } from './retenue.service';
 import { SellerMoneyService } from './seller-money.service';
 
 /**
@@ -38,6 +39,7 @@ import { SellerMoneyService } from './seller-money.service';
     BonsVersementService,
     CaisseService,
     PayrollService,
+    RetenueService,
     SellerMoneyService,
   ],
   exports: [
@@ -45,6 +47,7 @@ import { SellerMoneyService } from './seller-money.service';
     BonsRetourService,
     CaisseService,
     PayrollService,
+    RetenueService,
     SellerMoneyService,
   ],
 })

@@ -25,6 +25,7 @@ describe('AdminNav', () => {
       'Paiements vendeurs',
       'Retours',
       'Paie coursiers',
+      'Rapports',
       'Vendeurs',
       'Coursiers',
       'Paramètres',
