@@ -736,15 +736,20 @@ plans and the API's refusals have their Arabic in the same file
 
 ### Vendeur (`/vendeur`, `/vendeur/paiements`, `/vendeur/retours`)
 
-| Key                                        | Français                                                                                                                                                                                               |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| web `seller-dashboard-screen` — À recevoir | Chez les coursiers : {montant} · Au dépôt, prêt à payer : {montant} · Frais à déduire : {montant}                                                                                                      |
-| web `seller-dashboard-screen` — aide       | Montant des colis livrés moins les frais de livraison, avant retenue à la source. Voir les paiements                                                                                                   |
-| web `seller-dashboard-screen` — À traiter  | {n} bon(s) de versement en route · {n} bon(s) de retour en route · {n} retour(s) au dépôt                                                                                                              |
-| web `seller-dashboard-screen` — taux       | {n} livré(s) · {n} retourné(s)                                                                                                                                                                         |
-| web `seller-nav` — badges                  | {n} bon(s) de versement en route · {n} bon(s) de retour en route                                                                                                                                       |
-| web `seller-money-screens` — Paiements     | Colis livrés non payés · Aucun bon de versement pour l’instant. · Chaque colis : montant encaissé − frais de livraison. La retenue à la source, s’il y en a une, est calculée sur le bon de versement. |
-| web `seller-money-screens` — Retours       | En cours de retour ({n}) · Aucun retour en cours. · Les retours vous sont rapportés par le ramasseur lors de sa prochaine visite. {n} retour(s) reçu(s) au total.                                      |
+| Key                                        | Français                                                                                                                                                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web `seller-dashboard-screen` — À recevoir | Chez les coursiers : {montant} · Au dépôt, prêt à payer : {montant} · Frais à déduire : {montant}                                                                                                        |
+| web `seller-dashboard-screen` — aide       | Montant des colis livrés moins les frais de livraison, avant retenue à la source. Voir les paiements                                                                                                     |
+| web `a-recevoir-card` — lignes             | Montant total des colis livrés · Frais de livraison · Frais de retour · Changement de client · Frais de ramassage · Total à recevoir                                                                     |
+| web `a-recevoir-card` — aide               | Avant retenue à la source, s’il y en a une : elle est calculée sur le bon de versement.                                                                                                                  |
+| web `a-ramasser-screen`                    | Colis à ramasser · {n} colis · {montant} à encaisser. Collez l’étiquette sur chaque colis avant le passage du ramasseur. · Imprimer la liste · Pas encore demandé · Aucun colis en attente de ramassage. |
+| web `pickup-request-form` — colis          | {n} colis créé(s) en attente de ramassage · Le ramasseur scanne vos colis sur place : leur nombre est compté automatiquement. · Imprimer les étiquettes des colis à ramasser                             |
+| web `seller-nav` — Mes colis               | Mes colis · Tous les colis · À ramasser                                                                                                                                                                  |
+| web `seller-dashboard-screen` — À traiter  | {n} bon(s) de versement en route · {n} bon(s) de retour en route · {n} retour(s) au dépôt                                                                                                                |
+| web `seller-dashboard-screen` — taux       | {n} livré(s) · {n} retourné(s)                                                                                                                                                                           |
+| web `seller-nav` — badges                  | {n} bon(s) de versement en route · {n} bon(s) de retour en route                                                                                                                                         |
+| web `seller-money-screens` — Paiements     | Colis livrés non payés · Aucun bon de versement pour l’instant. · Chaque colis : montant encaissé − frais de livraison. La retenue à la source, s’il y en a une, est calculée sur le bon de versement.   |
+| web `seller-money-screens` — Retours       | En cours de retour ({n}) · Aucun retour en cours. · Les retours vous sont rapportés par le ramasseur lors de sa prochaine visite. {n} retour(s) reçu(s) au total.                                        |
 
 ### Courier app (`apps/courier/src/i18n/messages.ts`, phase 8)
 

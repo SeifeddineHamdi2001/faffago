@@ -40,7 +40,7 @@ export function PayoutsScreen({ rows }: { rows: SellerPayoutSummary[] }) {
                 <th className="text-right">Payable maintenant</th>
                 <th className="text-right">Chez les coursiers</th>
                 <th className="text-right">Frais à déduire</th>
-                <th>Bons en cours</th>
+                <th className="pl-6">Bons en cours</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-navy/10">
@@ -62,7 +62,7 @@ export function PayoutsScreen({ rows }: { rows: SellerPayoutSummary[] }) {
                   </td>
                   <td className="text-right">{dt(row.withCouriersMillimes)}</td>
                   <td className="text-right">{dt(row.pendingChargesMillimes)}</td>
-                  <td>{row.bonsEnCours}</td>
+                  <td className="pl-6">{row.bonsEnCours}</td>
                 </tr>
               ))}
             </tbody>

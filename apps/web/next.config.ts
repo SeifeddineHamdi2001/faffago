@@ -15,6 +15,9 @@ const securityHeaders = [
 const config: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // `pnpm dev` only: Next serves its scripts to localhost alone, so a phone on
+  // the local network (or 127.0.0.1) got a page that never hydrated (D-93).
+  allowedDevOrigins: ['127.0.0.1', '192.168.*.*'],
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

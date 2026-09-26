@@ -47,15 +47,16 @@ export function AdminNav({
   const items = ITEMS.filter((item) => permissions.includes(item.permission));
 
   return (
-    <nav aria-label="Menu" className="flex gap-1 md:flex-col">
+    <nav aria-label="Menu" className="flex flex-col gap-1">
       {items.map((item) => {
-        const active = pathname.startsWith(item.href);
+        // Whole segments: /admin/paiements must not light up /admin/paie too.
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`flex-1 rounded-lg px-3 py-3 text-center text-sm font-semibold md:flex-none md:text-left ${
+            className={`rounded-lg px-3 py-3 text-sm font-semibold ${
               active ? 'bg-orange text-navy' : 'text-white/80 hover:bg-white/10'
             }`}
           >

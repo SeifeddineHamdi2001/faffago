@@ -22,13 +22,16 @@ describe('the request form (Vendeur 4.5, D-35)', () => {
     expect(pickupRequestSchema.parse({ ...base, declaredCount: '12' }).declaredCount).toBe(12);
   });
 
-  it('refuses both, or neither', () => {
+  it('needs only the address and the window: the ramasseur counts the parcels (D-98)', () => {
+    expect(pickupRequestSchema.safeParse(base).success).toBe(true);
+    expect(pickupRequestSchema.safeParse({ ...base, parcelCodes: [] }).success).toBe(true);
+  });
+
+  it('refuses a list and a number together', () => {
     expect(
       pickupRequestSchema.safeParse({ ...base, parcelCodes: ['FG-8K2QX7AB'], declaredCount: 3 })
         .success,
     ).toBe(false);
-    expect(pickupRequestSchema.safeParse({ ...base, parcelCodes: [] }).success).toBe(false);
-    expect(pickupRequestSchema.safeParse(base).success).toBe(false);
   });
 
   it('takes a saved address, or a new one on the first request', () => {

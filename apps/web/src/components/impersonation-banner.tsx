@@ -20,7 +20,7 @@ export function ImpersonationBanner({ banner }: { banner: string }) {
   return (
     <section
       aria-label="Consultation"
-      className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-2 bg-orange px-4 py-3 text-navy"
+      className="flex flex-wrap items-center justify-between gap-2 bg-orange px-4 py-3 text-navy"
     >
       <div>
         <p className="font-semibold">{banner}</p>

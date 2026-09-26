@@ -261,10 +261,10 @@ describe('the money part (Vendeur 4.1, D-39, D-83)', () => {
     await t.prisma.sellerCharge.create({
       data: { sellerId: seller.sellerId!, type: 'RETOUR', amountMillimes: 5000n },
     });
-    // Three delivered and one received back today, one delivered yesterday.
+    // Three delivered and one return decided today, one delivered yesterday.
     for (let i = 0; i < 3; i++)
       await happened(await parcelOf(seller), 'LIVRAISON', '2026-09-25T07:00:00.000Z');
-    await happened(await parcelOf(seller), 'RETOUR_RECU', '2026-09-25T07:30:00.000Z');
+    await happened(await parcelOf(seller), 'DECISION_RETOURNER', '2026-09-25T07:30:00.000Z');
     await happened(await parcelOf(seller), 'LIVRAISON', '2026-09-24T10:00:00.000Z');
 
     const today = await dashboard(token);
@@ -275,6 +275,12 @@ describe('the money part (Vendeur 4.1, D-39, D-83)', () => {
         auDepotMillimes: '78000',
         totalMillimes: '156000',
         fraisADeduireMillimes: '5000',
+        codMillimes: '170000',
+        fraisLivraisonMillimes: '14000',
+        fraisRetourMillimes: '5000',
+        fraisChangementClientMillimes: '0',
+        fraisRamassageMillimes: '0',
+        netMillimes: '151000',
       },
       aTraiter: { bonsVersementEnRoute: 0, bonsRetourEnRoute: 0, retoursAuDepot: 1 },
       deliveryRate: { delivered: 3, returned: 1, rateBps: 7500 },

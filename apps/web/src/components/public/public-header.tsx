@@ -37,9 +37,9 @@ export function PublicHeader({ locale, texts }: { locale: Locale; texts: PublicT
   ];
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-navy/95 text-white backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:h-20 sm:gap-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-1.5 px-3 sm:h-20 sm:gap-3 sm:px-6 lg:px-8">
         <Link href={home} className="me-auto inline-flex min-h-11 shrink-0 items-center rounded-lg">
-          <Logo className="h-8 sm:h-10" />
+          <Logo className="h-6 sm:h-10" />
         </Link>
         <nav aria-label={texts.nav.menu} className="hidden items-center gap-1 lg:flex">
           {links.map((link, index) => (
@@ -62,7 +62,7 @@ export function PublicHeader({ locale, texts }: { locale: Locale; texts: PublicT
         <LanguageSwitch locale={locale} label={texts.nav.otherLanguage} />
         <a
           href={`${home}#contact`}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-orange px-3 text-sm font-bold whitespace-nowrap text-navy shadow-lg shadow-orange/25 transition hover:-translate-y-0.5 hover:brightness-105 sm:px-5"
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-orange px-2.5 text-xs font-bold whitespace-nowrap text-navy shadow-lg shadow-orange/25 transition hover:-translate-y-0.5 hover:brightness-105 sm:px-5 sm:text-sm"
         >
           {texts.nav.partner}
         </a>

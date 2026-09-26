@@ -9,7 +9,14 @@
     "android": {
       "package": "tn.faffago.coursier",
       "versionCode": 1,
-      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+      "permissions": [
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
       "blockedPermissions": ["ACCESS_BACKGROUND_LOCATION"]
     },
     "plugins": [
@@ -30,6 +37,11 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "450131de-3346-4eac-9a87-ee2592ec47be"
+      }
+    }
   }
 }

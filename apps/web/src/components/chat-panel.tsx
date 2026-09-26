@@ -7,6 +7,7 @@ import {
   CHAT_QUICK_REPLIES_SELLER,
   CHAT_THREAD_STATE_LABELS_FR,
 } from '@faffago/shared';
+import { newUuid } from '@/lib/client/uuid';
 import { bff } from '@/lib/client/call';
 import type { ChatMessageView, ChatThreadView } from '@/lib/types';
 
@@ -113,7 +114,7 @@ export function ChatPanel({
     const body = draft.trim();
     if (!body) return;
     setDraft('');
-    void send(crypto.randomUUID(), body);
+    void send(newUuid(), body);
   }
 
   if (!thread) {

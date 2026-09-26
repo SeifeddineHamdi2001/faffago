@@ -62,6 +62,12 @@ export interface ReadyParcel {
   createdAt: Date;
 }
 
+export interface AwaitingParcel extends ReadyParcel {
+  recipientPhone: string;
+  /** The open request it is on (Demandé or Planifié), if any. */
+  pickup: { id: string; status: PickupStatus } | null;
+}
+
 const INCLUDE = {
   pickupAddress: { include: WITH_PLACE },
   ramasseur: { include: { user: { select: { firstName: true } } } },
@@ -138,9 +144,13 @@ export class PickupsService {
         });
         if (open) throw ramassageEnCours();
 
+        // No list and no number (D-98): every Créé parcel not yet in a request
+        // is expected; a parcel created after it is scanned as an extra (D-47).
         const parcelIds = values.parcelCodes?.length
           ? await this.availableParcels(tx, sellerId, values.parcelCodes)
-          : [];
+          : values.declaredCount
+            ? []
+            : await this.allReadyParcels(tx, sellerId);
         const pickup = await tx.pickup.create({
           data: {
             sellerId,
@@ -267,6 +277,45 @@ export class PickupsService {
    * request, locked until the request is written. Any other is refused, with
    * its code; another seller's reads like an unknown one (D-26).
    */
+  private async allReadyParcels(tx: Tx, sellerId: string): Promise<string[]> {
+    const parcels = await tx.parcel.findMany({
+      where: {
+        sellerId,
+        status: ParcelStatus.CREE,
+        pickupLinks: { none: { pickup: { status: { in: OPEN } } } },
+      },
+      select: { id: true },
+    });
+    return parcels.map((parcel) => parcel.id);
+  }
+
+  /**
+   * À ramasser (D-98): every Créé parcel of the seller, to print the labels
+   * before the ramasseur comes, with the open request it is on, if any.
+   */
+  async aRamasser(principal: Principal): Promise<AwaitingParcel[]> {
+    const parcels = await this.prisma.parcel.findMany({
+      where: { sellerId: sellerIdOf(principal), status: ParcelStatus.CREE },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        delegation: true,
+        pickupLinks: {
+          where: { pickup: { status: { in: OPEN } } },
+          select: { pickup: { select: { id: true, status: true } } },
+        },
+      },
+    });
+    return parcels.map((parcel) => ({
+      code: parcel.code,
+      recipientName: parcel.recipientName,
+      recipientPhone: parcel.recipientPhone,
+      delegationNameFr: parcel.delegation.nameFr,
+      codAmountMillimes: parcel.codAmountMillimes,
+      createdAt: parcel.createdAt,
+      pickup: parcel.pickupLinks[0]?.pickup ?? null,
+    }));
+  }
+
   private async availableParcels(tx: Tx, sellerId: string, rawCodes: string[]): Promise<string[]> {
     const codes = [...new Set(rawCodes.map(normalizeParcelCode))];
     await tx.$queryRaw`SELECT "id" FROM "parcels" WHERE "code" = ANY(${codes}::text[]) FOR UPDATE`;

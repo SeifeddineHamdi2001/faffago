@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { aRecevoirOf, deliveryRateBps, formatDeliveryRate } from '../seller-money.js';
-import { ParcelCashStatus } from '../statuses.js';
+import { ChargeType, ParcelCashStatus } from '../statuses.js';
 
 describe('aRecevoirOf — À recevoir (Vendeur 4.1, D-83)', () => {
   it('is COD minus the frozen delivery fee, split chez les coursiers / au dépôt', () => {
@@ -17,7 +17,10 @@ describe('aRecevoirOf — À recevoir (Vendeur 4.1, D-83)', () => {
           deliveryFeeMillimes: 5_500n,
         },
       ],
-      [2_000n, 1_000n],
+      [
+        { type: ChargeType.RAMASSAGE, amountMillimes: 2_000n },
+        { type: ChargeType.CHANGEMENT_CLIENT, amountMillimes: 1_000n },
+      ],
     );
     expect(result).toEqual({
       parcelCount: 2,
@@ -25,7 +28,41 @@ describe('aRecevoirOf — À recevoir (Vendeur 4.1, D-83)', () => {
       auDepotMillimes: 34_500n,
       totalMillimes: 112_500n,
       fraisADeduireMillimes: 3_000n,
+      codMillimes: 125_000n,
+      fraisLivraisonMillimes: 12_500n,
+      fraisRetourMillimes: 0n,
+      fraisChangementClientMillimes: 1_000n,
+      fraisRamassageMillimes: 2_000n,
+      netMillimes: 109_500n,
     });
+  });
+
+  it('takes every waiting fee off the net, by type', () => {
+    const result = aRecevoirOf(
+      [
+        {
+          cashStatus: ParcelCashStatus.AU_DEPOT,
+          codAmountMillimes: 50_000n,
+          deliveryFeeMillimes: 7_000n,
+        },
+      ],
+      [
+        { type: ChargeType.RETOUR, amountMillimes: 4_000n },
+        { type: ChargeType.RETOUR, amountMillimes: 4_000n },
+        { type: ChargeType.RAMASSAGE, amountMillimes: 2_000n },
+      ],
+    );
+    expect(result.codMillimes).toBe(50_000n);
+    expect(result.fraisLivraisonMillimes).toBe(7_000n);
+    expect(result.fraisRetourMillimes).toBe(8_000n);
+    expect(result.fraisRamassageMillimes).toBe(2_000n);
+    expect(result.fraisChangementClientMillimes).toBe(0n);
+    expect(result.netMillimes).toBe(33_000n);
+  });
+
+  it('can go below zero when the fees are more than the cash', () => {
+    const result = aRecevoirOf([], [{ type: ChargeType.RETOUR, amountMillimes: 4_000n }]);
+    expect(result.netMillimes).toBe(-4_000n);
   });
 
   it('leaves paid parcels out', () => {

@@ -1,15 +1,15 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import {
   PICKUP_SLOT_LABELS_FR,
   PickupSlot,
-  formatDT,
-  millimesFromJson,
   pickupRequestSchema,
   type GeoTreeView,
 } from '@faffago/shared';
+import { newUuid } from '@/lib/client/uuid';
 import { bff } from '@/lib/client/call';
 import type { ApiError, PickupAddress, PickupView, ReadyParcel } from '@/lib/types';
 import { ErrorAlert } from './account-actions';
@@ -24,10 +24,11 @@ import {
 const NEW_ADDRESS = 'NOUVELLE';
 
 /**
- * Demander un ramassage (Vendeur 4.5): the parcels ready, or how many; the
- * window; a note. On the first request the seller fills the pickup address,
- * which is saved in his profile and chosen next time. The fee rule is shown
- * before he confirms.
+ * Demander un ramassage (Vendeur 4.5, D-98): the address, the window and a
+ * note. The seller does not list or count his parcels: the ramasseur's scans
+ * count them, and the fee follows. On the first request the seller fills the
+ * pickup address, which is saved in his profile and chosen next time. The fee
+ * rule is shown before he confirms.
  */
 export function PickupRequestForm({
   tree,
@@ -46,22 +47,12 @@ export function PickupRequestForm({
     addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? NEW_ADDRESS,
   );
   const [draft, setDraft] = useState<PickupAddressDraft>(EMPTY_ADDRESS);
-  const [mode, setMode] = useState<'LISTE' | 'NOMBRE'>(
-    readyParcels.length > 0 ? 'LISTE' : 'NOMBRE',
-  );
-  const [selected, setSelected] = useState<string[]>(readyParcels.map((p) => p.code));
-  const [declaredCount, setDeclaredCount] = useState('');
   const [slot, setSlot] = useState<PickupSlot | ''>('');
   const [note, setNote] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
-  const [clientRequestId] = useState(() => crypto.randomUUID());
-
-  const toggle = (code: string) =>
-    setSelected((current) =>
-      current.includes(code) ? current.filter((c) => c !== code) : [...current, code],
-    );
+  const [clientRequestId] = useState(() => newUuid());
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -70,7 +61,6 @@ export function PickupRequestForm({
       ...(addressChoice === NEW_ADDRESS
         ? { newAddress: addressPayload(draft) }
         : { pickupAddressId: addressChoice }),
-      ...(mode === 'LISTE' ? { parcelCodes: selected } : { declaredCount }),
       requestedSlot: slot,
       note: note.trim() || null,
     };
@@ -147,73 +137,20 @@ export function PickupRequestForm({
         {errors.pickupAddressId && <p className="text-sm text-red-700">{errors.pickupAddressId}</p>}
       </fieldset>
 
-      <fieldset className="card space-y-3">
-        <legend className="font-display text-lg font-bold text-navy">Colis à ramasser</legend>
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === 'LISTE'}
-              onChange={() => setMode('LISTE')}
-              disabled={readyParcels.length === 0}
-            />
-            Choisir les colis prêts
-          </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === 'NOMBRE'}
-              onChange={() => setMode('NOMBRE')}
-            />
-            Indiquer seulement le nombre
-          </label>
-        </div>
-        {mode === 'LISTE' ? (
-          <ul className="max-h-80 divide-y divide-navy/10 overflow-y-auto text-sm">
-            {readyParcels.map((parcel) => (
-              <li key={parcel.code}>
-                <label className="flex flex-wrap items-center gap-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(parcel.code)}
-                    onChange={() => toggle(parcel.code)}
-                  />
-                  <span className="font-mono font-semibold">{parcel.code}</span>
-                  <span>{parcel.recipientName}</span>
-                  <span className="text-navy/60">{parcel.delegationNameFr}</span>
-                  <span className="ml-auto">
-                    {formatDT(millimesFromJson(parcel.codAmountMillimes))}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div>
-            <label htmlFor="declaredCount" className="field-label">
-              Nombre de colis
-            </label>
-            <input
-              id="declaredCount"
-              className="field max-w-40"
-              inputMode="numeric"
-              value={declaredCount}
-              onChange={(e) => setDeclaredCount(e.target.value)}
-            />
-            {readyParcels.length === 0 && (
-              <p className="mt-1 text-sm text-navy/70">Aucun colis créé en attente de ramassage.</p>
-            )}
-          </div>
-        )}
-        {(errors.parcelCodes || errors.declaredCount) && (
-          <p className="text-sm text-red-700">{errors.parcelCodes ?? errors.declaredCount}</p>
-        )}
-        {mode === 'LISTE' && (
-          <p className="text-sm font-semibold text-navy">{selected.length} colis choisis</p>
-        )}
-      </fieldset>
+      <section aria-labelledby="colis-a-ramasser" className="card space-y-2">
+        <h2 id="colis-a-ramasser" className="font-display text-lg font-bold text-navy">
+          Colis à ramasser
+        </h2>
+        <p className="text-sm font-semibold text-navy">
+          {readyParcels.length} colis créé(s) en attente de ramassage
+        </p>
+        <p className="text-sm text-navy/70">
+          Le ramasseur scanne vos colis sur place : leur nombre est compté automatiquement.
+        </p>
+        <Link href="/vendeur/colis/a-ramasser" className="text-sm text-orange-dark underline">
+          Imprimer les étiquettes des colis à ramasser
+        </Link>
+      </section>
 
       <fieldset className="card space-y-3">
         <legend className="font-display text-lg font-bold text-navy">Créneau</legend>

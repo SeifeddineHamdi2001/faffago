@@ -438,6 +438,12 @@ describe('the seller’s money (Vendeur 4.11, 4.12)', () => {
             auDepotMillimes: '78000',
             totalMillimes: '78000',
             fraisADeduireMillimes: '0',
+            codMillimes: '85000',
+            fraisLivraisonMillimes: '7000',
+            fraisRetourMillimes: '0',
+            fraisChangementClientMillimes: '0',
+            fraisRamassageMillimes: '0',
+            netMillimes: '78000',
             parcels: [
               {
                 code: 'FG-AAAAAAAA',

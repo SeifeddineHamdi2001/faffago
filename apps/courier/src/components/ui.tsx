@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -12,7 +11,9 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import { useContext, type ReactNode } from 'react';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../i18n';
 import { useApp } from '../state/app';
 import { TOUCH_MIN, colors, font } from '../theme';
@@ -191,6 +192,10 @@ export function Screen({
   footer?: ReactNode;
   scroll?: boolean;
 }) {
+  // Inside the tabs the tab bar already clears the phone's navigation bar; elsewhere the screen does.
+  const inTabs = useContext(BottomTabBarHeightContext) !== undefined;
+  const insets = useSafeAreaInsets();
+  const bottom = inTabs ? 0 : insets.bottom;
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       <QueueBanner />
@@ -200,11 +205,21 @@ export function Screen({
         </T>
       ) : null}
       {scroll ? (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>{children}</ScrollView>
+        <ScrollView
+          contentContainerStyle={{
+            padding: 16,
+            gap: 12,
+            paddingBottom: 16 + (footer ? 0 : bottom),
+          }}
+        >
+          {children}
+        </ScrollView>
       ) : (
         <View style={{ flex: 1 }}>{children}</View>
       )}
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+      {footer ? (
+        <View style={[styles.footer, { paddingBottom: 16 + bottom }]}>{footer}</View>
+      ) : null}
     </SafeAreaView>
   );
 }

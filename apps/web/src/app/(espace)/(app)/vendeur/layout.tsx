@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { AppShell } from '@/components/app-shell';
 import { ImpersonationBanner } from '@/components/impersonation-banner';
 import { LogoutButton } from '@/components/logout-button';
 import { NotificationBell } from '@/components/notification-bell';
@@ -7,7 +8,8 @@ import { requireMe, serverGetOrNull } from '@/lib/server/session';
 import type { SellerMoneyBadges, SellerVerifySummary } from '@/lib/types';
 
 /**
- * The seller space (Vendeur 3). The shop name is always visible. While an
+ * The seller space (Vendeur 3): sidebar on a computer, burger menu on a
+ * phone (D-94). The shop name and the bell are always visible. While an
  * admin uses "Voir comme le vendeur", the banner sits on top and there is
  * nothing to log out of: the exit is the banner's Quitter (D-5).
  */
@@ -23,34 +25,40 @@ export default async function VendeurLayout({ children }: { children: ReactNode 
   );
 
   return (
-    <div className="min-h-screen">
-      {me.impersonation && <ImpersonationBanner banner={me.impersonation.banner} />}
-      <header className="flex items-center justify-between bg-navy px-4 py-3 text-white">
-        <p className="font-display text-lg font-bold">
+    <AppShell
+      banner={me.impersonation && <ImpersonationBanner banner={me.impersonation.banner} />}
+      brand={
+        <p className="font-display text-xl font-bold">
           Faffa <span className="text-orange">Go</span>
         </p>
-        <div className="flex items-center gap-2">
-          <p className="font-semibold">{me.seller?.shopName}</p>
+      }
+      nav={
+        <SellerNav
+          aVerifierCount={summary?.count ?? 0}
+          paiementsCount={money?.bonsVersementEnRoute ?? 0}
+          retoursCount={money?.bonsRetourEnRoute ?? 0}
+        />
+      }
+      sidebarFooter={
+        !me.impersonation && (
+          <LogoutButton
+            loginPath="/vendeur/connexion"
+            className="text-sm text-white/80 underline"
+          />
+        )
+      }
+      topBar={
+        <>
+          <p className="truncate font-semibold">{me.seller?.shopName}</p>
           <NotificationBell
             initialCount={bell?.unreadCount ?? 0}
             href="/vendeur/notifications"
             live={!me.impersonation}
           />
-        </div>
-      </header>
-      <SellerNav
-        aVerifierCount={summary?.count ?? 0}
-        paiementsCount={money?.bonsVersementEnRoute ?? 0}
-        retoursCount={money?.bonsRetourEnRoute ?? 0}
-      />
-      <main className="mx-auto max-w-4xl p-4">
-        {children}
-        {!me.impersonation && (
-          <div className="mt-8">
-            <LogoutButton loginPath="/vendeur/connexion" className="btn-secondary" />
-          </div>
-        )}
-      </main>
-    </div>
+        </>
+      }
+    >
+      <div className="mx-auto max-w-4xl">{children}</div>
+    </AppShell>
   );
 }

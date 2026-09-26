@@ -55,7 +55,10 @@ export class NoticesJob {
     const near = await this.prisma.parcel.findMany({
       where: {
         status: ParcelStatus.A_VERIFIER,
-        verifyDeadlineAt: { gt: now, lte: new Date(now.getTime() + VERIFY_WARNING_HOURS * HOUR_MS) },
+        verifyDeadlineAt: {
+          gt: now,
+          lte: new Date(now.getTime() + VERIFY_WARNING_HOURS * HOUR_MS),
+        },
       },
       select: {
         id: true,
@@ -68,7 +71,9 @@ export class NoticesJob {
     let warned = 0;
     for (const parcel of near) {
       // The failure this deadline belongs to began one deadline ago.
-      const since = new Date(parcel.verifyDeadlineAt!.getTime() - settings.verifyDeadlineHours * HOUR_MS);
+      const since = new Date(
+        parcel.verifyDeadlineAt!.getTime() - settings.verifyDeadlineHours * HOUR_MS,
+      );
       const already = await this.prisma.notification.findFirst({
         where: { parcelId: parcel.id, type: 'COLIS_24H_RESTANTES', createdAt: { gte: since } },
         select: { id: true },
@@ -76,9 +81,15 @@ export class NoticesJob {
       if (already) continue;
       await this.prisma.$transaction(async (tx) => {
         const options = { parcelId: parcel.id };
-        await this.notifications.send(tx, { sellerId: parcel.sellerId }, 'COLIS_24H_RESTANTES', {
-          code: parcel.code,
-        }, options);
+        await this.notifications.send(
+          tx,
+          { sellerId: parcel.sellerId },
+          'COLIS_24H_RESTANTES',
+          {
+            code: parcel.code,
+          },
+          options,
+        );
         await this.notifications.send(
           tx,
           { permission: Permission.SUIVI_A_VERIFIER },
@@ -107,7 +118,9 @@ export class NoticesJob {
     }
     let told = 0;
     for (const [userId, count] of counts) {
-      if (await this.notifications.hasNotice(this.prisma, userId, 'COLIS_RELANCE_AUJOURDHUI', { day })) {
+      if (
+        await this.notifications.hasNotice(this.prisma, userId, 'COLIS_RELANCE_AUJOURDHUI', { day })
+      ) {
         continue;
       }
       await this.notifications.send(this.prisma, { userId }, 'COLIS_RELANCE_AUJOURDHUI', {
@@ -140,7 +153,9 @@ export class NoticesJob {
     let told = 0;
     for (const user of couriers) {
       const courierId = user.courier!.id;
-      if (await this.notifications.hasNotice(this.prisma, user.id, 'RAPPEL_FIN_DE_JOURNEE', { day })) {
+      if (
+        await this.notifications.hasNotice(this.prisma, user.id, 'RAPPEL_FIN_DE_JOURNEE', { day })
+      ) {
         continue;
       }
       const [parcels, bons, session] = await Promise.all([
@@ -155,8 +170,12 @@ export class NoticesJob {
           : Promise.resolve(0),
         user.role === 'RAMASSEUR'
           ? Promise.all([
-              this.prisma.bonVersement.count({ where: { ramasseurId: courierId, status: 'EN_ROUTE' } }),
-              this.prisma.bonRetour.count({ where: { ramasseurId: courierId, status: 'EN_ROUTE' } }),
+              this.prisma.bonVersement.count({
+                where: { ramasseurId: courierId, status: 'EN_ROUTE' },
+              }),
+              this.prisma.bonRetour.count({
+                where: { ramasseurId: courierId, status: 'EN_ROUTE' },
+              }),
             ]).then(([versement, retour]) => versement + retour)
           : Promise.resolve(0),
         this.caisse.session(user.id, day),

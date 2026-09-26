@@ -284,6 +284,32 @@ describe('the parcels ready to be picked up', () => {
   });
 });
 
+describe('the seller only asks for the visit (D-98)', () => {
+  it('attaches every Créé parcel not yet in a request, and À ramasser lists them all', async () => {
+    const own = await createUser(t.prisma, { role: 'VENDEUR', email: 'visite@ramassage.tn' });
+    const ownToken = (await login(t, own)).accessToken;
+    const first = await parcelCode('CREE', 'CHEZ_LE_VENDEUR', own);
+    const second = await parcelCode('CREE', 'CHEZ_LE_VENDEUR', own);
+    const delivered = await parcelCode('LIVRE', 'CHEZ_LE_CLIENT', own);
+    const theirs = await parcelCode('CREE', 'CHEZ_LE_VENDEUR', otherSeller);
+
+    const before = await t.request('GET', '/pickups/a-ramasser', { token: ownToken });
+    expect(before.status).toBe(200);
+    expect(before.body.map((p: { code: string }) => p.code).sort()).toEqual([first, second].sort());
+    expect(before.body.every((p: { pickup: unknown }) => p.pickup === null)).toBe(true);
+
+    const created = await request({ pickupAddressId: await newAddress(ownToken) }, ownToken);
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ declaredCount: null, expectedCount: 2 });
+
+    const after = await t.request('GET', '/pickups/a-ramasser', { token: ownToken });
+    const codes = after.body.map((p: { code: string }) => p.code);
+    expect(codes).not.toContain(delivered);
+    expect(codes).not.toContain(theirs);
+    expect(after.body[0].pickup).toEqual({ id: created.body.id, status: 'DEMANDE' });
+  });
+});
+
 describe('Mes ramassages', () => {
   it('lists the seller’s own requests, newest first; another seller sees none of them', async () => {
     const created = await request({ pickupAddressId: await newAddress(), declaredCount: 4 });

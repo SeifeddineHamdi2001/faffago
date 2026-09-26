@@ -9,6 +9,7 @@ import {
   tryParseDT,
   type GeoTreeView,
 } from '@faffago/shared';
+import { newUuid } from '@/lib/client/uuid';
 import { bff } from '@/lib/client/call';
 import type { ApiError, ParcelEdit, SellerParcel } from '@/lib/types';
 import { ErrorAlert, fieldErrors } from './account-actions';
@@ -122,7 +123,7 @@ export function ParcelForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<ApiError | null>(null);
   const [busy, setBusy] = useState(false);
-  const [clientRequestId] = useState(() => crypto.randomUUID());
+  const [clientRequestId] = useState(() => newUuid());
 
   const set =
     <K extends keyof Values>(key: K) =>

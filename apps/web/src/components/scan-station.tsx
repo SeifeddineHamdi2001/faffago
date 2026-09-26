@@ -14,6 +14,7 @@ import {
   isRepeatRead,
   type DepotScanMode,
 } from '@faffago/shared';
+import { newUuid } from '@/lib/client/uuid';
 import { bff } from '@/lib/client/call';
 import type { CourierRow, DepotScanResult } from '@/lib/types';
 import { CameraScanner } from './camera-scanner';
@@ -120,7 +121,7 @@ export function ScanStation({
   }
 
   async function send(rawCode: string, source: ScanSource) {
-    const clientScanId = crypto.randomUUID();
+    const clientScanId = newUuid();
     if (needsCourier && !courierId) {
       show({
         key: clientScanId,

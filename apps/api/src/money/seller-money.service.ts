@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   addTunisDays,
   aRecevoirOf,
   deliveryRateBps,
+  RETURN_DECIDED_EVENT_TYPES,
   tunisDayStart,
   type ARecevoir,
 } from '@faffago/shared';
@@ -51,13 +53,10 @@ export class SellerMoneyService {
       }),
       this.prisma.sellerCharge.findMany({
         where: { sellerId, status: 'EN_ATTENTE', type: { not: 'LIVRAISON' } },
-        select: { amountMillimes: true },
+        select: { type: true, amountMillimes: true },
       }),
     ]);
-    const totals: ARecevoir = aRecevoirOf(
-      parcels,
-      charges.map((charge) => charge.amountMillimes),
-    );
+    const totals: ARecevoir = aRecevoirOf(parcels, charges);
     return {
       ...totals,
       parcels: parcels.map((parcel) => ({
@@ -116,22 +115,24 @@ export class SellerMoneyService {
   }
 
   /**
-   * Taux de livraison over the dashboard's period (D-48, D-83): distinct
-   * parcels delivered, and received back, on the Tunis day of their event —
-   * the phone's clock for a scan — a cancelled scan taken back (A-11).
+   * Taux de livraison over the dashboard's period (D-48, D-83, D-97): distinct
+   * parcels delivered, and whose return was decided, on the Tunis day of
+   * their event — the phone's clock for a scan — a cancelled scan taken back
+   * (A-11).
    */
   async deliveryRate(sellerId: string, from: string, to: string): Promise<DeliveryRate> {
     const start = tunisDayStart(from);
     const end = tunisDayStart(addTunisDays(to, 1));
+    // Each parcel once per outcome: the 3rd attempt and a later decision never both count.
     const rows = await this.prisma.$queryRaw<{ day: string; type: string; parcels: number }[]>`
       SELECT to_char((COALESCE(e."deviceTime", e."serverTime") + INTERVAL '1 hour'), 'YYYY-MM-DD') AS "day",
-             e."type"::text AS "type",
+             CASE WHEN e."type" = 'LIVRAISON' THEN 'LIVRAISON' ELSE 'RETOUR' END AS "type",
              COUNT(DISTINCT e."parcelId")::int AS "parcels"
       FROM "parcel_events" e
       JOIN "parcels" p ON p."id" = e."parcelId"
       LEFT JOIN "scans" s ON s."id" = e."scanId"
       WHERE p."sellerId" = ${sellerId}::uuid
-        AND e."type" IN ('LIVRAISON'::"ParcelEventType", 'RETOUR_RECU'::"ParcelEventType")
+        AND e."type"::text IN ('LIVRAISON', ${Prisma.join(RETURN_DECIDED_EVENT_TYPES)})
         AND COALESCE(e."deviceTime", e."serverTime") >= ${start}
         AND COALESCE(e."deviceTime", e."serverTime") < ${end}
         AND s."cancelledAt" IS NULL
@@ -140,24 +141,25 @@ export class SellerMoneyService {
     `;
     // A parcel counts once over the period, whatever its day.
     const totals = await this.prisma.$queryRaw<{ type: string; parcels: number }[]>`
-      SELECT e."type"::text AS "type", COUNT(DISTINCT e."parcelId")::int AS "parcels"
+      SELECT CASE WHEN e."type" = 'LIVRAISON' THEN 'LIVRAISON' ELSE 'RETOUR' END AS "type",
+             COUNT(DISTINCT e."parcelId")::int AS "parcels"
       FROM "parcel_events" e
       JOIN "parcels" p ON p."id" = e."parcelId"
       LEFT JOIN "scans" s ON s."id" = e."scanId"
       WHERE p."sellerId" = ${sellerId}::uuid
-        AND e."type" IN ('LIVRAISON'::"ParcelEventType", 'RETOUR_RECU'::"ParcelEventType")
+        AND e."type"::text IN ('LIVRAISON', ${Prisma.join(RETURN_DECIDED_EVENT_TYPES)})
         AND COALESCE(e."deviceTime", e."serverTime") >= ${start}
         AND COALESCE(e."deviceTime", e."serverTime") < ${end}
         AND s."cancelledAt" IS NULL
       GROUP BY 1
     `;
     const delivered = totals.find((row) => row.type === 'LIVRAISON')?.parcels ?? 0;
-    const returned = totals.find((row) => row.type === 'RETOUR_RECU')?.parcels ?? 0;
+    const returned = totals.find((row) => row.type === 'RETOUR')?.parcels ?? 0;
     const days: DeliveryRate['days'] = [];
     for (let day = from; day <= to; day = addTunisDays(day, 1)) {
       const of = (type: string) =>
         rows.find((row) => row.day === day && row.type === type)?.parcels ?? 0;
-      days.push({ day, delivered: of('LIVRAISON'), returned: of('RETOUR_RECU') });
+      days.push({ day, delivered: of('LIVRAISON'), returned: of('RETOUR') });
       if (days.length > 366) break;
     }
     return { delivered, returned, rateBps: deliveryRateBps(delivered, returned), days };

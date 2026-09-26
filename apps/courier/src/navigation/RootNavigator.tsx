@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useI18n } from '../i18n';
 import { hasLocationPermission, requestLocationPermission } from '../location';
 import { CaisseScreen } from '../screens/CaisseScreen';
@@ -50,11 +51,13 @@ function Tabs() {
   const { t } = useI18n();
   const isLivreur = session?.user.role === 'LIVREUR';
   const news = unread.notifications + unread.chats;
+  // A fixed height must include the phone's own navigation bar, or the tabs sit under it.
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { height: TOUCH_MIN + 14 },
+        tabBarStyle: { height: TOUCH_MIN + 14 + insets.bottom },
         tabBarLabelStyle: { fontSize: font.small, fontWeight: '700' },
         tabBarActiveTintColor: colors.orangeDark,
         tabBarInactiveTintColor: colors.navyMuted,
