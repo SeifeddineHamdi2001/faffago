@@ -11,8 +11,9 @@ import {
   periodRange,
   type DayRange,
 } from '@faffago/shared';
-import { day, dt } from '@/lib/money';
+import { day } from '@/lib/money';
 import type { SellerDashboard } from '@/lib/types';
+import { ARecevoirCard } from './a-recevoir-card';
 
 const PRESETS = DASHBOARD_PERIODS.filter((period) => period !== DashboardPeriod.PERSONNALISE);
 
@@ -176,28 +177,17 @@ export function SellerDashboardScreen({
   );
 }
 
-/** À recevoir (Vendeur 4.1, D-83): the hero number, split by where the cash is. */
+/** À recevoir (Vendeur 4.1, D-83, D-96): the breakdown, then a link to the payments. */
 function ARecevoir({ money }: { money: SellerDashboard['aRecevoir'] }) {
   return (
-    <section aria-labelledby="a-recevoir" className="card mb-4 border-2 border-orange">
-      <h2 id="a-recevoir" className="text-sm font-semibold text-navy/70">
-        À recevoir
-      </h2>
-      <p className="font-display text-4xl font-bold text-navy">{dt(money.totalMillimes)}</p>
-      <p className="mt-1 text-sm">
-        Chez les coursiers : {dt(money.chezLesCoursiersMillimes)} · Au dépôt, prêt à payer :{' '}
-        {dt(money.auDepotMillimes)}
-      </p>
-      {money.fraisADeduireMillimes !== '0' && (
-        <p className="text-sm">Frais à déduire : {dt(money.fraisADeduireMillimes)}</p>
-      )}
-      <p className="mt-1 text-xs text-navy/70">
-        Montant des colis livrés moins les frais de livraison, avant retenue à la source.{' '}
+    <ARecevoirCard
+      money={money}
+      footer={
         <Link href="/vendeur/paiements" className="text-orange-dark underline">
           Voir les paiements
         </Link>
-      </p>
-    </section>
+      }
+    />
   );
 }
 

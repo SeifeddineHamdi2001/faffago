@@ -91,7 +91,9 @@ describe('Créer un vendeur (Admin 4.14, D-33)', () => {
     // CIN uniquement: the CIN number is required, printed on the certificates (D-89).
     await user.click(screen.getByRole('button', { name: 'Créer' }));
     expect(bff).not.toHaveBeenCalled();
-    expect(screen.getByText('Numéro de CIN obligatoire pour le statut CIN uniquement')).toBeTruthy();
+    expect(
+      screen.getByText('Numéro de CIN obligatoire pour le statut CIN uniquement'),
+    ).toBeTruthy();
     await user.type(screen.getByLabelText(/Numéro de CIN/), '01234567');
     await user.click(screen.getByRole('button', { name: 'Créer' }));
 

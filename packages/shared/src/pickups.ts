@@ -69,7 +69,9 @@ export const pickupRequestSchema = z
     message: 'Choisissez une adresse de ramassage',
     path: ['pickupAddressId'],
   })
-  .refine((v) => (v.parcelCodes?.length ? 1 : 0) + (v.declaredCount ? 1 : 0) === 1, {
+  // The seller only asks for the visit (D-98): without a list, every Créé
+  // parcel ready is attached, and the ramasseur's scans count the rest.
+  .refine((v) => !(v.parcelCodes?.length && v.declaredCount), {
     message: 'Choisissez les colis à ramasser, ou indiquez leur nombre',
     path: ['parcelCodes'],
   });

@@ -16,9 +16,11 @@ const BADGE_LABEL: Record<Badge, (n: number) => string> = {
   retours: (n) => `${n} bon(s) de retour en route`,
 };
 
-const ITEMS: { href: string; label: string; exact?: boolean; badge?: Badge }[] = [
+/** `sub`: an entry under Mes colis (D-98): every parcel, or those to print before the pickup. */
+const ITEMS: { href: string; label: string; exact?: boolean; badge?: Badge; sub?: boolean }[] = [
   { href: '/vendeur', label: 'Tableau de bord', exact: true },
-  { href: '/vendeur/colis', label: 'Mes colis', exact: true },
+  { href: '/vendeur/colis', label: 'Tous les colis', exact: true, sub: true },
+  { href: '/vendeur/colis/a-ramasser', label: 'À ramasser', sub: true },
   { href: '/vendeur/a-verifier', label: 'À vérifier', badge: 'aVerifier' },
   { href: '/vendeur/colis/nouveau', label: 'Créer un colis' },
   { href: '/vendeur/colis/import', label: 'Import CSV' },
@@ -44,16 +46,22 @@ export function SellerNav({
   };
   const pathname = usePathname();
   return (
-    <nav aria-label="Menu" className="flex flex-wrap gap-1 bg-navy px-4 pb-3">
-      {ITEMS.map((item) => {
+    <nav aria-label="Menu" className="flex flex-col gap-1">
+      {ITEMS.map((item, index) => {
         const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
         const count = item.badge ? counts[item.badge] : 0;
-        return (
+        const heading = item.sub && !ITEMS[index - 1]?.sub && (
+          <p key="mes-colis" className="px-3 pt-2 text-xs font-bold uppercase text-white/60">
+            Mes colis
+          </p>
+        );
+        return [
+          heading,
           <Link
             key={item.href}
             href={item.href}
             aria-current={active ? 'page' : undefined}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+            className={`rounded-lg py-3 text-sm font-semibold ${item.sub ? 'pl-6 pr-3' : 'px-3'} ${
               active ? 'bg-orange text-navy' : 'text-white/80 hover:bg-white/10'
             }`}
           >
@@ -66,8 +74,8 @@ export function SellerNav({
                 {count}
               </span>
             )}
-          </Link>
-        );
+          </Link>,
+        ];
       })}
     </nav>
   );

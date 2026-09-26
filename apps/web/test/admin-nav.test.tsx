@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { PERMISSIONS_BY_ROLE } from '@faffago/shared';
 import { AdminNav } from '@/components/admin-nav';
 
-vi.mock('next/navigation', () => ({ usePathname: () => '/admin/coursiers' }));
+let pathname = '/admin/coursiers';
+vi.mock('next/navigation', () => ({ usePathname: () => pathname }));
 
 /** "Each role only sees the menu items it can use" (Admin 3). */
 
@@ -73,7 +74,23 @@ describe('AdminNav', () => {
   });
 
   it('marks the current screen', () => {
+    pathname = '/admin/coursiers';
     render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
     expect(screen.getByRole('link', { name: 'Coursiers' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('marks Paiements vendeurs alone, not Paie coursiers whose address starts the same', () => {
+    for (const path of ['/admin/paiements', '/admin/paiements/s1']) {
+      pathname = path;
+      const { unmount } = render(<AdminNav permissions={[...PERMISSIONS_BY_ROLE.ADMIN]} />);
+      expect(screen.getByRole('link', { name: 'Paiements vendeurs' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      expect(screen.getByRole('link', { name: 'Paie coursiers' })).not.toHaveAttribute(
+        'aria-current',
+      );
+      unmount();
+    }
   });
 });

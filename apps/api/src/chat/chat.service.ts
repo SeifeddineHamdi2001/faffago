@@ -57,7 +57,11 @@ export type PostResult =
   | { ok: false; status: number; code: string; message: string };
 
 const notFound = () =>
-  apiError(404, ParcelErrorCode.COLIS_INTROUVABLE, PARCEL_MESSAGES[ParcelErrorCode.COLIS_INTROUVABLE]);
+  apiError(
+    404,
+    ParcelErrorCode.COLIS_INTROUVABLE,
+    PARCEL_MESSAGES[ParcelErrorCode.COLIS_INTROUVABLE],
+  );
 
 const HISTORY_LIMIT = 500;
 const INBOX_LIMIT = 100;
@@ -100,7 +104,10 @@ export class ChatService {
     rawCode: string,
   ): Promise<{ thread: ChatThreadView | null }> {
     const code = normalizeParcelCode(rawCode);
-    const parcel = await this.prisma.parcel.findUnique({ where: { code }, select: PARCEL_FOR_CHAT });
+    const parcel = await this.prisma.parcel.findUnique({
+      where: { code },
+      select: PARCEL_FOR_CHAT,
+    });
     if (!parcel) throw notFound();
     const row = await this.prisma.chatThread.findUnique({
       where: { parcelId: parcel.id },
@@ -164,7 +171,9 @@ export class ChatService {
     const state = this.threads.stateOf(parcel);
     const isParcelSeller = principal.sellerId === parcel.sellerId;
     const isThreadCourier =
-      principal.kind === 'user' && principal.courierId === thread.courierId && thread.courierId !== null;
+      principal.kind === 'user' &&
+      principal.courierId === thread.courierId &&
+      thread.courierId !== null;
     const { canPost } = chatAccessFor({
       role: principal.role,
       state,
@@ -229,12 +238,7 @@ export class ChatService {
   // ── Writing ────────────────────────────────────────────────
 
   /** A message from the web or the app, refused with the reason in French. */
-  async post(
-    principal: UserPrincipal,
-    side: ChatSide,
-    rawCode: string,
-    values: ChatMessageValues,
-  ) {
+  async post(principal: UserPrincipal, side: ChatSide, rawCode: string, values: ChatMessageValues) {
     const result = await this.prisma.$transaction((tx) =>
       this.postIn(tx, principal, side, rawCode, values),
     );
@@ -268,9 +272,19 @@ export class ChatService {
           include: { courier: { include: { user: true } } },
         })
       : null;
-    if (!parcel) return this.refusal(404, ParcelErrorCode.COLIS_INTROUVABLE, PARCEL_MESSAGES.COLIS_INTROUVABLE);
+    if (!parcel)
+      return this.refusal(
+        404,
+        ParcelErrorCode.COLIS_INTROUVABLE,
+        PARCEL_MESSAGES.COLIS_INTROUVABLE,
+      );
     const access = this.accessOf(principal, side, parcel, thread);
-    if (!access) return this.refusal(404, ParcelErrorCode.COLIS_INTROUVABLE, PARCEL_MESSAGES.COLIS_INTROUVABLE);
+    if (!access)
+      return this.refusal(
+        404,
+        ParcelErrorCode.COLIS_INTROUVABLE,
+        PARCEL_MESSAGES.COLIS_INTROUVABLE,
+      );
 
     const earlier = await tx.chatMessage.findUnique({
       where: { id: values.messageId },
@@ -284,10 +298,15 @@ export class ChatService {
           message: this.messageView(earlier, kind, parcel, earlier.sender),
         };
       }
-      return this.refusal(409, ChatErrorCode.MESSAGE_ID_REUTILISE, CHAT_MESSAGES_FR.MESSAGE_ID_REUTILISE);
+      return this.refusal(
+        409,
+        ChatErrorCode.MESSAGE_ID_REUTILISE,
+        CHAT_MESSAGES_FR.MESSAGE_ID_REUTILISE,
+      );
     }
 
-    if (!thread) return this.refusal(409, ChatErrorCode.CHAT_NON_OUVERT, CHAT_MESSAGES_FR.CHAT_NON_OUVERT);
+    if (!thread)
+      return this.refusal(409, ChatErrorCode.CHAT_NON_OUVERT, CHAT_MESSAGES_FR.CHAT_NON_OUVERT);
     if (!access.canPost) {
       const state = this.threads.stateOf(parcel);
       const why = chatRefusalFor(state) ?? ChatErrorCode.CHAT_LECTURE_SEULE;
@@ -376,16 +395,28 @@ export class ChatService {
       });
 
     if (kind !== 'VENDEUR') {
-      await this.notifications.send(tx, { sellerId: parcel.sellerId }, 'NOUVEAU_MESSAGE', {
-        code: parcel.code,
-        from: from('VENDEUR'),
-      }, options);
+      await this.notifications.send(
+        tx,
+        { sellerId: parcel.sellerId },
+        'NOUVEAU_MESSAGE',
+        {
+          code: parcel.code,
+          from: from('VENDEUR'),
+        },
+        options,
+      );
     }
     if (kind !== 'COURSIER' && courier && state === ChatThreadState.OUVERT) {
-      await this.notifications.send(tx, { userId: courier.id }, 'NOUVEAU_MESSAGE', {
-        code: parcel.code,
-        from: from('COURSIER'),
-      }, options);
+      await this.notifications.send(
+        tx,
+        { userId: courier.id },
+        'NOUVEAU_MESSAGE',
+        {
+          code: parcel.code,
+          from: from('COURSIER'),
+        },
+        options,
+      );
     }
     if (kind !== 'FAFFA_GO') {
       const joined = await tx.chatMessage.findFirst({
@@ -393,10 +424,16 @@ export class ChatService {
         select: { id: true },
       });
       if (joined) {
-        await this.notifications.send(tx, { permission: Permission.CHATS_STAFF }, 'NOUVEAU_MESSAGE', {
-          code: parcel.code,
-          from: from('FAFFA_GO'),
-        }, options);
+        await this.notifications.send(
+          tx,
+          { permission: Permission.CHATS_STAFF },
+          'NOUVEAU_MESSAGE',
+          {
+            code: parcel.code,
+            from: from('FAFFA_GO'),
+          },
+          options,
+        );
       }
     }
   }

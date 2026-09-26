@@ -232,7 +232,12 @@ export class RamassagesService {
         select: { shopName: true },
       });
       const notice = { pickupId: id, day: input.date, window: input.slot };
-      await this.notifications.send(tx, { sellerId: pickup.sellerId }, 'RAMASSAGE_PLANIFIE', notice);
+      await this.notifications.send(
+        tx,
+        { sellerId: pickup.sellerId },
+        'RAMASSAGE_PLANIFIE',
+        notice,
+      );
       await this.notifications.send(tx, { courierId: courier.id }, 'RAMASSAGE_PLANIFIE', {
         ...notice,
         shopName: seller.shopName,

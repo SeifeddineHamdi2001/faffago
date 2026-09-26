@@ -16,6 +16,7 @@ import type {
   SellerPaiements,
   SellerRetours,
 } from '@/lib/types';
+import { ARecevoirCard } from './a-recevoir-card';
 
 /**
  * Paiements (Vendeur 4.11, D-83): what he is owed, parcel by parcel, and his
@@ -36,26 +37,7 @@ export function SellerPaiementsScreen({
     <section>
       <h1 className="mb-4 font-display text-2xl font-bold text-navy">Paiements</h1>
 
-      <section aria-labelledby="a-recevoir" className="card mb-4 border-2 border-orange">
-        <h2 id="a-recevoir" className="text-sm font-semibold text-navy/70">
-          À recevoir
-        </h2>
-        <p className="font-display text-3xl font-bold text-navy">{dt(aRecevoir.totalMillimes)}</p>
-        <p className="text-sm">
-          Chez les coursiers : {dt(aRecevoir.chezLesCoursiersMillimes)} · Au dépôt, prêt à payer :{' '}
-          {dt(aRecevoir.auDepotMillimes)}
-        </p>
-        {aRecevoir.fraisADeduireMillimes !== '0' && (
-          <p className="text-sm">
-            Frais à déduire (retours, changements de client, ramassages) :{' '}
-            {dt(aRecevoir.fraisADeduireMillimes)}
-          </p>
-        )}
-        <p className="mt-1 text-xs text-navy/70">
-          Chaque colis : montant encaissé − frais de livraison. La retenue à la source, s’il y en a
-          une, est calculée sur le bon de versement.
-        </p>
-      </section>
+      <ARecevoirCard money={aRecevoir} />
 
       {aRecevoir.parcels.length > 0 && (
         <section className="card mb-4 overflow-x-auto">

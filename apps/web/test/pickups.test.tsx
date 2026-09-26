@@ -121,16 +121,17 @@ describe('Demander un ramassage', () => {
         label: null,
         landmark: null,
       },
-      parcelCodes: ['FG-AAAA1111', 'FG-BBBB2222'],
       requestedSlot: 'MATIN',
       note: null,
     });
     expect(body.pickupAddressId).toBeUndefined();
+    expect(body.parcelCodes).toBeUndefined();
+    expect(body.declaredCount).toBeUndefined();
     expect(body.clientRequestId).toMatch(/^[0-9a-f-]{36}$/);
     expect(push).toHaveBeenCalledWith('/vendeur/ramassages/pk-1');
   });
 
-  it('chooses the default address, and the parcels ready are all selected', async () => {
+  it('chooses the default address; the parcels are counted by the ramasseur, not the seller (D-98)', async () => {
     const user = userEvent.setup();
     bff.mockResolvedValue({ ok: true, data: { id: 'pk-2' } });
     render(
@@ -144,44 +145,20 @@ describe('Demander un ramassage', () => {
 
     expect((screen.getByLabelText(/4 rue de Rome/) as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByLabelText('Adresse')).toBeNull();
-    expect(screen.getByText('2 colis choisis')).toBeTruthy();
+    expect(screen.getByText('2 colis créé(s) en attente de ramassage')).toBeTruthy();
+    expect(screen.queryByLabelText('Nombre de colis')).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: 'Imprimer les étiquettes des colis à ramasser' }),
+    ).toHaveAttribute('href', '/vendeur/colis/a-ramasser');
 
-    await user.click(screen.getByLabelText(/FG-BBBB2222/));
-    expect(screen.getByText('1 colis choisis')).toBeTruthy();
     await user.click(screen.getByLabelText('Après-midi'));
     await user.click(screen.getByRole('button', { name: 'Demander le ramassage' }));
 
     expect(bff.mock.calls[0]![2]).toMatchObject({
       pickupAddressId: home.id,
-      parcelCodes: ['FG-AAAA1111'],
       requestedSlot: 'APRES_MIDI',
     });
-  });
-
-  it('sends only a count when the seller gives the number of parcels', async () => {
-    const user = userEvent.setup();
-    bff.mockResolvedValue({ ok: true, data: { id: 'pk-3' } });
-    render(
-      <PickupRequestForm tree={tree} addresses={[home]} readyParcels={ready} feeRule={FEE_RULE} />,
-    );
-
-    await user.click(screen.getByLabelText('Indiquer seulement le nombre'));
-    await user.type(screen.getByLabelText('Nombre de colis'), '12');
-    await user.click(screen.getByLabelText('Matin'));
-    await user.click(screen.getByRole('button', { name: 'Demander le ramassage' }));
-
-    const body = bff.mock.calls[0]![2];
-    expect(body).toMatchObject({ pickupAddressId: home.id, declaredCount: '12' });
-    expect(body.parcelCodes).toBeUndefined();
-  });
-
-  it('only offers the count when no parcel is ready', () => {
-    render(<PickupRequestForm tree={tree} addresses={[home]} readyParcels={[]} feeRule={null} />);
-    expect((screen.getByLabelText('Choisir les colis prêts') as HTMLInputElement).disabled).toBe(
-      true,
-    );
-    expect(screen.getByLabelText('Nombre de colis')).toBeTruthy();
-    expect(screen.getByText('Aucun colis créé en attente de ramassage.')).toBeTruthy();
   });
 
   it('shows the fee rule before confirming, and nothing when pickups are free', () => {
@@ -196,21 +173,13 @@ describe('Demander un ramassage', () => {
     expect(screen.queryByRole('note')).toBeNull();
   });
 
-  it('refuses without a slot, then without parcels, before calling the API', async () => {
+  it('refuses without a slot, before calling the API', async () => {
     const user = userEvent.setup();
     render(
       <PickupRequestForm tree={tree} addresses={[home]} readyParcels={ready} feeRule={FEE_RULE} />,
     );
     await user.click(screen.getByRole('button', { name: 'Demander le ramassage' }));
     expect(screen.getByText('Choisissez un créneau')).toBeTruthy();
-
-    await user.click(screen.getByLabelText('Matin'));
-    await user.click(screen.getByLabelText(/FG-AAAA1111/));
-    await user.click(screen.getByLabelText(/FG-BBBB2222/));
-    await user.click(screen.getByRole('button', { name: 'Demander le ramassage' }));
-    expect(
-      screen.getByText('Choisissez les colis à ramasser, ou indiquez leur nombre'),
-    ).toBeTruthy();
     expect(bff).not.toHaveBeenCalled();
   });
 

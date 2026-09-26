@@ -68,6 +68,12 @@ const dashboard: SellerDashboard = {
     auDepotMillimes: '156000',
     totalMillimes: '234000',
     fraisADeduireMillimes: '2000',
+    codMillimes: '255000',
+    fraisLivraisonMillimes: '21000',
+    fraisRetourMillimes: '0',
+    fraisChangementClientMillimes: '0',
+    fraisRamassageMillimes: '2000',
+    netMillimes: '232000',
   },
   aTraiter: { bonsVersementEnRoute: 1, bonsRetourEnRoute: 0, retoursAuDepot: 2 },
   deliveryRate: {
@@ -171,7 +177,8 @@ describe('Tableau de bord (Vendeur 4.1, D-48)', () => {
     renderScreen({ canCreate: false, suspended: false });
     expect(screen.queryByRole('link', { name: 'Créer un colis' })).toBeNull();
     expect(screen.queryByText(/suspendu/)).toBeNull();
-    expect(screen.getAllByRole('definition')).toHaveLength(6);
+    const counts = screen.getByRole('region', { name: '7 derniers jours' });
+    expect(within(counts).getAllByRole('definition')).toHaveLength(6);
   });
 });
 
@@ -179,11 +186,15 @@ describe('the money part (Vendeur 4.1, D-83)', () => {
   it('shows À recevoir split by where the cash is, what to deal with, and the delivery rate', () => {
     renderScreen();
     const hero = screen.getByRole('region', { name: 'À recevoir' });
-    expect(within(hero).getByText('234,000 DT')).toBeInTheDocument();
+    expect(hero).toHaveTextContent('Montant total des colis livrés255,000 DT');
+    expect(hero).toHaveTextContent('Frais de livraison− 21,000 DT');
+    expect(hero).toHaveTextContent('Frais de retour− 0,000 DT');
+    expect(hero).toHaveTextContent('Frais de ramassage− 2,000 DT');
+    expect(hero).not.toHaveTextContent('Changement de client');
+    expect(hero).toHaveTextContent('Total à recevoir232,000 DT');
     expect(hero).toHaveTextContent(
       'Chez les coursiers : 78,000 DT · Au dépôt, prêt à payer : 156,000 DT',
     );
-    expect(hero).toHaveTextContent('Frais à déduire : 2,000 DT');
     const todo = screen.getByRole('region', { name: 'À traiter' });
     expect(
       within(todo).getByRole('link', { name: '1 bon(s) de versement en route' }),

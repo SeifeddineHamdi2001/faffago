@@ -9,6 +9,8 @@
   --color-orange: #ff6b35;
   --color-orange-dark: #b3441a;
   --color-navy: #1a1b2e;
+  /* The footer, one step darker than the navy above it. */
+  --color-navy-deep: #11121f;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-display: var(--font-grotesk), var(--font-manrope), system-ui, sans-serif;
   --font-arabic: var(--font-arabic-face), system-ui, sans-serif;
@@ -65,5 +67,29 @@
   }
   [dir='rtl'] .chevron {
     clip-path: polygon(0.75rem 0, 100% 0, calc(100% - 0.75rem) 50%, 100% 100%, 0.75rem 100%, 0 50%);
+  }
+  /* Public site hero (Landing 2.2): a faint orange dot grid, and badges that
+     float gently over the visual, still for those who ask for less motion. */
+  .hero-dots {
+    background-image: radial-gradient(rgb(255 107 53 / 0.18) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .float-slow {
+    animation: float-slow 4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .float-slow {
+      animation: none;
+    }
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
   }
 }

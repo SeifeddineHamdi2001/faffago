@@ -83,6 +83,7 @@ test('the admin reads the chat and answers as Faffa Go, then it is no longer new
 });
 
 test('the seller is told on the bell, and it leads to the chat of his parcel (Vendeur 4.13)', async () => {
+  test.setTimeout(120_000);
   await admin.goto('/admin/vendeurs');
   await admin
     .getByRole('listitem')
@@ -93,11 +94,15 @@ test('the seller is told on the bell, and it leads to the chat of his parcel (Ve
   const password = (await copyCredentials(admin)).password;
   await loginSeller(seller, SELLER_EMAIL, password);
 
-  // Two failed deliveries and the team's message.
-  await expect(seller.getByRole('link', { name: /^Notifications, 3 non lues$/ })).toBeVisible();
+  // Two failed deliveries, the team's message, and the "24 h restantes" warning
+  // on the demo failure near its deadline: NoticesJob sends it within a minute
+  // of the API starting, so wait for it rather than race it.
+  await expect(seller.getByRole('link', { name: /^Notifications, 4 non lues$/ })).toBeVisible({
+    timeout: 75_000,
+  });
   await seller.getByRole('link', { name: /^Notifications/ }).click();
   await expect(seller.getByRole('heading', { name: 'Notifications' })).toBeVisible();
-  await expect(seller.getByTestId('unread-summary')).toHaveText('3 non lues');
+  await expect(seller.getByTestId('unread-summary')).toHaveText('4 non lues');
   await expect(seller.getByText(/Colis FG-[0-9A-Z]{8} à vérifier · Ne répond pas/)).toBeVisible();
   await expect(seller.getByText(/Colis FG-[0-9A-Z]{8} à vérifier · Injoignable/)).toBeVisible();
 
@@ -123,17 +128,21 @@ test('the seller answers with a quick reply, and the team is told (Admin 4.18)',
   await expect(chat.getByRole('log')).toContainText('Le client est disponible après 17 h');
   await expect(chat.getByRole('log').getByText('Vous', { exact: true })).toBeVisible();
 
-  // The admin joined this chat, so he is told; the bell counts it.
+  // The admin joined this chat, so he is told; the bell counts it, beside the
+  // "24 h restantes" warning (SUIVI_A_VERIFIER).
   await admin.goto('/admin');
-  await expect(admin.getByRole('link', { name: /^Notifications, 1 non lue$/ })).toBeVisible();
+  await expect(admin.getByRole('link', { name: /^Notifications, 2 non lues$/ })).toBeVisible();
   await admin.getByRole('link', { name: /^Notifications/ }).click();
-  const notice = admin.getByRole('link', { name: `Nouveau message de Boutique Démo sur ${openCode}` });
+  const notice = admin.getByRole('link', {
+    name: `Nouveau message de Boutique Démo sur ${openCode}`,
+  });
   await expect(notice).toBeVisible();
   await notice.click();
   await admin.waitForURL(`**/admin/chats/${openCode}`);
   await expect(admin.getByRole('log')).toContainText('Le client est disponible après 17 h');
-  // The livreur's other message stays the only thing new in the inbox.
-  await expect(admin.getByRole('link', { name: /^Notifications$/ })).toBeVisible();
+  // The livreur's other message stays the only thing new in the inbox; the
+  // warning is still unread.
+  await expect(admin.getByRole('link', { name: /^Notifications, 1 non lue$/ })).toBeVisible();
 });
 
 test('a parcel back at the depot has a read-only chat for the seller, the team still writes (Q15)', async () => {
@@ -158,8 +167,9 @@ test('a parcel back at the depot has a read-only chat for the seller, the team s
 
 test('the seller clears his notifications: nothing is left unread', async () => {
   await seller.goto('/vendeur/notifications');
-  // Two failures and the team's reply at the depot; the message he opened is read.
-  await expect(seller.getByTestId('unread-summary')).toHaveText('3 non lues');
+  // Two failures, the warning and the team's reply at the depot; the message he
+  // opened is read.
+  await expect(seller.getByTestId('unread-summary')).toHaveText('4 non lues');
   await seller.getByRole('button', { name: 'Tout marquer comme lu' }).click();
   await expect(seller.getByTestId('unread-summary')).toHaveText('Tout est lu.');
   await expect(seller.getByRole('button', { name: 'Tout marquer comme lu' })).toBeDisabled();

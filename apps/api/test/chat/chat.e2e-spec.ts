@@ -67,7 +67,10 @@ async function act(
 }
 
 function goOut(parcelId: string, courier: Fixture) {
-  return act(parcelId, depot, { action: 'SCAN_SORTIE_COURSIER', assignToCourierId: courier.courierId });
+  return act(parcelId, depot, {
+    action: 'SCAN_SORTIE_COURSIER',
+    assignToCourierId: courier.courierId,
+  });
 }
 
 function get(path: string, user: Fixture) {
@@ -78,7 +81,13 @@ function headersOf(user: Fixture) {
   return user.role === 'LIVREUR' || user.role === 'RAMASSEUR' ? COURIER_APP_HEADERS : undefined;
 }
 
-function write(side: 'seller' | 'staff', code: string, user: Fixture, body: string, id = randomUUID()) {
+function write(
+  side: 'seller' | 'staff',
+  code: string,
+  user: Fixture,
+  body: string,
+  id = randomUUID(),
+) {
   return t.request('POST', `/chat/${side}/${code}/messages`, {
     token: tokens[user.id],
     body: { messageId: id, body },
@@ -115,7 +124,13 @@ beforeAll(async () => {
   depot = await createUser(t.prisma, { role: 'DEPOT', username: 'chat.depot' });
   sc = await createUser(t.prisma, { role: 'SERVICE_CLIENT', username: 'chat.sc' });
   const row = await t.prisma.user.findUniqueOrThrow({ where: { username: 'admin' } });
-  admin = { id: row.id, role: 'ADMIN', password: ADMIN.password, phone: row.phone, username: 'admin' };
+  admin = {
+    id: row.id,
+    role: 'ADMIN',
+    password: ADMIN.password,
+    phone: row.phone,
+    username: 'admin',
+  };
 });
 afterAll(async () => {
   await t.close();
@@ -126,7 +141,9 @@ beforeEach(async () => {
   for (const user of [seller, other, ali, bea, ramasseur, depot, sc]) {
     tokens[user.id] = (await login(t, user)).accessToken;
   }
-  tokens[admin.id] = (await t.request('POST', '/auth/login/staff', { body: ADMIN })).body.accessToken;
+  tokens[admin.id] = (
+    await t.request('POST', '/auth/login/staff', { body: ADMIN })
+  ).body.accessToken;
 });
 
 describe('no livreur, no thread (Q14, Q16)', () => {
@@ -313,7 +330,11 @@ describe('the life of a thread (Q15)', () => {
 
     // Read-only for the seller and the livreur; the team still writes.
     const locked = (await get(`seller/${parcel.code}`, seller)).body.thread;
-    expect(locked).toMatchObject({ state: 'VERROUILLE', canPost: false, refusal: 'CHAT_LECTURE_SEULE' });
+    expect(locked).toMatchObject({
+      state: 'VERROUILLE',
+      canPost: false,
+      refusal: 'CHAT_LECTURE_SEULE',
+    });
     expect(locked.messages).toHaveLength(2);
     const refusedSeller = await write('seller', parcel.code, seller, 'Encore là ?');
     expect(refusedSeller.status).toBe(409);
@@ -409,7 +430,9 @@ describe('the lists', () => {
     await write('seller', parcel.code, seller, 'Vous êtes où ?');
 
     const list = (await get('courier', ali)).body;
-    const row = list.threads.find((thread: { parcelCode: string }) => thread.parcelCode === parcel.code);
+    const row = list.threads.find(
+      (thread: { parcelCode: string }) => thread.parcelCode === parcel.code,
+    );
     expect(row).toMatchObject({ unread: 2, lastMessage: 'Vous êtes où ?', state: 'OUVERT' });
     expect(list.unreadCount).toBeGreaterThanOrEqual(2);
 
@@ -434,7 +457,9 @@ describe('the lists', () => {
     expect(all.unreadCount).toBeGreaterThanOrEqual(2);
 
     const bySeller = (await get(`staff?sellerId=${other.sellerId}`, sc)).body.threads;
-    expect(bySeller.map((thread: { parcelCode: string }) => thread.parcelCode)).toEqual([theirs.code]);
+    expect(bySeller.map((thread: { parcelCode: string }) => thread.parcelCode)).toEqual([
+      theirs.code,
+    ]);
     const byCourier = (await get(`staff?courierUserId=${ali.id}`, sc)).body.threads;
     const byCourierCodes = byCourier.map((thread: { parcelCode: string }) => thread.parcelCode);
     expect(byCourierCodes).toContain(mine.code);
@@ -492,9 +517,7 @@ describe('the courier’s queue', () => {
 
     const [refused] = await queue(ramasseur, parcel.code, 'Bonjour');
     expect(refused).toMatchObject({ ok: false });
-    expect(
-      await t.prisma.chatMessage.count({ where: { senderUserId: ramasseur.id } }),
-    ).toBe(0);
+    expect(await t.prisma.chatMessage.count({ where: { senderUserId: ramasseur.id } })).toBe(0);
 
     const [tooLong] = await queue(ali, parcel.code, 'a'.repeat(1001));
     expect(tooLong).toMatchObject({ ok: false, code: 'OPERATION_INVALIDE' });

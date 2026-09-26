@@ -21,6 +21,7 @@ import {
   type CsvRowEvaluation,
   type GeoTreeView,
 } from '@faffago/shared';
+import { newUuid } from '@/lib/client/uuid';
 import { bff } from '@/lib/client/call';
 import type { ApiError, ParcelImport, RefusedImportRow } from '@/lib/types';
 import { ErrorAlert } from './account-actions';
@@ -107,7 +108,7 @@ export function CsvImportScreen({
       return;
     }
     setFileError(null);
-    setFile({ name: chosen.name, importId: crypto.randomUUID(), rows: read.rows });
+    setFile({ name: chosen.name, importId: newUuid(), rows: read.rows });
   }
 
   async function importValid() {

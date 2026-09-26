@@ -120,6 +120,14 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-89 · Retenue certificates and the phase 10B reports](#d-89--retenue-certificates-and-the-phase-10b-reports)
 - [D-90 · Choices made building phase 10B](#d-90--choices-made-building-phase-10b)
 - [D-91 · Choices made building phase 10A](#d-91--choices-made-building-phase-10a)
+- [D-92 · The landing page's new design](#d-92--the-landing-pages-new-design)
+- [D-93 · The dev server answers on the local network](#d-93--the-dev-server-answers-on-the-local-network)
+- [D-94 · The menu sits in a sidebar, with a burger on a phone](#d-94--the-menu-sits-in-a-sidebar-with-a-burger-on-a-phone)
+- [D-95 · A test APK reaches the API over the local network](#d-95--a-test-apk-reaches-the-api-over-the-local-network)
+- [D-96 · À recevoir reads as a breakdown](#d-96--à-recevoir-reads-as-a-breakdown)
+- [D-97 · A return counts in the delivery rate when it is decided](#d-97--a-return-counts-in-the-delivery-rate-when-it-is-decided)
+- [D-98 · The seller asks for a visit; the ramasseur counts](#d-98--the-seller-asks-for-a-visit-the-ramasseur-counts)
+- [D-99 · The phone top bar fits 360 px](#d-99--the-phone-top-bar-fits-360-px)
 
 **Money — A-1 to A-5**
 
@@ -2015,6 +2023,35 @@ courier app's queue only.
 
 ---
 
+### D-92 · The landing page's new design
+
+Decided 2026-09-26, from the design mockup supplied by the owner (none touches
+a fee, a status or a permission). It restyles D-87's landing page; the
+sections, their order, the texts of the specs and every figure read from
+Paramètres are unchanged.
+
+- **Kept from the platform, not the mockup**: brand orange #FF6B35 and navy
+  #1A1B2E (plus `navy-deep` #11121F for the footer), Manrope and IBM Plex
+  Sans Arabic. Every orange button carries navy text (the mockup's white text
+  on orange fails AA); WhatsApp is white on emerald-700.
+- **Left out of the mockup, because nothing in operations guarantees them**
+  (Landing 1): "98.4% taux de réussite", "Reversement cash sous 24h", "100%
+  Grand Tunis", "Cash collecté : 145 DT", "Exclusif Faffa Go", "Populaire",
+  "Tarifs HT", "Support 6j/7 de 08:30 à 18:30", "compte généré dans l'heure",
+  "ramassage le jour même", "48 délégations", and the links to Conditions
+  générales and Confidentialité (no such pages). The FAQ answers stay D-87's.
+- **In their place**, under the hero: the delivery fee and "Gratuite" for the
+  relance, from Paramètres, and the number of délégations served, from the
+  délégation list; none shown while the API has never answered.
+- **The hero visual** is the mockup's illustration, cropped to remove another
+  company's name painted in it, self-hosted in `apps/web/public`, like the
+  logo. Both are served `unoptimized` (60 KB and 10 KB; `sharp` is not
+  installed). To be replaced by a Faffa Go illustration or photo.
+- **Icons**: drawn inline (`components/public/icons.tsx`), no icon font or
+  CDN script. Directional ones (arrow, chevron) turn round in Arabic.
+- Comment ça marche: four cards joined by a chevron on wide screens. The FAQ's
+  first question starts open. Délégation lists scroll past 20 rem.
+
 ## Money
 
 ### A-1 · The delivery fee is charged only on a delivered parcel
@@ -2320,3 +2357,75 @@ sessions in `apps/api/src/auth/sessions.service.ts`; the throttling in
 **Where.** `packages/shared/src/chat.ts` — `chatStateFor` derives
 `OUVERT` / `VERROUILLE` / `CLOS` from the parcel, so the thread cannot drift out
 of step with it.
+
+### D-93 · The dev server answers on the local network
+
+`pnpm dev` only serves Next's scripts to `localhost`: from `127.0.0.1` or a
+`192.168.x.x` address (a phone on the Wi-Fi) the pages never hydrated and the
+login form reloaded itself. `apps/web/next.config.ts` lists both in
+`allowedDevOrigins`. Development only; production builds ignore it.
+Plain HTTP also has no `crypto.randomUUID`: the browser's ids (scans, requests,
+imports, chat messages) come from `newUuid()` in `apps/web/src/lib/client/uuid.ts`,
+which falls back to `crypto.getRandomValues`.
+
+### D-94 · The menu sits in a sidebar, with a burger on a phone
+
+The owner asked for one frame for the seller space and the back office: the
+menu in a sidebar on a computer; on a phone a top bar with a burger that slides
+the same sidebar in (closed by a link, Fermer, Escape or a tap outside). This
+replaces "top bar on desktop, bottom bar on phone" (Vendeur 3) and "bottom bar
+with Scan in the centre" (Admin 3). The top bar keeps the shop name (seller) and
+the bell always visible; Se déconnecter moves to the bottom of the sidebar.
+Where: `apps/web/src/components/app-shell.tsx`, used by both layouts.
+
+### D-95 · A test APK reaches the API over the local network
+
+An EAS build never sees `apps/courier/.env` (git-ignored, so not uploaded), and
+a release APK refuses plain http. The `preview` profile in `eas.json` sets
+`EXPO_PUBLIC_API_URL` to the dev PC's address, and `app.config.js` allows
+cleartext only when that URL is http. Production uses https and keeps
+Android's default. Where: `apps/courier/eas.json`, `apps/courier/app.config.js`.
+
+### D-96 · À recevoir reads as a breakdown
+
+The owner asked the seller to see what comes off his money. The À recevoir card
+(Tableau de bord and Paiements) now reads top to bottom: **Montant total des
+colis livrés** (COD of the delivered, unpaid parcels), − **Frais de
+livraison**, − **Frais de retour**, − **Frais de ramassage** (− **Changement de
+client** only when there is one), then **Total à recevoir** = COD − every fee
+waiting. It replaces "COD − delivery fee, other fees on their own line"
+(D-83). The chez les coursiers / au dépôt split stays under it; the retenue is
+still not estimated. The total can go below zero when the fees are more than
+the cash. Where: `aRecevoirOf` in `packages/shared`, `a-recevoir-card.tsx`.
+
+### D-97 · A return counts in the delivery rate when it is decided
+
+The owner saw 100 % with returns waiting at the depot. The Taux de livraison
+(Tableau de bord, and Activité in the reports) now counts a returned parcel
+on the day its return is **decided**: `DECISION_RETOURNER` (the seller's
+choice), `RETOUR_AUTO_48H` or `RETOUR_AUTO_3E_TENTATIVE`, not on `RETOUR_RECU`.
+It replaces that part of D-24 and D-83 (Vendeur 4.1 "the date the return was
+received"). A parcel counts once per outcome; a cancelled scan is still taken
+back. Where: `RETURN_DECIDED_EVENT_TYPES` in `packages/shared`.
+
+### D-98 · The seller asks for a visit; the ramasseur counts
+
+The owner removed the choice of parcels and the number from Demander un
+ramassage: the seller gives the address, the créneau and a note, nothing else.
+The request attaches every Créé parcel not already in an open request; a parcel
+created later is scanned as an extra (D-47). The pickup fee is unchanged: it is
+counted on the parcels scanned (Vendeur 4.5). The API still accepts
+`parcelCodes` or `declaredCount` (older clients, tests), never both.
+Mes colis gets a sub-menu in the sidebar: **Tous les colis** and **À ramasser**
+(`/vendeur/colis/a-ramasser`, `GET /pickups/a-ramasser`): every Créé parcel,
+all selected to print the labels, **Imprimer la liste** (the menu is hidden when
+printing), and the request each is on. Replaces Vendeur 4.5 "selects the
+parcels ready (or states how many)".
+
+### D-99 · The phone top bar fits 360 px
+
+The new landing bar (D-92) was 80 px wider than a 360 px phone, so the page
+scrolled sideways. Below `sm` the logo is 24 px high, the gaps and side padding
+are tighter, Devenir partenaire is `text-xs`, and the language switch drops its
+globe icon. The four items of Landing 2.1 stay. Where: `public-header.tsx`,
+`language-switch.tsx`; held by the 360 px test in `e2e/phase-9.spec.ts`.

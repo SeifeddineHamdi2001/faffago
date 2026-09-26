@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
 import { Permission, ROLE_LABELS_FR } from '@faffago/shared';
 import { AdminNav } from '@/components/admin-nav';
+import { AppShell } from '@/components/app-shell';
 import { LogoutButton } from '@/components/logout-button';
 import { NotificationBell } from '@/components/notification-bell';
 import { requireMe, serverGetOrNull } from '@/lib/server/session';
 
 /**
- * The back office (Admin 3): sidebar on a computer, bottom bar on a phone.
+ * The back office (Admin 3): sidebar on a computer, burger menu on a phone (D-94).
  * Only Admin, Dépôt and Service client get past requireMe.
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -21,35 +22,29 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     : null;
 
   return (
-    <div className="min-h-screen md:flex">
-      <aside className="bg-navy text-white md:flex md:w-60 md:flex-col md:p-4">
-        <div className="flex items-center justify-between p-4 md:mb-6 md:block md:p-0">
-          <p className="font-display text-xl font-bold">
-            Faffa <span className="text-orange">Go</span>
+    <AppShell
+      brand={
+        <p className="font-display text-xl font-bold">
+          Faffa <span className="text-orange">Go</span>
+        </p>
+      }
+      sidebarHeader={
+        <div className="text-sm">
+          <p className="font-semibold">
+            {me.firstName} {me.lastName}
           </p>
-          <div className="flex items-center gap-2 text-right text-sm md:mt-4 md:text-left">
-            <div className="md:flex-1">
-              <p className="font-semibold">
-                {me.firstName} {me.lastName}
-              </p>
-              <p className="text-white/70">{ROLE_LABELS_FR[me.role]}</p>
-            </div>
-            <NotificationBell initialCount={bell?.unreadCount ?? 0} href="/admin/notifications" />
-          </div>
+          <p className="text-white/70">{ROLE_LABELS_FR[me.role]}</p>
         </div>
-        <div className="fixed inset-x-0 bottom-0 z-30 bg-navy p-2 md:static md:flex-1 md:p-0">
-          <AdminNav permissions={me.permissions} chatsUnread={chats?.unreadCount ?? 0} />
-        </div>
-        <div className="hidden md:block">
-          <LogoutButton loginPath="/admin/connexion" className="text-sm text-white/80 underline" />
-        </div>
-      </aside>
-      <main className="flex-1 p-4 pb-24 md:p-8">
-        {children}
-        <div className="mt-8 md:hidden">
-          <LogoutButton loginPath="/admin/connexion" className="btn-secondary w-full" />
-        </div>
-      </main>
-    </div>
+      }
+      nav={<AdminNav permissions={me.permissions} chatsUnread={chats?.unreadCount ?? 0} />}
+      sidebarFooter={
+        <LogoutButton loginPath="/admin/connexion" className="text-sm text-white/80 underline" />
+      }
+      topBar={
+        <NotificationBell initialCount={bell?.unreadCount ?? 0} href="/admin/notifications" />
+      }
+    >
+      {children}
+    </AppShell>
   );
 }

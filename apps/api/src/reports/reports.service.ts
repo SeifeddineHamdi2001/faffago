@@ -7,6 +7,7 @@ import {
   addTunisDays,
   averageMinutes,
   deliveryRateBps,
+  RETURN_DECIDED_EVENT_TYPES,
   documentDateKey,
   monthLabel,
   monthRange,
@@ -137,8 +138,8 @@ export class ReportsService {
   }
 
   /**
-   * Activité (Admin 4.13): delivered and returned parcels on the day of their
-   * event, the phone's for a scan, a cancelled scan taken back (D-83); the
+   * Activité (Admin 4.13): delivered parcels, and those whose return was
+   * decided (D-97), on the day of their event, the phone's for a scan, a cancelled scan taken back (D-83); the
    * delivery rate, the return rate and the time from pickup to delivery, by
    * seller, zone and livreur. A livreur's rate is his deliveries over his
    * attempts, failures included.
@@ -148,7 +149,7 @@ export class ReportsService {
     // Device time may lie a little before or after the server's: read wide, keep exact.
     const events = await this.prisma.parcelEvent.findMany({
       where: {
-        type: { in: ['LIVRAISON', 'RETOUR_RECU', 'ECHEC_LIVRAISON'] },
+        type: { in: ['LIVRAISON', 'ECHEC_LIVRAISON', ...RETURN_DECIDED_EVENT_TYPES] },
         serverTime: {
           gte: new Date(start.getTime() - 48 * HOUR_MS),
           lt: new Date(end.getTime() + 48 * HOUR_MS),

@@ -1,5 +1,6 @@
 import { formatRatePercent, sumMillimes, type Millimes } from './money.js';
-import { ParcelCashStatus } from './statuses.js';
+import { ParcelEventType } from './parcel-state-machine.js';
+import { ChargeType, ParcelCashStatus } from './statuses.js';
 
 /**
  * What the seller sees of his money (Vendeur 4.1, 4.11, D-40, D-83).
@@ -13,12 +14,21 @@ export interface ARecevoir {
   totalMillimes: Millimes;
   /** The other fees waiting: return, change-client, pickup. */
   fraisADeduireMillimes: Millimes;
+  /** The breakdown the seller reads, top to bottom: COD, each fee, what is left. */
+  codMillimes: Millimes;
+  fraisLivraisonMillimes: Millimes;
+  fraisRetourMillimes: Millimes;
+  fraisChangementClientMillimes: Millimes;
+  fraisRamassageMillimes: Millimes;
+  /** COD − every fee waiting; below zero when the fees are more than the cash. */
+  netMillimes: Millimes;
 }
 
 /**
  * À recevoir: COD − the delivery fee frozen on each delivered, unpaid parcel
  * (the estimate of D-40), split by where the cash is. The other waiting fees
- * are given on their own line; the retenue is not estimated (D-83).
+ * are given by type and taken off the net (D-96); the retenue is not
+ * estimated (D-83).
  */
 export function aRecevoirOf(
   parcels: readonly {
@@ -26,7 +36,7 @@ export function aRecevoirOf(
     codAmountMillimes: Millimes;
     deliveryFeeMillimes: Millimes;
   }[],
-  otherPendingCharges: readonly Millimes[],
+  otherPendingCharges: readonly { type: ChargeType; amountMillimes: Millimes }[],
 ): ARecevoir {
   const net = (p: { codAmountMillimes: Millimes; deliveryFeeMillimes: Millimes }) =>
     p.codAmountMillimes - p.deliveryFeeMillimes;
@@ -34,14 +44,42 @@ export function aRecevoirOf(
   const atDepot = parcels.filter((p) => p.cashStatus === ParcelCashStatus.AU_DEPOT);
   const chezLesCoursiersMillimes = sumMillimes(withCouriers.map(net));
   const auDepotMillimes = sumMillimes(atDepot.map(net));
+  const unpaid = [...withCouriers, ...atDepot];
+  const feesOf = (type: ChargeType) =>
+    sumMillimes(
+      otherPendingCharges
+        .filter((charge) => charge.type === type)
+        .map((charge) => charge.amountMillimes),
+    );
+  const totalMillimes = chezLesCoursiersMillimes + auDepotMillimes;
+  const fraisADeduireMillimes = sumMillimes(
+    otherPendingCharges.map((charge) => charge.amountMillimes),
+  );
   return {
-    parcelCount: withCouriers.length + atDepot.length,
+    parcelCount: unpaid.length,
     chezLesCoursiersMillimes,
     auDepotMillimes,
-    totalMillimes: chezLesCoursiersMillimes + auDepotMillimes,
-    fraisADeduireMillimes: sumMillimes(otherPendingCharges),
+    totalMillimes,
+    fraisADeduireMillimes,
+    codMillimes: sumMillimes(unpaid.map((p) => p.codAmountMillimes)),
+    fraisLivraisonMillimes: sumMillimes(unpaid.map((p) => p.deliveryFeeMillimes)),
+    fraisRetourMillimes: feesOf(ChargeType.RETOUR),
+    fraisChangementClientMillimes: feesOf(ChargeType.CHANGEMENT_CLIENT),
+    fraisRamassageMillimes: feesOf(ChargeType.RAMASSAGE),
+    netMillimes: totalMillimes - fraisADeduireMillimes,
   };
 }
+
+/**
+ * The events that make a parcel "retourné" for the Taux de livraison (D-97):
+ * the return is decided — the seller's choice, 48 hours without decision, or
+ * the 3rd failed attempt — not received back.
+ */
+export const RETURN_DECIDED_EVENT_TYPES = [
+  ParcelEventType.DECISION_RETOURNER,
+  ParcelEventType.RETOUR_AUTO_48H,
+  ParcelEventType.RETOUR_AUTO_3E_TENTATIVE,
+] as const;
 
 /**
  * Taux de livraison: livrés ÷ (livrés + retournés), in basis points rounded

@@ -356,6 +356,12 @@ export interface ReadyParcel {
   createdAt: string;
 }
 
+/** GET /pickups/a-ramasser (D-98): every Créé parcel, with its open request if any. */
+export interface AwaitingParcel extends ReadyParcel {
+  recipientPhone: string;
+  pickup: { id: string; status: PickupStatus } | null;
+}
+
 /** GET /profile (Vendeur 4.14). Money as digit strings of millimes. */
 export interface SellerProfile {
   shopName: string;
@@ -400,6 +406,12 @@ export interface ARecevoirTotals {
   auDepotMillimes: string;
   totalMillimes: string;
   fraisADeduireMillimes: string;
+  codMillimes: string;
+  fraisLivraisonMillimes: string;
+  fraisRetourMillimes: string;
+  fraisChangementClientMillimes: string;
+  fraisRamassageMillimes: string;
+  netMillimes: string;
 }
 
 export interface PersonRef {

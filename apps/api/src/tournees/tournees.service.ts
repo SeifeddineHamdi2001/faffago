@@ -253,12 +253,9 @@ export class TourneesService {
       }
       // The livreur is told what was put in his column (Coursier 4.11).
       if (target && moved > 0) {
-        await this.notifications.send(
-          tx,
-          { courierId: target },
-          'NOUVEAUX_COLIS_ASSIGNES',
-          { count: moved },
-        );
+        await this.notifications.send(tx, { courierId: target }, 'NOUVEAUX_COLIS_ASSIGNES', {
+          count: moved,
+        });
       }
       return { moved };
     });

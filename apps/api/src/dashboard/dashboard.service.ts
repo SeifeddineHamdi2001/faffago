@@ -8,6 +8,7 @@ import {
   dashboardTileOf,
   tunisDayKey,
   tunisDayStart,
+  type ARecevoir,
   type DashboardQuery,
   type DashboardTile,
   type ParcelEventType,
@@ -22,13 +23,7 @@ export interface SellerDashboard {
   to: string;
   counts: Record<DashboardTile, number>;
   /** The money part (D-39, D-83): À recevoir, À traiter, and the rate over the same period. */
-  aRecevoir: {
-    parcelCount: number;
-    chezLesCoursiersMillimes: bigint;
-    auDepotMillimes: bigint;
-    totalMillimes: bigint;
-    fraisADeduireMillimes: bigint;
-  };
+  aRecevoir: ARecevoir;
   aTraiter: { bonsVersementEnRoute: number; bonsRetourEnRoute: number; retoursAuDepot: number };
   deliveryRate: DeliveryRate;
 }

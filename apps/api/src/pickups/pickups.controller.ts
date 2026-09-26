@@ -45,6 +45,14 @@ export class PickupsController {
     return this.pickups.readyParcels(principal);
   }
 
+  /** À ramasser (D-98): every Créé parcel, to print before the ramasseur comes. */
+  @Get('a-ramasser')
+  @RequirePermission(Permission.ESPACE_VENDEUR)
+  @AllowImpersonation()
+  aRamasser(@CurrentPrincipal() principal: Principal) {
+    return this.pickups.aRamasser(principal);
+  }
+
   @Get(':id')
   @RequirePermission(Permission.ESPACE_VENDEUR)
   @AllowImpersonation()

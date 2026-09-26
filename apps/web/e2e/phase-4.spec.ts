@@ -197,7 +197,14 @@ test('Mes colis: four parcels, the En cours group, a search by phone (Vendeur 4.
   await expect(rows(seller)).toContainText('Sami Trabelsi');
 });
 
-test('Demander un ramassage at a new address, two parcels, Matin; then cancel it (Vendeur 4.5)', async () => {
+test('À ramasser lists the four Créé parcels to print (D-98)', async () => {
+  await seller.goto('/vendeur/colis/a-ramasser');
+  await expect(seller.getByRole('heading', { name: 'Colis à ramasser' })).toBeVisible();
+  await expect(seller.getByText('Imprimer 4 étiquettes :')).toBeVisible();
+  await expect(seller.getByText('Pas encore demandé')).toHaveCount(4);
+});
+
+test('Demander un ramassage at a new address, Matin, every parcel ready; then cancel it (Vendeur 4.5, D-98)', async () => {
   await seller.goto('/vendeur/ramassages');
   await seller.getByRole('main').getByRole('link', { name: 'Demander un ramassage' }).click();
   await seller.waitForURL('**/vendeur/ramassages/nouveau');
@@ -206,10 +213,8 @@ test('Demander un ramassage at a new address, two parcels, Matin; then cancel it
   await seller.getByRole('list', { name: 'Résultats' }).getByRole('button').first().click();
   await seller.getByLabel('Adresse', { exact: true }).fill('4 rue de Rome');
 
-  // Every ready parcel is ticked at first: keep two.
-  await seller.getByRole('checkbox', { name: /Leïla Mansour/ }).uncheck();
-  await seller.getByRole('checkbox', { name: /أمينة بن صالح/ }).uncheck();
-  await expect(seller.getByText('2 colis choisis')).toBeVisible();
+  // No list, no number: the ramasseur's scans count the parcels.
+  await expect(seller.getByText('4 colis créé(s) en attente de ramassage')).toBeVisible();
   await seller.getByRole('radio', { name: 'Matin' }).check();
   await seller.getByRole('button', { name: 'Demander le ramassage' }).click();
 

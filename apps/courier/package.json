@@ -10,7 +10,8 @@
     "build": "expo export --platform android --output-dir dist --no-minify",
     "test": "jest",
     "lint": "eslint src test index.ts App.tsx",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "eas-build-post-install": "pnpm --filter @faffago/shared build"
   },
   "dependencies": {
     "@faffago/shared": "workspace:*",
