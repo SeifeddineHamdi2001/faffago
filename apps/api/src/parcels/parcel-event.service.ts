@@ -33,6 +33,13 @@ import { ChatThreadsService } from '../chat/chat-threads.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from '../settings/settings.service';
 
+/** What a courier's scan can tell the seller: taken back when the scan is cancelled (A-11). */
+const SCAN_NOTICE_TYPES = [
+  'COLIS_A_VERIFIER',
+  'COLIS_REPORTE_PAR_CLIENT',
+  'COLIS_EN_RETOUR',
+] as const;
+
 /** A signed-in user, or a scheduled job (the 48-hour return). */
 export type ParcelActor = UserPrincipal | typeof SYSTEM_ACTOR;
 
@@ -408,6 +415,14 @@ export class ParcelEventService {
       where: { scanId: input.scanId, status: 'EN_ATTENTE' },
       data: { status: 'ANNULEE' },
     });
+    // What the cancelled scan told the seller is taken back with it.
+    const scan = await tx.scan.findUnique({
+      where: { id: input.scanId },
+      select: { receivedAt: true },
+    });
+    if (scan) {
+      await this.notifications.retractSince(tx, current.id, SCAN_NOTICE_TYPES, scan.receivedAt);
+    }
     await tx.parcelEvent.create({
       data: {
         parcelId: current.id,

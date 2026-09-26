@@ -7,6 +7,7 @@ import {
   ParcelEventType,
   ParcelLocation,
   ParcelStatus,
+  ParcelEffect,
   Role as SharedRole,
   applyParcelAction,
   businessDateOf,
@@ -14,6 +15,7 @@ import {
   generatePassword,
   parcelWriteFor,
   readPlatformSettings,
+  sellerNoticesForParcel,
   type ParcelActionCommand,
   type ParcelSnapshot,
   type PlatformSettings,
@@ -281,6 +283,7 @@ async function main(): Promise<void> {
     const work = await seedDemoOperations(prisma, { nodeEnv: process.env.NODE_ENV });
     const failures = await seedDemoFailures(prisma, { nodeEnv: process.env.NODE_ENV });
     const deliveries = await seedDemoDeliveries(prisma, { nodeEnv: process.env.NODE_ENV });
+    await seedDemoChat(prisma, { nodeEnv: process.env.NODE_ENV });
     console.log('\n─────────────────────────────────────────────');
     console.log('  Comptes de démonstration. Mots de passe affichés une seule fois.');
     for (const r of results) {
@@ -543,6 +546,54 @@ export const DEMO_FAILURES: ReadonlyArray<{
   },
 ];
 
+export function demoChatMessageId(index: number): string {
+  return `d0000000-0000-4000-8000-${String(index + 201).padStart(12, '0')}`;
+}
+
+/**
+ * A message from the demo livreur in the chat of each demo failed parcel, so
+ * the team's Chats inbox and the seller's chat tab have something to show
+ * (phase 10A). Returns how many were added; a second run adds none.
+ */
+export async function seedDemoChat(
+  prisma: PrismaClient,
+  options: { nodeEnv: string | undefined; now?: Date },
+): Promise<number> {
+  if (options.nodeEnv === 'production') {
+    throw new Error('db:seed:demo refuse de tourner en production (NODE_ENV=production).');
+  }
+  const now = options.now ?? new Date();
+  const livreur = await prisma.user.findUnique({
+    where: { phone_role: { phone: '50990004', role: 'LIVREUR' } },
+  });
+  if (!livreur) throw new Error('Comptes de démonstration absents : lancez seedDemo avant.');
+  let added = 0;
+  for (const [index] of DEMO_FAILURES.entries()) {
+    const parcel = await prisma.parcel.findUnique({
+      where: { clientRequestId: demoFailureRequestId(index) },
+    });
+    const thread = parcel
+      ? await prisma.chatThread.findUnique({ where: { parcelId: parcel.id } })
+      : null;
+    const id = demoChatMessageId(index);
+    if (!thread || (await prisma.chatMessage.findUnique({ where: { id } }))) continue;
+    const at = new Date(now.getTime() - 60_000);
+    await prisma.chatMessage.create({
+      data: {
+        id,
+        threadId: thread.id,
+        senderUserId: livreur.id,
+        senderKind: 'COURSIER',
+        body: 'Client ne répond pas',
+        createdAt: at,
+      },
+    });
+    await prisma.chatThread.update({ where: { id: thread.id }, data: { lastMessageAt: at } });
+    added += 1;
+  }
+  return added;
+}
+
 export function demoFailureRequestId(index: number): string {
   return `d0000000-0000-4000-8000-${String(index + 101).padStart(12, '0')}`;
 }
@@ -609,6 +660,39 @@ async function demoStep(
           step.type === ParcelEventType.ECHEC_LIVRAISON ? (command.failureReason ?? null) : null,
         reasonText: index === 0 ? note : null,
         serverTime: at,
+      },
+    });
+  }
+
+  // What ParcelEventService writes beside the events (phase 10A): the chat
+  // thread a Sortie coursier opens, and what the seller is told.
+  const updated = await tx.parcel.findUniqueOrThrow({ where: { id: parcelId } });
+  if (transition.events.some((step) => step.effects.includes(ParcelEffect.OUVRIR_CHAT))) {
+    await tx.chatThread.upsert({
+      where: { parcelId },
+      create: {
+        parcelId,
+        sellerId: updated.sellerId,
+        courierId: updated.currentLivreurId,
+        createdAt: at,
+      },
+      update: { courierId: updated.currentLivreurId },
+    });
+  }
+  const seller = await tx.seller.findUniqueOrThrow({ where: { id: updated.sellerId } });
+  for (const notice of sellerNoticesForParcel({
+    code: updated.code,
+    events: transition.events,
+    failureReason: command.failureReason ?? null,
+    relaunchDate: null,
+  })) {
+    await tx.notification.create({
+      data: {
+        userId: seller.userId,
+        type: notice.type,
+        params: notice.params as never,
+        parcelId,
+        createdAt: at,
       },
     });
   }

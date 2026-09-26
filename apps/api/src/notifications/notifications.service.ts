@@ -88,6 +88,22 @@ export class NotificationsService {
   }
 
   /**
+   * Takes back what a scan told about a parcel when that scan is cancelled
+   * (A-11): a failure the courier recorded by mistake must not stay in the
+   * seller's bell as a parcel to verify.
+   */
+  async retractSince(
+    db: Db,
+    parcelId: string,
+    types: readonly NotificationType[],
+    since: Date,
+  ): Promise<void> {
+    await db.notification.deleteMany({
+      where: { parcelId, type: { in: [...types] }, createdAt: { gte: since } },
+    });
+  }
+
+  /**
    * Whether the user (or, with no user, anyone) already has this type with
    * these parameters: the daily notices (a reminder, a pay due) run once,
    * however often the job looks.

@@ -5,6 +5,7 @@ import { VerifyDeadlineJob } from '../../src/a-verifier/verify-deadline.job';
 import { notificationText, type NotificationType } from '@faffago/shared';
 import { createTestApp, createUser, login, type Fixture, type TestApp } from '../support/test-app';
 import { principalOf } from '../support/principals';
+import { NOW, scanOp, sync } from '../support/money-fixtures';
 import { createParcel } from '../support/work-fixtures';
 
 /**
@@ -85,7 +86,13 @@ beforeAll(async () => {
   sc = await createUser(t.prisma, { role: 'SERVICE_CLIENT', username: 'notif.sc' });
   ali = await createUser(t.prisma, { role: 'LIVREUR' });
   const row = await t.prisma.user.findUniqueOrThrow({ where: { username: 'admin' } });
-  admin = { id: row.id, role: 'ADMIN', password: ADMIN.password, phone: row.phone, username: 'admin' };
+  admin = {
+    id: row.id,
+    role: 'ADMIN',
+    password: ADMIN.password,
+    phone: row.phone,
+    username: 'admin',
+  };
 });
 afterAll(async () => {
   await t.close();
@@ -116,7 +123,9 @@ describe('the bell', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.unreadCount).toBe(before + 2);
-    expect(response.body.items.every((item: { readAt: unknown }) => item.readAt === null)).toBe(true);
+    expect(response.body.items.every((item: { readAt: unknown }) => item.readAt === null)).toBe(
+      true,
+    );
     expect(response.body.items.map((item: { type: string }) => item.type)).not.toContain(
       'COMPTE_REACTIVE',
     );
@@ -198,6 +207,26 @@ describe('what a parcel’s events tell the seller (Vendeur 4.13)', () => {
       type: 'COLIS_A_VERIFIER',
       params: { code: parcel.code, reason: 'NE_REPOND_PAS' },
     });
+  });
+
+  it('takes back what a scan told him when the courier cancels that scan (A-11)', async () => {
+    const parcel = await parcelOf(seller, { status: 'EN_LIVRAISON', location: 'AVEC_LE_LIVREUR' });
+    const token = (await login(t, ali)).accessToken;
+    const [failed] = await sync(t, token, [
+      scanOp({ action: 'ECHEC', rawCode: parcel.code, failureReason: 'NE_REPOND_PAS' }),
+    ]);
+    expect(failed).toMatchObject({ ok: true });
+    expect(await t.prisma.notification.count({ where: { parcelId: parcel.id } })).toBe(1);
+
+    const [cancelled] = await sync(t, token, [
+      { kind: 'ANNULATION', clientScanId: failed!.id, deviceTime: NOW },
+    ]);
+
+    expect(cancelled).toMatchObject({ ok: true });
+    expect(await t.prisma.notification.count({ where: { parcelId: parcel.id } })).toBe(0);
+    expect((await t.prisma.parcel.findUniqueOrThrow({ where: { id: parcel.id } })).status).toBe(
+      'EN_LIVRAISON',
+    );
   });
 
   it('tells nobody when the scan is refused', async () => {
@@ -365,8 +394,11 @@ describe('the team and the seller are told of requests and account changes', () 
     expect((await noticesOf(sc, 'DEMANDE_MODIFICATION')).length).toBe(scs + 1);
     expect((await noticesOf(depot, 'DEMANDE_MODIFICATION')).length).toBe(depots);
     expect(
-      (await t.prisma.notification.findFirstOrThrow({ where: { userId: sc.id, parcelId: parcel.id } }))
-        .params,
+      (
+        await t.prisma.notification.findFirstOrThrow({
+          where: { userId: sc.id, parcelId: parcel.id },
+        })
+      ).params,
     ).toEqual({ code: parcel.code, shopName: 'Boutique Test' });
   });
 
@@ -436,15 +468,18 @@ describe('the scheduled notices', () => {
     });
     expect((await noticesOf(seller, 'COLIS_24H_RESTANTES')).length).toBe(forSeller + 1);
     expect((await noticesOf(depot, 'COLIS_24H_RESTANTES')).length).toBe(forDepot);
-    expect(
-      await t.prisma.notification.count({ where: { parcelId: later.id } }),
-    ).toBe(0);
+    expect(await t.prisma.notification.count({ where: { parcelId: later.id } })).toBe(0);
   });
 
   it('tells a livreur of the relancé parcels waiting for him today, once', async () => {
     const where = await marsa();
     await t.prisma.zoneAssignment.create({
-      data: { zoneId: where.zoneId!, courierId: ali.courierId!, role: 'LIVREUR', kind: 'TITULAIRE' },
+      data: {
+        zoneId: where.zoneId!,
+        courierId: ali.courierId!,
+        role: 'LIVREUR',
+        kind: 'TITULAIRE',
+      },
     });
     await parcelOf(seller, {
       status: 'RELANCE',

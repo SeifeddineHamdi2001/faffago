@@ -11,7 +11,7 @@ rounds and are referenced by those names in the code and in the commit history:
 | -------------- | ------------------------------------------------------------------------------------ |
 | **A-1 … A-24** | Ambiguities and contradictions found while reviewing the specs against the schema    |
 | **Q1 … Q16**   | Follow-up clarifications on the answers to those                                     |
-| **D-1 … D-87** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-87 are rules |
+| **D-1 … D-91** | Decisions taken during the build: D-1 to D-3 shape the schema, D-4 to D-91 are rules |
 
 Entries are never renumbered. Where a later answer overrides an earlier one, the
 earlier entry says which one supersedes it rather than being rewritten.
@@ -119,6 +119,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-88 · Correcting a bon scanned by mistake](#d-88--correcting-a-bon-scanned-by-mistake)
 - [D-89 · Retenue certificates and the phase 10B reports](#d-89--retenue-certificates-and-the-phase-10b-reports)
 - [D-90 · Choices made building phase 10B](#d-90--choices-made-building-phase-10b)
+- [D-91 · Choices made building phase 10A](#d-91--choices-made-building-phase-10a)
 
 **Money — A-1 to A-5**
 
@@ -1926,6 +1927,91 @@ permission beyond D-89).
 **Where.** `packages/shared/src/retenue.ts`, `reports.ts`, `exceptions.ts`;
 `apps/api/src/money/retenue.service.ts`, `apps/api/src/reports`; migration
 `20261012000000_retenue_certificates`.
+
+### D-91 · Choices made building phase 10A
+
+Decided 2026-09-26, building notifications and the parcel chat. No question was
+open on money, statuses or permissions: `CHATS_STAFF`, A-23 and Q14 to Q16
+already answered them. What follows is what the specs left to the builder.
+
+**Who is told what.** A notification is stored as a type and its parameters
+(money as digit strings), worded in the browser or the app (A-24). It is written
+in the transaction of the event that caused it, so a rolled-back scan tells
+nobody. Its recipient is either the person the event is about, or every active
+account holding the permission that acts on it (Admin 4.18, "filtered by role"):
+
+| Type                                                             | Told when                                                       | To                                                                                          |
+| ---------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| À vérifier, reporté par le client, en retour, retour automatique | after the courier's failure, the third failure, the 48-hour job | the seller                                                                                  |
+| 24 h restantes                                                   | under 24 h left (D-76), once per failure                        | the seller, and `SUIVI_A_VERIFIER`                                                          |
+| Bon de versement / de retour en route                            | at the ramasseur's departure                                    | the seller                                                                                  |
+| Ramassage planifié                                               | when planned or planned again                                   | the seller, and the ramasseur with the shop                                                 |
+| Ramassage effectué                                               | at Terminer le ramassage, with parcels                          | the seller                                                                                  |
+| Compte suspendu / réactivé                                       | at the admin's action                                           | the seller                                                                                  |
+| Nouvelle demande de ramassage                                    | when requested                                                  | `PLANIFIER_RAMASSAGES_TOURNEES`                                                             |
+| Demande de modification                                          | when the seller asks                                            | `DEMANDES_VENDEUR`                                                                          |
+| Écart de caisse                                                  | at Clôturer, when not conforme (manque or excédent)             | `CAISSE_ECARTS`                                                                             |
+| Bon non remis                                                    | at the ramasseur's Clôturer                                     | `BONS_VERSEMENT` or `BONS_RETOUR` by the bon                                                |
+| Paie à préparer                                                  | when a fiche comes due, once per period                         | `PAIE_COURSIERS`                                                                            |
+| Nouveaux colis assignés                                          | when the team moves parcels in Tournées                         | that livreur, with the count                                                                |
+| Colis relancés aujourd'hui                                       | 07:00 Tunis, once a day                                         | the livreur whose column holds them                                                         |
+| Rappel de fin de journée                                         | 18:00 Tunis, once a day                                         | livreur (parcels still with him, cash not handed in), ramasseur (bons still with him, cash) |
+
+The seller is never told what he did himself (his decisions, cancelling,
+editing). A third failure is one notice, the return, not an À vérifier that
+lasted no time. A scan the courier cancels (A-11) takes its notices back. The
+two hours are constants (`RELANCE_TODAY_NOTICE_HOUR_TUNIS`,
+`END_OF_DAY_REMINDER_HOUR_TUNIS`, TO CONFIRM). The scheduled ones are sent once
+whatever the job's rhythm: an earlier notice of the parcel, or the day in the
+parameters, is the memory.
+
+**The bell.** Every role reads and clears his own notifications only: list
+(50 a page), unread count, mark one read, mark all read. The web bell reads its
+count every 30 s while the tab is shown; the app reads notifications and chats
+every 30 s. Under "Voir comme le vendeur" the admin reads the seller's, and
+marks nothing (D-5).
+
+**The chat.** One thread per parcel, created by the effect `OUVRIR_CHAT` of the
+Sortie coursier scan (and by Forcer un statut to En livraison); the same thread
+points at the next livreur after a relance. Whether it is open, read-only or
+closed is read from the parcel on every call (`chatStateFor`); the stored state
+is only a copy. One door per space, each with its own permission: the seller
+(`ESPACE_VENDEUR`), the livreur (`APP_LIVREUR`, so the ramasseur has none), the
+team (`CHATS_STAFF`). A livreur reads through his door and writes through the
+courier app's queue only.
+
+- **Messages** are text, 1,000 characters at most. The message id is the one
+  the sender drew: sent twice, it is stored once and answered as the same
+  message, even if the chat closed in between; from someone else it is refused.
+  Messages read in the order written (`sequence`).
+- **From the phone**, a message is a queue operation (`MESSAGE_CHAT`) applied
+  once under its UUID like a note d'adresse. One refused (the chat went
+  read-only while the phone was offline) is answered once, with why, and never
+  tried again. The screen shows it as waiting, sent or not sent.
+- **Names.** The seller reads the courier's first name and the team as Faffa Go;
+  the courier reads the shop, a previous livreur by first name, and sees the
+  seller's contact phone; the team reads full names and writes as Faffa Go.
+- **Quick replies.** The courier's four (Coursier 4.8), on buttons in French or
+  Arabic, sent in French, which is what the seller reads. The seller's four are
+  worded here (`CHAT_QUICK_REPLIES_SELLER`), the specs giving one example. The
+  team has none.
+- **Who is told of a message.** The seller of a message from the courier or the
+  team; the livreur, while the chat is open, of a message from the seller or the
+  team; the team only in the chats it has joined (a Faffa Go message exists),
+  the others being read in the Chats inbox, where unread is counted per person
+  (`ChatRead`). Each reader is told the name he may read. The ramasseur is told
+  nothing.
+- **The inbox** lists every chat with a message, latest first, filtered by
+  unread, seller, courier and a search on code or shop.
+- Parcels dispatched before this phase have no thread (development data only:
+  no production database exists yet).
+
+**Where.** `packages/shared/src/notifications.ts`, `chat.ts`;
+`apps/api/src/notifications`, `chat`, `notices`; migration
+`20261013000000_chat_message_operation` (the queue's `MESSAGE_CHAT` kind and
+`chat_messages.sequence`); web `notification-bell`, `notifications-screen`,
+`chat-panel`, `chats-inbox-screen`; courier `NotificationsScreen`,
+`ChatScreens`.
 
 ---
 

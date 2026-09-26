@@ -11,6 +11,7 @@ import {
   seedDemo,
   seedDemoOperations,
   seedDemoFailures,
+  seedDemoChat,
   demoFailureRequestId,
   DEMO_FAILURES,
   DEMO_DELIVERIES,
@@ -249,6 +250,32 @@ describe('seedDemoOperations: work for the back office screens (D-50)', () => {
     ]);
 
     expect(await seedDemoFailures(client, { nodeEnv: 'development', now })).toBe(0);
+  });
+
+  it('opens a chat for each failed parcel a livreur took out, and tells the seller (phase 10A)', async () => {
+    const now = new Date('2026-09-25T08:00:00.000Z');
+    const seller = await client.seller.findFirstOrThrow({
+      where: { user: { email: 'vendeur@boutique-demo.test' } },
+    });
+    const parcel = await client.parcel.findUniqueOrThrow({
+      where: { clientRequestId: demoFailureRequestId(0) },
+    });
+
+    // The thread points at the demo livreur, as the Sortie coursier scan makes it.
+    const thread = await client.chatThread.findUniqueOrThrow({ where: { parcelId: parcel.id } });
+    expect(thread).toMatchObject({ sellerId: seller.id, courierId: parcel.currentLivreurId });
+    // The seller was told of the failure, once per failed parcel.
+    const notices = await client.notification.findMany({
+      where: { userId: seller.userId, type: 'COLIS_A_VERIFIER' },
+    });
+    expect(notices.map((row) => (row.params as { code: string }).code)).toContain(parcel.code);
+
+    await expect(seedDemoChat(client, { nodeEnv: 'production', now })).rejects.toThrow(
+      /production/,
+    );
+    expect(await seedDemoChat(client, { nodeEnv: 'development', now })).toBe(2);
+    expect(await client.chatMessage.count({ where: { threadId: thread.id } })).toBe(1);
+    expect(await seedDemoChat(client, { nodeEnv: 'development', now })).toBe(0);
   });
 });
 
