@@ -1,0 +1,9 @@
+# Daily backup: database and documents, copied off the server (deploy/backup.sh).
+# Runs as root: it reads the db container and the env file.
+[Unit]
+Description=Faffa Go backup
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/faffago/deploy/backup.sh

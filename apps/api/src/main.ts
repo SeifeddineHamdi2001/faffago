@@ -1,3 +1,5 @@
+// First: Sentry must load before the modules it hooks into.
+import './instrument';
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

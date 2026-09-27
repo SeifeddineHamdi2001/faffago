@@ -128,6 +128,7 @@ earlier entry says which one supersedes it rather than being rewritten.
 - [D-97 · A return counts in the delivery rate when it is decided](#d-97--a-return-counts-in-the-delivery-rate-when-it-is-decided)
 - [D-98 · The seller asks for a visit; the ramasseur counts](#d-98--the-seller-asks-for-a-visit-the-ramasseur-counts)
 - [D-99 · The phone top bar fits 360 px](#d-99--the-phone-top-bar-fits-360-px)
+- [D-100 · How Faffa Go runs on its VPS](#d-100--how-faffa-go-runs-on-its-vps)
 
 **Money — A-1 to A-5**
 
@@ -2429,3 +2430,66 @@ scrolled sideways. Below `sm` the logo is 24 px high, the gaps and side padding
 are tighter, Devenir partenaire is `text-xs`, and the language switch drops its
 globe icon. The four items of Landing 2.1 stay. Where: `public-header.tsx`,
 `language-switch.tsx`; held by the 360 px test in `e2e/phase-9.spec.ts`.
+
+### D-100 · How Faffa Go runs on its VPS
+
+Decided 2026-09-27, phase 11. The owner chose a VPS, shared with his other
+projects, and **Docker**; the provider is still open (D-32's legal question),
+so nothing depends on one.
+
+- **Docker Compose**, project `faffago` (`deploy/docker-compose.yml`): `db`
+  (PostgreSQL 17 as in the tests, D-78, with the French locale, its data in a
+  volume, no port on the host), `api` and `web`. The API and the web app are
+  **one image** (`Dockerfile` at the root: install without the courier app,
+  build shared, API, web), run with two commands. Built on the VPS.
+- **The VPS is shared**, so Faffa Go touches nothing of the other projects:
+  its own **Nginx** site next to theirs (Nginx already holds 80 and 443),
+  HTTPS by **certbot**; firewall and time zone left as they are (the backup
+  timer names Africa/Tunis itself).
+- **Ports 4002 (web) and 4001 (API)**, published on 127.0.0.1 only (4000 is taken): the
+  owner's server already uses the 3000s. Development keeps 3000 / 3001.
+- **Three names**: `www.mirely.store` (web), `api.mirely.store` (API, for the
+  courier app: Next.js already answers `/api/*` with its own route handlers, so
+  the API cannot share the path), `mirely.store` → `www`. The web app reaches
+  the API inside Docker, `http://api:4001`.
+- **`TRUST_PROXY`**: in Docker, Nginx and the web app reach the API from
+  private container addresses, not loopback. The API trusts
+  `loopback, uniquelocal` there, so `req.ip` is still the browser's address for
+  the login throttling (D-6) and a client still cannot choose it. Unset (the
+  default everywhere else): `loopback`, as before.
+- **One env file**, `/etc/faffago/faffago.env` (root only), generated with fresh
+  secrets by `deploy/setup-server.sh`. The api container reads all of it; the
+  web container gets only its three variables (no secret, D-15); the db
+  container only its two passwords, set on first start
+  (`deploy/postgres/initdb`). Migrations run as `faffago_owner`, the API only
+  ever as `faffago_app`.
+- **Releases** with `deploy/deploy.sh`: pull `main`, build the image while the
+  old containers serve, migrate, seed (idempotent), swap the containers, check
+  `GET /api/health`. Down only the seconds the containers take to start.
+- **Documents** on the host, `/var/lib/faffago/documents`, mounted into the api
+  container, owned by the container's user (uid 1000).
+- **Backups** nightly at 02:30 Tunis: `pg_dump` from the db container and a tar
+  of the (already encrypted) documents, 14 days on the server, copied off it
+  with **rclone** to `BACKUP_RCLONE_REMOTE` (an rclone crypt remote; the
+  destination waits for D-32's answer). With no remote the job fails on
+  purpose. `deploy/restore-test.sh` proves a restore into a scratch database.
+- **Sentry** in the API only for now: `src/instrument.ts`, loaded first, does
+  nothing without `SENTRY_DSN`. It reports unexpected errors (never a 4xx) and
+  collects no request data: bodies, headers, cookies and query strings carry
+  customers' details. The web app and the courier app log to Docker's logs and
+  the phone for now; adding Sentry to them is a later step.
+- **`GET /api/health`**, public, says only whether the database answers, for the
+  deploy check and an uptime monitor.
+- **Courier APK**: EAS profile `production` builds an APK for
+  `https://api.mirely.store/api`; it is served by Nginx at
+  `https://www.mirely.store/apk/faffago-coursier.apk` with its `.sha256`.
+
+**Found on the way (typed codes).** `normalizeParcelCode` stripped a leading
+`FG` from anything typed, so a code whose own characters begin with FG (about
+1 in 1,000, e.g. `FG-FGK3M9QA`) typed without its prefix (`fgk3m9qa`) was never
+found, by public tracking or a hand-typed scan. `FG` is now the prefix only when
+a separator follows it or when it comes on top of 8 characters.
+
+Where: `Dockerfile`, `deploy/`, `docs/deployment.md`,
+`apps/api/src/public/health.controller.ts`, `apps/api/src/app.setup.ts`
+(`trustProxyFrom`), `apps/courier/eas.json`.

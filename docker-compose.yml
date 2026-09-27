@@ -6,8 +6,7 @@
 # faffago_owner runs the migrations, faffago_app is what the API connects as
 # and has UPDATE/DELETE revoked on parcel_events and audit_log.
 #
-# Not for production. On the VPS, PostgreSQL is installed on the host and
-# backed up daily off the server (tech-stack 6).
+# Not for production: the VPS runs deploy/docker-compose.yml (D-100).
 
 services:
   postgres:
