@@ -15,8 +15,10 @@
 **/.env
 **/.env.*
 !.env.example
-**/storage
-**/uploads
+storage
+apps/api/storage
+uploads
+apps/api/uploads
 
 # The courier app's own build output and native folders (its package.json stays:
 # the lockfile names it).
