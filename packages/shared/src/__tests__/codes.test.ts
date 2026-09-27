@@ -54,6 +54,13 @@ describe('normalizeParcelCode', () => {
     expect(normalizeParcelCode('FG-l2345678')).toBe('FG-12345678');
   });
 
+  it('keeps a code whose own characters begin with FG, typed without the prefix', () => {
+    // About 1 code in 1,000 starts with F then G: only the prefix is stripped.
+    expect(normalizeParcelCode('fgk3m9qa')).toBe('FG-FGK3M9QA');
+    expect(normalizeParcelCode('FG-FGK3M9QA')).toBe('FG-FGK3M9QA');
+    expect(normalizeParcelCode('fgfgk3m9qa')).toBe('FG-FGK3M9QA');
+  });
+
   it('still rejects a code of the wrong length', () => {
     expect(isValidParcelCode(normalizeParcelCode('FG-8K2QX7'))).toBe(false);
   });

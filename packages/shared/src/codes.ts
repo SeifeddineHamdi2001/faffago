@@ -46,10 +46,14 @@ export function generateParcelCode(randomBytes: RandomBytes): string {
 export function normalizeParcelCode(input: string): string {
   // \s already matches the non-breaking and narrow no-break spaces that come
   // with a code copied out of a PDF, so they need no escape of their own.
-  let body = String(input)
-    .toUpperCase()
-    .replace(/[\s.\-_]/g, '');
-  if (body.startsWith('FG')) body = body.slice(2);
+  const typed = String(input).trim().toUpperCase();
+  // FG is the prefix when a separator follows it, or when it comes on top of a
+  // full code. A code typed without the prefix may itself begin with FG.
+  const hasPrefix = /^FG[\s.\-_]/.test(typed);
+  let body = typed.replace(/[\s.\-_]/g, '');
+  if (hasPrefix || (body.startsWith('FG') && body.length === PARCEL_CODE_LENGTH + 2)) {
+    body = body.slice(2);
+  }
   body = body.replace(/[IL]/g, '1').replace(/O/g, '0');
   return PARCEL_CODE_PREFIX + body;
 }
