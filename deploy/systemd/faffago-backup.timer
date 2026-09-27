@@ -1,10 +1,10 @@
-# Every night at 02:30, Tunis time (the server's time zone). A missed run
+# Every night at 02:30, Tunis time, whatever the server's time zone. A missed run
 # (server off) runs at the next boot.
 [Unit]
 Description=Faffa Go daily backup
 
 [Timer]
-OnCalendar=*-*-* 02:30:00
+OnCalendar=*-*-* 02:30:00 Africa/Tunis
 Persistent=true
 
 [Install]

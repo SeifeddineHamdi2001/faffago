@@ -2436,14 +2436,21 @@ globe icon. The four items of Landing 2.1 stay. Where: `public-header.tsx`,
 Decided 2026-09-27, phase 11. The owner chose a VPS; the provider is still
 open (D-32's legal question), so nothing depends on one.
 
-- **Ubuntu 24.04**, everything on the host, no Docker: PostgreSQL 17 (as in
-  the tests, D-78), Node 22, the API and the web app as two **systemd**
-  services under a `faffago` user, **Caddy** for HTTPS. Time zone
-  Africa/Tunis. Firewall: SSH, 80, 443.
+- **Ubuntu 24.04**, everything on the host, no Docker, the API and the web app
+  as two **systemd** services under a `faffago` user.
+- **The VPS is shared** with the owner's other projects, so Faffa Go touches
+  nothing of theirs: its own **Nginx** sites next to theirs (Nginx already holds
+  80 and 443), HTTPS by **certbot**; its own **Node 22** in `/opt/faffago-node`;
+  the **PostgreSQL** already running if it is 16 or newer (else 17, as in the
+  tests, D-78), on whatever port it uses; firewall and time zone left as they
+  are (the backup timer names Africa/Tunis itself).
 - **Three names**: `www.mirely.store` (web), `api.mirely.store` (API, for the
   courier app: Next.js already answers `/api/*` with its own route handlers, so
   the API cannot share the path), `mirely.store` → `www`. The web app reaches
   the API on 127.0.0.1.
+- **Ports 4000 (web) and 4001 (API)**, loopback behind the proxy: the owner's
+  server already uses the 3000s for other projects. Set in the env file
+  (`WEB_PORT`, `API_PORT`). Development keeps 3000 / 3001.
 - **One env file**, `/etc/faffago/faffago.env`, generated with fresh secrets by
   `deploy/setup-server.sh`, read by both services and linked as the root
   `.env`. Migrations run as `faffago_owner` (`DATABASE_MIGRATION_URL`); the API
@@ -2464,7 +2471,7 @@ open (D-32's legal question), so nothing depends on one.
 - **`GET /api/health`**, public, says only whether the database answers, for the
   deploy check and an uptime monitor.
 - **Courier APK**: EAS profile `production` builds an APK for
-  `https://api.mirely.store/api`; it is served by Caddy at
+  `https://api.mirely.store/api`; it is served by Nginx at
   `https://www.mirely.store/apk/faffago-coursier.apk` with its `.sha256`.
 
 Where: `deploy/`, `docs/deployment.md`, `apps/api/src/public/health.controller.ts`,

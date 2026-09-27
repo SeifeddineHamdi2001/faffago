@@ -1,5 +1,5 @@
 # Faffa Go web (Next.js: public site, seller space, back office).
-# Listens on loopback only; Caddy is the way in.
+# Listens on loopback only; Nginx is the way in.
 [Unit]
 Description=Faffa Go web
 After=network-online.target faffago-api.service
@@ -13,7 +13,7 @@ WorkingDirectory=/opt/faffago/apps/web
 EnvironmentFile=/etc/faffago/faffago.env
 Environment=NODE_ENV=production
 # pnpm hoists (node-linker=hoisted): next lives in the root node_modules.
-ExecStart=/usr/bin/node /opt/faffago/node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+ExecStart=/opt/faffago-node/bin/node /opt/faffago/node_modules/next/dist/bin/next start -H 127.0.0.1 -p ${WEB_PORT}
 Restart=always
 RestartSec=5
 StandardOutput=journal

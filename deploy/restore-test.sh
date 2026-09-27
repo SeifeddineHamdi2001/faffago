@@ -16,6 +16,7 @@ DOCS_TAR="${2:?the documents-*.tar file}"
 ENV_FILE="/etc/faffago/faffago.env"
 APP_DIR="/opt/faffago"
 SCRATCH_DB="faffago_restore_test"
+export PATH="/opt/faffago-node/bin:${PATH}"
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run as root: sudo bash $0 ..." >&2
@@ -26,17 +27,20 @@ set -a
 . "${ENV_FILE}"
 set +a
 
+# The cluster's port, from the URL (the server may run PostgreSQL on another port).
+PG_PORT="$(sed -E 's#.*@[^:/]+:([0-9]+)/.*#\1#' <<<"${DATABASE_MIGRATION_URL}")"
+
 work="$(mktemp -d /var/lib/faffago/restore-XXXX)"
 chown faffago:faffago "${work}"
 cleanup() {
-  sudo -u postgres dropdb --if-exists "${SCRATCH_DB}"
+  sudo -u postgres dropdb -p "${PG_PORT}" --if-exists "${SCRATCH_DB}"
   rm -rf "${work}"
 }
 trap cleanup EXIT
 
 echo "== Database into ${SCRATCH_DB}"
-sudo -u postgres dropdb --if-exists "${SCRATCH_DB}"
-sudo -u postgres createdb --owner faffago_owner --template template0 \
+sudo -u postgres dropdb -p "${PG_PORT}" --if-exists "${SCRATCH_DB}"
+sudo -u postgres createdb -p "${PG_PORT}" --owner faffago_owner --template template0 \
   --locale fr_FR.UTF-8 --encoding UTF8 "${SCRATCH_DB}"
 base="${DATABASE_MIGRATION_URL%%\?*}"
 scratch_url="${base%/*}/${SCRATCH_DB}"
@@ -55,7 +59,7 @@ tar -xf "${DOCS_TAR}" -C "${work}"
 chown -R faffago:faffago "${work}"
 docs="${work}/$(basename "${STORAGE_LOCAL_PATH}")"
 # The env file first (for the key), then the scratch database and directory.
-sudo -u faffago bash -c "cd ${APP_DIR} && set -a && . ${ENV_FILE} && set +a && \
+sudo -u faffago bash -c "export PATH=/opt/faffago-node/bin:\$PATH && cd ${APP_DIR} && set -a && . ${ENV_FILE} && set +a && \
   DATABASE_URL='${scratch_url}' STORAGE_LOCAL_PATH='${docs}' \
   pnpm --filter @faffago/api documents:verify --decrypt"
 

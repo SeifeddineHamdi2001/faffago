@@ -5,18 +5,20 @@ How to put Faffa Go on a VPS and keep it running. The scripts are in
 
 ## What runs where
 
-One Ubuntu 24.04 VPS holds everything:
+One Ubuntu 24.04 VPS, shared with other projects: Faffa Go adds its own Nginx
+sites, its own ports (4000 and 4001, the 3000s are taken) and its own Node 22,
+and leaves the rest of the server as it is.
 
-| Piece                | How                                                  | Reached at                             |
-| -------------------- | ---------------------------------------------------- | -------------------------------------- |
-| Web app (Next.js)    | systemd `faffago-web`, 127.0.0.1:3000                | https://www.mirely.store               |
-| API (NestJS)         | systemd `faffago-api`, port 3001                     | https://api.mirely.store (courier app) |
-| PostgreSQL 17        | on the host, roles `faffago_owner` and `faffago_app` | local only                             |
-| Caddy                | HTTPS, certificates renewed by itself                | ports 80 and 443                       |
-| Seller documents     | `/var/lib/faffago/documents`, encrypted              | never served (D-32)                    |
-| Courier APK          | `/var/www/faffago-apk`                               | https://www.mirely.store/apk/…         |
-| Backups              | `faffago-backup.timer`, 02:30 Tunis                  | `/var/backups/faffago` + off-server    |
-| Settings and secrets | `/etc/faffago/faffago.env`                           | —                                      |
+| Piece                | How                                                                                             | Reached at                             |
+| -------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------- |
+| Web app (Next.js)    | systemd `faffago-web`, 127.0.0.1:4000, Node in `/opt/faffago-node`                              | https://www.mirely.store               |
+| API (NestJS)         | systemd `faffago-api`, port 4001                                                                | https://api.mirely.store (courier app) |
+| PostgreSQL           | the one already running (16+), or 17 installed; roles `faffago_owner` and `faffago_app`         | local only                             |
+| Nginx + certbot      | the server's Nginx, site `/etc/nginx/sites-available/faffago`; Let's Encrypt renewed by certbot | ports 80 and 443                       |
+| Seller documents     | `/var/lib/faffago/documents`, encrypted                                                         | never served (D-32)                    |
+| Courier APK          | `/var/www/faffago-apk`                                                                          | https://www.mirely.store/apk/…         |
+| Backups              | `faffago-backup.timer`, 02:30 Tunis                                                             | `/var/backups/faffago` + off-server    |
+| Settings and secrets | `/etc/faffago/faffago.env`                                                                      | —                                      |
 
 `mirely.store` redirects to `www`. The web app talks to the API on 127.0.0.1;
 only the courier app uses `api.mirely.store`.
@@ -57,7 +59,15 @@ It prints **the first admin's password once**: note it. It also writes
 places now** (a USB key, a password manager): it holds the documents'
 encryption key, and losing it loses every CIN and patente.
 
-Then, once the DNS names point at the server:
+Then, once the DNS names point at the server, get the HTTPS certificates
+(certbot asks for an email address for expiry notices, once):
+
+```bash
+sudo certbot --nginx --redirect -d mirely.store -d www.mirely.store -d api.mirely.store
+```
+
+certbot adds the HTTPS part to Faffa Go's Nginx site and renews it by itself.
+Then:
 
 ```bash
 sudo -u faffago bash /opt/faffago/deploy/deploy.sh        # first release
@@ -118,7 +128,7 @@ opens every document with the key. The live database is not touched.
 ## 5. Watching it
 
 - Logs: `journalctl -u faffago-api -f`, `journalctl -u faffago-web -f`,
-  `/var/log/caddy/faffago.log`.
+  `/var/log/nginx/faffago*.log`.
 - State: `systemctl status faffago-api faffago-web faffago-backup.timer`.
 - Uptime: add https://api.mirely.store/api/health to a free uptime monitor
   (for example UptimeRobot). It answers `{"status":"ok"}` when the API reaches
@@ -146,7 +156,7 @@ pnpm exec eas build --platform android --profile production
 
   ```bash
   scp faffago-coursier.apk user@server:/tmp/
-  sudo install -o faffago -g caddy -m 640 /tmp/faffago-coursier.apk /var/www/faffago-apk/
+  sudo install -o faffago -g www-data -m 640 /tmp/faffago-coursier.apk /var/www/faffago-apk/
   cd /var/www/faffago-apk && sha256sum faffago-coursier.apk | sudo tee faffago-coursier.apk.sha256
   ```
 
@@ -157,7 +167,7 @@ pnpm exec eas build --platform android --profile production
 
 ## 7. If something goes wrong
 
-- **The site is down**: `systemctl status faffago-web faffago-api caddy`, then
+- **The site is down**: `systemctl status faffago-web faffago-api nginx`, then
   the logs above. `sudo systemctl restart faffago-api faffago-web`.
 - **Lost admin password**: `cd /opt/faffago && sudo -u faffago bash -c 'set -a; . /etc/faffago/faffago.env; pnpm --filter @faffago/api admin:reset admin'`.
 - **Server lost**: on the new VPS, put the saved env file at
@@ -165,3 +175,7 @@ pnpm exec eas build --platform android --profile production
   keeps its passwords and keys. Then restore the latest dump
   (`pg_restore --dbname="<DATABASE_MIGRATION_URL without ?schema=public>" db-….dump`),
   untar the documents into `/var/lib/faffago/`, and run `deploy.sh`.
+- **A newer `deploy/nginx/faffago.conf`**: the setup installs it only once,
+  because certbot has since added the HTTPS lines to the installed copy. Copy
+  the change by hand into `/etc/nginx/sites-available/faffago`, then
+  `sudo nginx -t && sudo systemctl reload nginx`.

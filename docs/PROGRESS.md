@@ -668,10 +668,11 @@ Branch `phase-11`. Plan 2026-09-27: the owner chose a VPS (provider open,
 D-32). Runbook: `docs/deployment.md`; choices: D-100.
 
 1. [x] `GET /api/health` (public, database check) — 1 API e2e
-2. [x] `deploy/setup-server.sh`: Ubuntu 24.04, PostgreSQL 17 with both roles,
-       Node 22, Caddy, firewall, swap, env file with fresh secrets, services
+2. [x] `deploy/setup-server.sh`: Ubuntu 24.04, reuses or installs PostgreSQL
+       with both roles, Node 22, Nginx site, swap, env file with fresh secrets
 3. [x] `deploy/deploy.sh`: build, migrate as owner, seed, restart, health check
-4. [x] systemd units, Caddyfile (www, api, apex redirect, `/apk/`)
+4. [x] systemd units, Nginx site (www, api, apex redirect, `/apk/`) with
+       certbot; ports 4000 / 4001, own Node 22: the VPS is shared
 5. [x] `deploy/backup.sh` + nightly timer, `deploy/restore-test.sh`,
        `deploy/check-db-roles.sh`
 6. [x] EAS `production` profile: APK on `https://api.mirely.store/api`

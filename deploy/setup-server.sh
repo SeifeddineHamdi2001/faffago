@@ -1,53 +1,64 @@
 #!/usr/bin/env bash
-# One-time setup of a fresh Ubuntu 24.04 VPS for Faffa Go (phase 11).
+# One-time setup of Faffa Go on an Ubuntu 24.04 VPS (phase 11, D-100).
 #
 #   sudo bash setup-server.sh
 #
+# The VPS already hosts other projects behind Nginx, so this script leaves them
+# alone: it adds Nginx sites for Faffa Go only, runs the apps on 4000 / 4001,
+# keeps its own Node 22 in /opt/faffago-node (the system's Node is untouched),
+# reuses the PostgreSQL already running if there is one, and changes neither
+# the firewall nor the server's time zone.
+#
 # Safe to run again: every step checks what is already there. It stops once,
 # after printing the server's deploy key, if GitHub does not know it yet: add
-# the key to the repository, then run it again.
-#
-# What it does: system packages, swap, firewall, Node 22 + pnpm, PostgreSQL 17
-# with the two roles, Caddy, the faffago user and its directories, the
-# production env file with fresh secrets, the code, the systemd services and
-# the daily backup timer. See docs/deployment.md.
+# the key to the repository, then run it again. See docs/deployment.md.
 set -euo pipefail
 
 REPO_SSH="git@github.com:SeifeddineHamdi2001/faffago.git"
 APP_USER="faffago"
 APP_DIR="/opt/faffago"
+NODE_DIR="/opt/faffago-node"
 ENV_FILE="/etc/faffago/faffago.env"
 DOCS_DIR="/var/lib/faffago/documents"
 BACKUP_DIR="/var/backups/faffago"
 APK_DIR="/var/www/faffago-apk"
+NGINX_SITE="/etc/nginx/sites-available/faffago"
 PNPM_VERSION="9.15.4"
-PG_VERSION="17"
+WEB_PORT=4000
+API_PORT=4001
+PG_NEW_VERSION="17"
+PG_MIN_VERSION="16"
 
 step() { printf '\n\033[1;33m== %s\033[0m\n' "$*"; }
-
-if [[ $EUID -ne 0 ]]; then
-  echo "Run as root: sudo bash $0" >&2
+die() {
+  echo "$*" >&2
   exit 1
-fi
+}
+
+[[ $EUID -eq 0 ]] || die "Run as root: sudo bash $0"
 . /etc/os-release
-if [[ "${ID}" != "ubuntu" ]]; then
-  echo "Written for Ubuntu 24.04; this is ${PRETTY_NAME}." >&2
-  exit 1
-fi
+[[ "${ID}" == "ubuntu" ]] || die "Written for Ubuntu 24.04; this is ${PRETTY_NAME}."
 
-step "System packages, time zone, French locale"
+step "Packages (only what is missing), French locale"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-apt-get install -y -q ca-certificates curl gnupg git ufw fail2ban unattended-upgrades \
-  locales rclone debian-keyring debian-archive-keyring apt-transport-https
-timedatectl set-timezone Africa/Tunis
+apt-get install -y -q ca-certificates curl gnupg git locales rclone xz-utils
 # The database sorts French names with the French collation, as in development.
 if ! locale -a | grep -qi '^fr_FR\.utf8$'; then
   locale-gen fr_FR.UTF-8
 fi
-dpkg-reconfigure -f noninteractive unattended-upgrades
 
-step "Swap (next build needs it on a small VPS)"
+step "Ports ${WEB_PORT} and ${API_PORT} are free"
+if [[ ! -f "${ENV_FILE}" ]]; then
+  for port in "${WEB_PORT}" "${API_PORT}"; do
+    if ss -ltnH "sport = :${port}" | grep -q .; then
+      die "Port ${port} is already used on this server: $(ss -ltnpH "sport = :${port}")"
+    fi
+  done
+fi
+echo "ok"
+
+step "Swap (only if the server has none: next build needs it on a small VPS)"
 if ! swapon --show | grep -q .; then
   fallocate -l 2G /swapfile
   chmod 600 /swapfile
@@ -56,52 +67,66 @@ if ! swapon --show | grep -q .; then
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
 fi
 
-step "Firewall: SSH, HTTP, HTTPS only"
-ufw allow OpenSSH
-ufw allow 80/tcp
-ufw allow 443/tcp
-ufw --force enable
-
-step "Node 22 and pnpm ${PNPM_VERSION}"
-if ! command -v node >/dev/null || [[ "$(node -v)" != v22.* ]]; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y -q nodejs
+step "Node 22 for Faffa Go only, in ${NODE_DIR}"
+if [[ ! -x "${NODE_DIR}/bin/node" ]]; then
+  case "$(uname -m)" in
+    x86_64) arch="x64" ;;
+    aarch64) arch="arm64" ;;
+    *) die "Unsupported CPU: $(uname -m)" ;;
+  esac
+  base="https://nodejs.org/dist/latest-v22.x"
+  tmp="$(mktemp -d)"
+  curl -fsSL "${base}/SHASUMS256.txt" -o "${tmp}/SHASUMS256.txt"
+  tarball="$(grep -oE "node-v22\.[0-9]+\.[0-9]+-linux-${arch}\.tar\.xz" "${tmp}/SHASUMS256.txt" | head -1)"
+  curl -fsSL "${base}/${tarball}" -o "${tmp}/${tarball}"
+  (cd "${tmp}" && grep " ${tarball}\$" SHASUMS256.txt | sha256sum -c -)
+  install -d "${NODE_DIR}"
+  tar -xJf "${tmp}/${tarball}" -C "${NODE_DIR}" --strip-components=1
+  rm -rf "${tmp}"
 fi
-corepack enable
-corepack prepare "pnpm@${PNPM_VERSION}" --activate
+export PATH="${NODE_DIR}/bin:${PATH}"
+corepack enable --install-directory "${NODE_DIR}/bin"
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 corepack prepare "pnpm@${PNPM_VERSION}" --activate
+node -v
 
-step "PostgreSQL ${PG_VERSION}"
-if ! command -v "/usr/lib/postgresql/${PG_VERSION}/bin/postgres" >/dev/null; then
+step "PostgreSQL"
+if command -v pg_lsclusters >/dev/null && pg_lsclusters -h | awk '$4 == "online"' | grep -q .; then
+  # Reuse the newest running cluster.
+  read -r PG_VERSION PG_PORT < <(pg_lsclusters -h | awk '$4 == "online" {print $1, $3}' | sort -rn | head -1)
+  if (( ${PG_VERSION%%.*} < PG_MIN_VERSION )); then
+    die "PostgreSQL ${PG_VERSION} runs here; Faffa Go needs ${PG_MIN_VERSION} or newer."
+  fi
+  echo "Using the PostgreSQL ${PG_VERSION} already running on port ${PG_PORT}."
+else
   install -d /usr/share/postgresql-common/pgdg
   curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
     https://www.postgresql.org/media/keys/ACCC4CF8.asc
   echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
     > /etc/apt/sources.list.d/pgdg.list
   apt-get update -q
-  apt-get install -y -q "postgresql-${PG_VERSION}"
+  apt-get install -y -q "postgresql-${PG_NEW_VERSION}"
+  systemctl enable --now postgresql
+  read -r PG_VERSION PG_PORT < <(pg_lsclusters -h | awk '{print $1, $3}' | head -1)
 fi
-systemctl enable --now postgresql
+pg() { sudo -u postgres psql -p "${PG_PORT}" -v ON_ERROR_STOP=1 -q "$@"; }
 
-step "Caddy"
-if ! command -v caddy >/dev/null; then
-  curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
-    | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
-    > /etc/apt/sources.list.d/caddy-stable.list
-  apt-get update -q
-  apt-get install -y -q caddy
-fi
+step "Nginx and certbot"
+command -v nginx >/dev/null || apt-get install -y -q nginx
+command -v certbot >/dev/null || apt-get install -y -q certbot python3-certbot-nginx
 
 step "User ${APP_USER} and its directories"
 if ! id "${APP_USER}" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "${APP_USER}"
 fi
 install -d -o "${APP_USER}" -g "${APP_USER}" -m 750 "${APP_DIR}"
-# Documents: outside the repository and anything Caddy serves, API user only (D-32).
+# Documents: outside the repository and anything Nginx serves, API user only (D-32).
 install -d -o "${APP_USER}" -g "${APP_USER}" -m 700 /var/lib/faffago "${DOCS_DIR}"
 install -d -o "${APP_USER}" -g "${APP_USER}" -m 700 "${BACKUP_DIR}"
-install -d -o "${APP_USER}" -g caddy -m 750 "${APK_DIR}"
+install -d -o "${APP_USER}" -g www-data -m 750 "${APK_DIR}"
 install -d -o root -g "${APP_USER}" -m 750 /etc/faffago
+# pnpm and node for the faffago user's own shell (deploy.sh sets PATH itself).
+grep -q "${NODE_DIR}/bin" "/home/${APP_USER}/.profile" 2>/dev/null ||
+  echo "export PATH=\"${NODE_DIR}/bin:\$PATH\"" >> "/home/${APP_USER}/.profile"
 
 step "Database roles and database"
 rand() { openssl rand -base64 48 | tr -d '/+=\n' | cut -c1-40; }
@@ -115,7 +140,7 @@ else
   OWNER_PW="$(rand)"
   APP_PW="$(rand)"
 fi
-sudo -u postgres psql -v ON_ERROR_STOP=1 -q <<SQL
+pg <<SQL
 DO \$\$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'faffago_owner') THEN
     CREATE ROLE faffago_owner LOGIN;
@@ -127,12 +152,11 @@ END \$\$;
 ALTER ROLE faffago_owner PASSWORD '${OWNER_PW}';
 ALTER ROLE faffago_app PASSWORD '${APP_PW}';
 SQL
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'faffago'" | grep -q 1; then
-  sudo -u postgres createdb --owner faffago_owner --template template0 \
+if ! pg -tAc "SELECT 1 FROM pg_database WHERE datname = 'faffago'" | grep -q 1; then
+  sudo -u postgres createdb -p "${PG_PORT}" --owner faffago_owner --template template0 \
     --locale fr_FR.UTF-8 --encoding UTF8 faffago
 fi
-sudo -u postgres psql -v ON_ERROR_STOP=1 -q -d faffago \
-  -c "GRANT CONNECT ON DATABASE faffago TO faffago_app"
+pg -d faffago -c "GRANT CONNECT ON DATABASE faffago TO faffago_app"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   step "Production env file with fresh secrets: ${ENV_FILE}"
@@ -144,12 +168,14 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 # Never commit, never send by chat or email. Keep a copy offline (docs/deployment.md).
 NODE_ENV="production"
 
-DATABASE_URL="postgresql://faffago_app:${APP_PW}@127.0.0.1:5432/faffago?schema=public"
-DATABASE_MIGRATION_URL="postgresql://faffago_owner:${OWNER_PW}@127.0.0.1:5432/faffago?schema=public"
+DATABASE_URL="postgresql://faffago_app:${APP_PW}@127.0.0.1:${PG_PORT}/faffago?schema=public"
+DATABASE_MIGRATION_URL="postgresql://faffago_owner:${OWNER_PW}@127.0.0.1:${PG_PORT}/faffago?schema=public"
 FAFFAGO_APP_DB_PASSWORD="${APP_PW}"
 
-API_PORT=3001
-API_BASE_URL="http://127.0.0.1:3001"
+# 4000 and up: the 3000s are taken by other projects on this server (D-100).
+WEB_PORT=${WEB_PORT}
+API_PORT=${API_PORT}
+API_BASE_URL="http://127.0.0.1:${API_PORT}"
 
 JWT_ACCESS_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
 JWT_REFRESH_SECRET="$(openssl rand -base64 48 | tr -d '\n')"
@@ -177,8 +203,6 @@ BACKUP_RCLONE_REMOTE=""
 
 SENTRY_DSN=""
 ENV
-  chown root:"${APP_USER}" "${ENV_FILE}"
-  chmod 640 "${ENV_FILE}"
   echo
   echo "Written. The first admin is 'admin' with password: ${ADMIN_PW}"
   echo "Copy ${ENV_FILE} to two offline places now (it holds the document key)."
@@ -209,12 +233,10 @@ fi
 # The API and the scripts read the root .env (app.module.ts).
 ln -sfn "${ENV_FILE}" "${APP_DIR}/.env"
 
-step "Services, reverse proxy, backups"
-install -m 644 "${APP_DIR}/deploy/systemd/faffago-api.service" /etc/systemd/system/
-install -m 644 "${APP_DIR}/deploy/systemd/faffago-web.service" /etc/systemd/system/
-install -m 644 "${APP_DIR}/deploy/systemd/faffago-backup.service" /etc/systemd/system/
-install -m 644 "${APP_DIR}/deploy/systemd/faffago-backup.timer" /etc/systemd/system/
-install -m 644 "${APP_DIR}/deploy/Caddyfile" /etc/caddy/Caddyfile
+step "Services and backups"
+for unit in faffago-api.service faffago-web.service faffago-backup.service faffago-backup.timer; do
+  install -m 644 "${APP_DIR}/deploy/systemd/${unit}" /etc/systemd/system/
+done
 # deploy.sh restarts the two services as the faffago user, nothing more.
 cat > /etc/sudoers.d/faffago <<SUDO
 ${APP_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl restart faffago-api, /usr/bin/systemctl restart faffago-web
@@ -224,13 +246,23 @@ visudo -cf /etc/sudoers.d/faffago >/dev/null
 systemctl daemon-reload
 systemctl enable faffago-api faffago-web faffago-backup.timer
 systemctl start faffago-backup.timer
-systemctl reload caddy || systemctl restart caddy
+
+step "Nginx sites for Faffa Go"
+# Installed once: certbot then adds the HTTPS parts to this file, and a rerun
+# must not undo them. To take a newer deploy/nginx/faffago.conf, see the runbook.
+if [[ ! -f "${NGINX_SITE}" ]]; then
+  install -m 644 "${APP_DIR}/deploy/nginx/faffago.conf" "${NGINX_SITE}"
+  ln -sfn "${NGINX_SITE}" /etc/nginx/sites-enabled/faffago
+fi
+nginx -t
+systemctl reload nginx
 
 step "Done"
 cat <<NEXT
 Next:
   1. DNS: A records for mirely.store, www.mirely.store and api.mirely.store -> this server.
-  2. First release:  sudo -u ${APP_USER} bash ${APP_DIR}/deploy/deploy.sh
-  3. Check the roles: sudo -u ${APP_USER} bash ${APP_DIR}/deploy/check-db-roles.sh
-  4. Off-server backups: docs/deployment.md, "Backups".
+  2. HTTPS: sudo certbot --nginx --redirect -d mirely.store -d www.mirely.store -d api.mirely.store
+  3. First release:  sudo -u ${APP_USER} bash ${APP_DIR}/deploy/deploy.sh
+  4. Check the roles: sudo -u ${APP_USER} bash ${APP_DIR}/deploy/check-db-roles.sh
+  5. Off-server backups: docs/deployment.md, "Backups".
 NEXT

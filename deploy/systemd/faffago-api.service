@@ -12,7 +12,8 @@ Group=faffago
 WorkingDirectory=/opt/faffago/apps/api
 EnvironmentFile=/etc/faffago/faffago.env
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node dist/main.js
+# Faffa Go's own Node 22 (setup-server.sh), not the system's.
+ExecStart=/opt/faffago-node/bin/node dist/main.js
 Restart=always
 RestartSec=5
 # Logs: journalctl -u faffago-api

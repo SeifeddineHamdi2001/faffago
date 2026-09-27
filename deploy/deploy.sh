@@ -10,6 +10,8 @@ set -euo pipefail
 
 APP_DIR="/opt/faffago"
 ENV_FILE="/etc/faffago/faffago.env"
+# Faffa Go's own Node 22 and pnpm (setup-server.sh), not the system's.
+export PATH="/opt/faffago-node/bin:${PATH}"
 
 step() { printf '\n\033[1;33m== %s\033[0m\n' "$*"; }
 
@@ -62,6 +64,6 @@ wait_for() {
   return 1
 }
 wait_for API "http://127.0.0.1:${API_PORT}/api/health"
-wait_for Web "http://127.0.0.1:3000/fr"
+wait_for Web "http://127.0.0.1:${WEB_PORT}/fr"
 echo
 echo "Deployed $(git log -1 --format='%h')."
