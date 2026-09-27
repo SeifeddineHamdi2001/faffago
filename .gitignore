@@ -17,8 +17,10 @@ build/
 !.env.example
 
 # Private uploads (CIN / patente). Never served publicly, never committed.
-storage/
-uploads/
+/storage/
+/apps/api/storage/
+/uploads/
+/apps/api/uploads/
 
 # Generated
 apps/api/src/generated/
