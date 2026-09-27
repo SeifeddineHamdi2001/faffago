@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { AVerifierModule } from './a-verifier/a-verifier.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuditModule } from './audit/audit.module';
@@ -40,6 +42,7 @@ import { ZonesModule } from './zones/zones.module';
  */
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['../../.env'] }),
     ScheduleModule.forRoot(),
     ClockModule,
@@ -73,5 +76,8 @@ import { ZonesModule } from './zones/zones.module';
     NoticesModule,
     PublicModule,
   ],
+  // Reports unexpected errors (not 4xx) to Sentry when SENTRY_DSN is set, then
+  // answers exactly as Nest's default handler does.
+  providers: [{ provide: APP_FILTER, useClass: SentryGlobalFilter }],
 })
 export class AppModule {}

@@ -1,0 +1,27 @@
+# What `docker build` never sees (Dockerfile at the root).
+.git
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/blob-report
+*.tsbuildinfo
+.pnpm-store
+
+# Secrets and private files: never in an image.
+**/.env
+**/.env.*
+!.env.example
+storage
+apps/api/storage
+uploads
+apps/api/uploads
+
+# The courier app's own build output and native folders (its package.json stays:
+# the lockfile names it).
+apps/courier/android
+apps/courier/ios
+apps/courier/.expo
