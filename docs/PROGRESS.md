@@ -664,6 +664,21 @@ them); the choices made while building are D-91. Steps, all done:
 
 ## Phase 11 — Deployment
 
+Branch `phase-11`. Plan 2026-09-27: the owner chose a VPS (provider open,
+D-32). Runbook: `docs/deployment.md`; choices: D-100.
+
+1. [x] `GET /api/health` (public, database check) — 1 API e2e
+2. [x] `deploy/setup-server.sh`: Ubuntu 24.04, PostgreSQL 17 with both roles,
+       Node 22, Caddy, firewall, swap, env file with fresh secrets, services
+3. [x] `deploy/deploy.sh`: build, migrate as owner, seed, restart, health check
+4. [x] systemd units, Caddyfile (www, api, apex redirect, `/apk/`)
+5. [x] `deploy/backup.sh` + nightly timer, `deploy/restore-test.sh`,
+       `deploy/check-db-roles.sh`
+6. [x] EAS `production` profile: APK on `https://api.mirely.store/api`
+7. [x] Sentry in the API (`@sentry/nestjs`), off without `SENTRY_DSN`; only
+       5xx errors, no request data (bodies, headers, cookies, query strings)
+8. [ ] On the server (owner): the items below
+
 - [ ] VPS setup, HTTPS, environment variables
 - [ ] Verify the API connects as `faffago_app` with its password, and that an
       UPDATE on `parcel_events` fails on the production database.
