@@ -7,13 +7,13 @@ D-100 in `decisions.md`.
 ## What runs where
 
 One Ubuntu 24.04 VPS, shared with other projects. Faffa Go runs in its own
-Docker Compose project (`faffago`), listens on 127.0.0.1:4000 and 4001 (the
+Docker Compose project (`faffago`), listens on 127.0.0.1:4002 and 4001 (the
 3000s are taken), and adds its own site to the server's Nginx. Nothing else on
 the server is changed.
 
 | Piece                | How                                                           | Reached at                             |
 | -------------------- | ------------------------------------------------------------- | -------------------------------------- |
-| Web app (Next.js)    | container `web`, 127.0.0.1:4000                               | https://www.mirely.store               |
+| Web app (Next.js)    | container `web`, 127.0.0.1:4002                               | https://www.mirely.store               |
 | API (NestJS)         | container `api`, 127.0.0.1:4001                               | https://api.mirely.store (courier app) |
 | PostgreSQL 17        | container `db`, volume `faffago_faffago-pgdata`, no host port | inside Docker only                     |
 | Nginx + certbot      | the server's Nginx, site `/etc/nginx/sites-available/faffago` | ports 80 and 443                       |

@@ -5,7 +5,7 @@
 #
 # The --env-file fills the ${…} below; the api container also reads the whole
 # file. Ports listen on 127.0.0.1 only: the server's Nginx is the way in, for
-# the web app (4000) and the API (4001). The database has no port on the host.
+# the web app (4002) and the API (4001). The database has no port on the host.
 #
 # (The docker-compose.yml at the repository root is for development only.)
 
@@ -75,7 +75,7 @@ services:
       API_BASE_URL: http://api:${API_PORT:-4001}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     ports:
-      - '127.0.0.1:${WEB_PORT:-4000}:4000'
+      - '127.0.0.1:${WEB_PORT:-4002}:4000'
     depends_on:
       - api
     logging: *logging

@@ -5,7 +5,7 @@
 #
 # The VPS already hosts other projects behind Nginx, so this script leaves them
 # alone: Faffa Go runs in its own containers (compose project "faffago") on
-# 127.0.0.1:4000 and 4001, and gets its own Nginx site. Firewall, time zone and
+# 127.0.0.1:4002 and 4001, and gets its own Nginx site. Firewall, time zone and
 # other containers are not touched.
 #
 # Safe to run again: every step checks what is already there. It stops once,
@@ -21,7 +21,7 @@ DOCS_DIR="/var/lib/faffago/documents"
 BACKUP_DIR="/var/backups/faffago"
 APK_DIR="/var/www/faffago-apk"
 NGINX_SITE="/etc/nginx/sites-available/faffago"
-WEB_PORT=4000
+WEB_PORT=4002
 API_PORT=4001
 # The node user inside the app image, who writes the documents.
 CONTAINER_UID=1000
@@ -106,7 +106,7 @@ FAFFAGO_APP_DB_PASSWORD="${APP_PW}"
 DATABASE_URL="postgresql://faffago_app:${APP_PW}@db:5432/faffago?schema=public"
 DATABASE_MIGRATION_URL="postgresql://faffago_owner:${OWNER_PW}@db:5432/faffago?schema=public"
 
-# 4000 and up on the host: the 3000s are taken by other projects (D-100).
+# 4001 and 4002 on the host: the 3000s and 4000 are taken by other apps (D-100).
 WEB_PORT=${WEB_PORT}
 API_PORT=${API_PORT}
 API_BASE_URL="http://api:${API_PORT}"

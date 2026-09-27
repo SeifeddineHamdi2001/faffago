@@ -2446,7 +2446,7 @@ so nothing depends on one.
   its own **Nginx** site next to theirs (Nginx already holds 80 and 443),
   HTTPS by **certbot**; firewall and time zone left as they are (the backup
   timer names Africa/Tunis itself).
-- **Ports 4000 (web) and 4001 (API)**, published on 127.0.0.1 only: the
+- **Ports 4002 (web) and 4001 (API)**, published on 127.0.0.1 only (4000 is taken): the
   owner's server already uses the 3000s. Development keeps 3000 / 3001.
 - **Three names**: `www.mirely.store` (web), `api.mirely.store` (API, for the
   courier app: Next.js already answers `/api/*` with its own route handlers, so
